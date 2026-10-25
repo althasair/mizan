@@ -41,10 +41,12 @@ function buildReport(ctx) {
   /* التقييمات */
   const AS = Rp('AS'); const prevYr = r => /^نتائج/.test(d(r).lvl || '');
   const ASs = AS.filter(r => SEC.AS.cat(d(r)) === 'قصير'), ASa = AS.filter(r => SEC.AS.cat(d(r)) === 'تحصيلي' && !prevYr(r));
-  const nAS = ASs.reduce((a, r) => a + (+d(r).n > 0 ? +d(r).n : 1), 0);
-  const grpAS = L => { const g = []; L.forEach(r => { const x = d(r), k = [x.ty, x.lvl, x.corr || '', x.note || ''].join('|'); let o = g.find(y => y.k === k); if (!o) g.push(o = { k, x, n: 0, ds: [] }); o.n += +x.n > 0 ? +x.n : 1; if (x.date) o.ds.push(dm(x.date)); }); return g; };
+  const isDiag = r => /تشخيص/.test(d(r).ty || ''); const ASd = ASs.filter(isDiag), ASq = ASs.filter(r => !isDiag(r));
+  const nAS = ASq.reduce((a, r) => a + (+d(r).n > 0 ? +d(r).n : d(r).nc ? 0 : 1), 0);
+  const grpAS = L => { const g = []; L.forEach(r => { const x = d(r), k = [x.ty, x.lvl, x.corr || '', x.note || ''].join('|'); let o = g.find(y => y.k === k); if (!o) g.push(o = { k, x, n: 0, ds: [] }); o.n += +x.n > 0 ? +x.n : x.nc ? 0 : 1; if (x.date) o.ds.push(dm(x.date)); }); return g; };
   const asG = o => o.x.ty + (o.n > 1 ? ` (${o.n})` : '') + ' — ' + o.x.lvl + (o.ds.length ? ` (${o.ds.join('، ')})` : '') + (o.x.corr ? '، ' + o.x.corr : '') + (o.x.note ? ` (${o.x.note})` : '');
-  T.as_short = ASs.length ? `نفّذ القسم (${nAS}) من التقييمات القصيرة والتطبيقات: ` + grpAS(ASs).map(asG).join('؛ ') + '.' : 'لم تُسجَّل تقييمات قصيرة خلال الفترة.';
+  const dgTxt = ASd.length ? 'التقييم التشخيصي — ' + grpAS(ASd).map(o => o.x.lvl + (o.ds.length ? ` (${o.ds.join('، ')})` : '') + (o.x.corr ? '، ' + o.x.corr : '') + (o.x.note ? ` (${o.x.note})` : '')).join('؛ ') + '.' : '';
+  T.as_short = ASq.length ? `نفّذ القسم (${nAS}) من التقييمات القصيرة والتطبيقات: ` + grpAS(ASq).map(asG).join('؛ ') + '.' + (dgTxt ? ' إضافةً إلى ' + dgTxt : '') : dgTxt ? 'نُفّذ ' + dgTxt : 'لم تُسجَّل تقييمات قصيرة خلال الفترة.';
   T.as_ach = sec(ASa, r => SEC.AS.tx(d(r)), 'لم تُسجَّل اختبارات تحصيلية خلال الفترة.', 'الاختبارات التحصيلية: ');
   const ASn = AS.filter(r => SEC.AS.an(d(r)));
   T.as_anal = sec(ASn, r => SEC.AS.an(d(r)), 'لم يُسجَّل تحليل للنتائج خلال الفترة.', 'تمت قراءة النتائج وتحليلها: ');
@@ -72,7 +74,7 @@ function buildReport(ctx) {
   /* التطوير الخارجي */
   const EX = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
   const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NM : uniq(EX.map(r => d(r).t)).filter(t => allM.includes(t)).length;
-  const exP = uniq(EX.map(r => d(r).name)).length;
+  const exP = uniq(EX.map(r => String(d(r).name || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim())).length;
   T.ex_n = exP; T.ex_k = exK;
   T.pd_ext = !EX.length ? 'لم تُسجَّل مشاركات في برامج تطوير مهني خارجية خلال الفترة.'
     : (NM ? `شاركت ${exK} من أصل ${NM} من أعضاء القسم في برامج تطوير مهني خارجية بنسبة ${pct(exK, NM)}، ` : '') + `بإجمالي (${exP}) ${exP === 1 ? 'برنامج' : 'برامج'}: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
@@ -116,7 +118,7 @@ function buildReport(ctx) {
       if (n) return 'ما زالت بحاجة إلى ' + REF.CRIT[i].core;
       return '';
     }).filter(Boolean).join('، و');
-    const Y = uniq(vs.map(v => v.note).filter(Boolean)).join('؛ ');
+    const Y = (x => x.length ? x.join('؛ ') + '.' : '')(uniq(vs.map(v => String(v.note || '').replace(/\s*\n\s*/g, ' ').trim().replace(/[.。]+$/, '')).filter(Boolean)));
     const z = `• تم الحضور للأستاذة ${t} ${Tt}` + (U ? (U.includes('،') ? ' في الصفوف (' : ' في الصف (') + U + ')' : '') + (AG ? (AG.includes(' و') ? ' في مادتي ' : ' في مادة ') + AG : '') + '.'
       + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (Y ? ' ' + Y : '');
     return { t, c, kul: vs.filter(v => v.kj === 'كلية').length, juz: vs.filter(v => v.kj === 'جزئية').length, fu: vs.filter(isFU).length, z };
@@ -151,16 +153,16 @@ function buildReport(ctx) {
   const solved = PAi.filter(r => ['تم الحل', 'تحسن ملحوظ'].includes(d(r).res)).length;
   const nStu = PAi.reduce((a, r) => a + (+d(r).n > 0 ? +d(r).n : 1), 0);
   T.pa_ind = PAi.length ? `تم التواصل مع أولياء أمور (${nStu}) من الطالبات خلال الفترة، وتحقق الحل أو التحسن في (${solved}) حالة: ` + PAi.map(r => SEC.PA.tx(d(r))).join('؛ ') + '.' : 'لم يُسجَّل تواصل فردي مع أولياء الأمور خلال الفترة.';
-  T.pa_ev = sec(PAe, r => SEC.PA.tx(d(r)), 'لم تُسجَّل فعاليات أو مبادرات لأولياء الأمور خلال الفترة.', 'قدّم القسم لأولياء الأمور: ');
+  T.pa_ev = sec(PAe, r => SEC.PA.tx(d(r)), 'لم تُسجَّل فعاليات أو مبادرات لأولياء الأمور خلال الفترة.', 'الفعاليات والمبادرات المقدَّمة لأولياء الأمور بمشاركة القسم: ');
   T.pa_ind_n = PAi.length; T.pa_ev_n = PAe.length;
 
   /* المصادر والتعليم الإلكتروني */
   const LR = Rp('LR');
   T.lrc = sec(LR.filter(r => d(r).k === 'تفعيل مركز مصادر التعلم'), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
   const EL = LR.filter(r => d(r).k === 'توظيف أدوات التعليم الإلكتروني');
-  const elBy = [REF.ALL_MEMBERS, coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e)) })).filter(x => x.tools.length);
+  const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e + ((x => x ? ` (${x})` : '')([d(r).s ? 'الصف ' + d(r).s : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
   T.el_n = elBy.reduce((a, x) => a + x.tools.length, 0);
-  T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => (x.t === REF.ALL_MEMBERS ? 'جميع معلمات القسم' : `أ. ${x.t}`) + `: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
+  T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => (x.t === REF.ALL_MEMBERS ? 'جميع معلمات القسم' : x.t === 'القسم' ? 'القسم' : `أ. ${x.t}`) + `: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
 
   /* الإنجازات */
   const ACH = Rp('ACH');
@@ -191,7 +193,7 @@ function buildReport(ctx) {
     }
     if (p === 4) {
       if (PAi.length) parts.push(`التواصل الفردي مع أولياء أمور (${nStu}) من الطالبات`);
-      if (PAe.length) parts.push(`تقديم (${PAe.length}) من الفعاليات والمبادرات لأولياء الأمور`);
+      if (PAe.length) parts.push(`(${PAe.length}) من الفعاليات والمبادرات لأولياء الأمور`);
       n += PA.length;
     }
     return { txt: parts.length ? 'تحققت من خلال: ' + parts.join('، ') + '.' : 'لم تُسجَّل إجراءات مرتبطة بهذه الأولوية خلال الفترة.', n };

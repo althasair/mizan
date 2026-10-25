@@ -4,7 +4,7 @@
 const dm = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return `${+dd}/${+m}`; };
 const dmy = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return `${+dd}/${+m}/${y}`; };
 const bt = d => d ? ' بتاريخ ' + dm(d) : '';
-const A = n => n === ALL() ? n : 'أ. ' + n;
+const A = n => n === ALL() || n === 'القسم' ? n : 'أ. ' + n;
 const ALL = () => REF.ALL_MEMBERS;
 const execs = (a, b, c) => {
   const v = [a, b, c].filter(Boolean);
@@ -53,7 +53,7 @@ const SECTIONS = [
     ],
     cat: r => { const i = REF.L.as_type.indexOf(r.ty); return i >= 0 ? REF.L.as_cat[i] : 'قصير'; },
     tx: r => r.ty + ((+r.n > 1) ? ` (${r.n})` : '') + ' — ' + r.lvl + (r.corr ? '، ' + r.corr : '') + (r.note ? ` (${r.note})` : ''),
-    an: r => (!r.an || r.an === 'لا ينطبق') ? '' : `${r.ty} (${r.lvl}): ${r.an}` + (r.pass !== '' && r.pass != null ? `، ونسبة النجاح ${r.pass}%` : '') },
+    an: r => (!r.an || r.an === 'لا ينطبق') ? '' : `${r.ty} (${r.lvl}): ${r.an}` + (r.pass !== '' && r.pass != null && !String(r.an).includes(String(r.pass)) ? `، ونسبة النجاح ${r.pass}%` : '') },
 
   { k: 'RA', g: 'plan', t: 'رفع التحصيل', title: 'التحصيل الأكاديمي: إجراءات رفع التحصيل',
     note: 'سجّلي إجراءات رفع التحصيل لكل مستوى والفئة المستهدفة والمنفذة والأثر، واربطيها بأولويات المدرسة.',
@@ -66,7 +66,7 @@ const SECTIONS = [
       { n: 'imp', h: 'الأثر', ty: 'sel', l: 'ra_impact' },
       { n: 'p', h: 'الأولوية المرتبطة (افتراضياً الأولى)', ty: 'sel', l: 'prio' },
     ],
-    tx: r => `${r.item} (${r.lvl || ''}${r.tg ? ' – ' + r.tg : ''})` + (r.by ? ' — تنفيذ: ' + A(r.by) : '') + (r.imp ? ' — ' + r.imp : '') },
+    tx: r => r.item + ((x => x ? ` (${x})` : '')([r.lvl, r.tg, r.nd ? '' : dm(r.date)].filter(Boolean).join(' – '))) + (r.by ? ' — تنفيذ: ' + A(r.by) : '') + (r.imp ? ' — ' + r.imp : '') },
 
   /* ------------------------------------------------ التطوير المهني */
   { k: 'WS', g: 'pd', t: 'الورش الداخلية', title: 'التطوير المهني الداخلي: متابعة ورش الخطة', plan: 1,
@@ -113,7 +113,7 @@ const SECTIONS = [
       { n: 'hrs', h: 'عدد الساعات', ty: 'int' },
       { n: 'ev', h: 'تم رفع الأدلة', ty: 'sel', l: 'yesno' },
     ],
-    tx: r => `${A(r.t)}: «${r.name}»` + ((x => x ? ` (${x})` : '')([r.ent, r.mode, +r.hrs > 0 ? (+r.hrs === 1 ? 'ساعة واحدة' : +r.hrs === 2 ? 'ساعتان' : r.hrs + ' ساعات') : '', dm(r.date)].filter(Boolean).join('، '))) },
+    tx: r => `${A(r.t)}: «${r.name}»` + ((x => x ? ` (${x})` : '')([r.ent, r.mode, +r.hrs > 0 ? (+r.hrs === 1 ? 'ساعة واحدة' : +r.hrs === 2 ? 'ساعتان' : r.hrs + (+r.hrs <= 10 ? ' ساعات' : ' ساعة')) : '', dm(r.date)].filter(Boolean).join('، '))) },
 
   { k: 'MT', g: 'pd', t: 'الاجتماعات', title: 'الاجتماعات الأكاديمية',
     note: 'سجّلي اجتماعات القسم واجتماعات التوجيه والقيادة (يُصنّف داخلياً أو خارجياً تلقائياً). المحاور تُختار من القائمة أو تُكتب يدوياً. للغياب اختاري أسماء المعلمات الغائبات (حتى 3).',
@@ -191,7 +191,7 @@ const SECTIONS = [
       { n: 'how', h: 'كيف ستطبّق ما استفادته', ty: 'combo', l: 'pv_apply' },
       { n: 'yes', h: 'هل لبّت الزيارة احتياجها؟', ty: 'sel', l: 'yesno' },
     ],
-    tx: r => (r.v === ALL() ? 'زارت معلمات القسم ' : `أ. ${r.v} زارت `) + (/^زميلات/.test(r.t) ? r.t : 'أ. ' + r.t) + bt(r.date) + (r.s ? ' في الصف ' + r.s : '') + (r.why ? '، وسبب التوجيه: ' + r.why : '')
+    tx: r => (r.v === ALL() ? 'زارت معلمات القسم ' : `أ. ${r.v} زارت `) + (/^(زميلات|مدرسة)/.test(r.t) ? r.t : 'أ. ' + r.t) + bt(r.date) + (r.s ? ' في الصف ' + r.s : '') + (r.why ? '، وسبب التوجيه: ' + r.why : '')
       + (r.got ? '؛ واستفادت: ' + r.got : '') + (r.how ? '؛ وستطبّق ذلك من خلال: ' + r.how : '')
       + (r.yes === 'نعم' ? ' (لبّت الزيارة احتياجها)' : r.yes === 'لا' ? ' (لم تلبِّ الزيارة احتياجها بعد)' : '') },
 
@@ -262,7 +262,7 @@ const SECTIONS = [
       { n: 's', h: 'الصف', ty: 'sel', l: 'sections' },
       { n: 'imp', h: 'الأثر', ty: 'combo', l: 'lr_impact' },
     ],
-    tx: r => `أ. ${r.t}` + (r.s ? ` (${r.s})` : '') + `: ${r.e}` + bt(r.date) + (r.imp ? ' — ' + r.imp : '') },
+    tx: r => (r.t === ALL() ? 'جميع معلمات القسم' : A(r.t)) + (r.s ? ` (${r.s})` : '') + `: ${r.e}` + bt(r.date) + (r.imp ? ' — ' + r.imp : '') },
 
   { k: 'ACH', g: 'part', t: 'الإنجازات والمشاركات', title: 'الإنجازات والمشاركات',
     note: '«الإنجاز» حصول طالبات القسم أو معلماته على مركز أو جائزة في مسابقة أو فعالية. «المشاركة» حضور مسابقة أو برنامج أو فعالية خارجية دون فوز.',
