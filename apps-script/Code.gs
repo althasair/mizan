@@ -11,7 +11,7 @@ const SS_ID = '1H49-iBPf3wM87IRhxOkUuZO89vDetj_Rv714knzSt-g';
 const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزان — ملفات خاصة» في Drive
 const SIG_FILE = 'signature-vp.png';
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
-const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE'];                 // بنود خاصة بالنائب لا تراها المنسقات
+const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];                 // بنود خاصة بالنائب لا تراها المنسقات
 
 const SH = {
   users: 'المستخدمون', teachers: 'المعلمات', periods: 'الفترات', prio: 'الأولويات',
@@ -240,6 +240,26 @@ function setPin_(u, p) {
   fail_('الحساب غير موجود');
 }
 
+/* ------------------------------------------------------------------ إرسال الاستمارات بالبريد (PDF موقّع) */
+function sendForm_(u, p) {
+  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!p.to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(String(p.to))) fail_('البريد الإلكتروني غير صالح');
+  const it = DriveApp.getFolderById(PRIVATE_FOLDER).getFilesByName(SIG_FILE);
+  let sig = '';
+  if (it.hasNext()) { const b = it.next().getBlob(); sig = '<img src="data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes()) + '" alt="">'; }
+  const html = String(p.html || '').replace(/\{\{SIG\}\}/g, sig);
+  const name = String(p.file || 'استمارة').replace(/[\\/:*?"<>|]/g, '-');
+  const pdf = Utilities.newBlob(html, 'text/html', name + '.html').getAs('application/pdf').setName(name + '.pdf');
+  // نسخة محفوظة في مجلد «الاستمارات المرسلة» داخل المجلد الخاص
+  try {
+    const root = DriveApp.getFolderById(PRIVATE_FOLDER); const f = root.getFoldersByName('الاستمارات المرسلة');
+    (f.hasNext() ? f.next() : root.createFolder('الاستمارات المرسلة')).createFile(pdf.copyBlob().setName(name + '.pdf'));
+  } catch (e) {}
+  MailApp.sendEmail({ to: String(p.to), subject: String(p.subject || name), htmlBody: String(p.body || ''), attachments: [pdf], name: u.name + ' — نائب المدير للشؤون الأكاديمية' });
+  log_(u, 'إرسال استمارة', '', name + ' ← ' + p.to);
+  return { sent: true };
+}
+
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -258,6 +278,7 @@ function route_(req) {
     case 'feedback': return { report: feedback_(u, req) };
     case 'signature': return signature_(u, req);
     case 'setPin': return setPin_(u, req);
+    case 'sendForm': return sendForm_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');
@@ -277,4 +298,5 @@ function setup() {
   const it = DriveApp.getFolderById(PRIVATE_FOLDER).getFilesByName(SIG_FILE);
   Logger.log(it.hasNext() ? 'التوقيع موجود ✓' : 'لم يُعثر على ملف التوقيع');
   Logger.log('عدد المعلمات: ' + (rows_(SH.teachers).rows.length));
+  Logger.log('حصة البريد المتبقية اليوم: ' + MailApp.getRemainingDailyQuota());
 }

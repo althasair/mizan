@@ -86,6 +86,7 @@ const DEMO = {
     if (a === 'feedback') { let i = fr(); if (i < 0) { d.reps.push({ id: 'p' + Date.now(), dept: p.dept, period: p.period, from: p.from, to: p.to, status: 'مسودة', feedback: p.feedback }); i = d.reps.length - 1; } else d.reps[i].feedback = p.feedback; this.save(d); return { ok: 1, report: d.reps[i] }; }
     if (a === 'signature') return { ok: 1, data: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="120"><path d="M20 90 C80 10,140 10,160 60 S260 100,280 30" stroke="#1B2A6E" stroke-width="4" fill="none"/><text x="150" y="112" font-size="12" text-anchor="middle" fill="#999">توقيع تجريبي</text></svg>') };
     if (a === 'setPin') { const u = d.users.find(x => x.id === p.id); u.pin = String(p.newPin); this.save(d); return { ok: 1 }; }
+    if (a === 'sendForm') { console.log('معاينة: لا يُرسل بريد فعلي', p.to, p.subject); return { ok: 1, sent: true }; }
     if (a === 'logout') { sessionStorage.removeItem('mizan_demo_u'); return { ok: 1 }; }
     throw new Error('عملية غير معروفة');
   }

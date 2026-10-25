@@ -26,7 +26,7 @@ function A_home(el) {
   </div>
   <div class="card" style="margin-top:16px"><h2>حالة الأقسام في ${esc(p.name)}</h2><div class="tbl"><table class="t">
     <tr><th>القسم</th><th>المنسقة</th><th>السجلات</th><th>البنود الموثّقة</th><th>الزيارات</th><th>المعلمات المُزارات</th><th>خطة التطوير</th><th>التقرير</th><th></th></tr>
-    ${Rs.map(({ d, R, rp }) => { const docs = SECTIONS.filter(s => S.records.some(r => r.dept === d && r.item === s.k && inP(r.date, p))).length;
+    ${Rs.map(({ d, R, rp }) => { const docs = SECTIONS.filter(s => s.k !== 'SN' && S.records.some(r => r.dept === d && r.item === s.k && inP(r.date, p))).length;
       return `<tr><td><b>${esc(d)}</b></td><td>${esc(coordOf(d))}</td><td>${R.K.records}</td><td><div class="row"><div class="bar" style="width:70px"><i style="width:${docs / 15 * 100}%"></i></div>${docs}/15</div></td><td>${R.K.visits}</td><td>${fmtPct(R.K.visitedPct)}</td><td>${fmtPct(R.K.planPct)}</td><td>${statusChip(rp)}</td><td><button class="btn sm sec" data-rep="${esc(d)}">التقرير</button></td></tr>`; }).join('')}
   </table></div></div>`;
   $$('[data-rep]', el).forEach(b => b.onclick = () => { S.view = 'a_reports'; S.adminDept = b.dataset.rep; refresh(); });
@@ -91,8 +91,12 @@ function adminRepButtons(rp) {
 /* ------------------------------------------------------------------ التغذية الراجعة التلقائية (مسودة تراجعها النائب) */
 function autoFeedback(dept, p) {
   const R = buildReport(ctxFor(dept, p)), K = R.K, T = R.T;
-  const docs = SECTIONS.filter(s => S.records.some(r => r.dept === dept && r.item === s.k && inP(r.date, p)));
-  const missing = SECTIONS.filter(s => !docs.includes(s)).map(s => s.t);
+  const docs = SECTIONS.filter(s => s.k !== 'SN' && S.records.some(r => r.dept === dept && r.item === s.k && inP(r.date, p)));
+  const snK = new Set(S.records.filter(r => r.dept === dept && r.item === 'SN' && inP(r.date, p)).map(r => r.d.k));
+  const noted = (...L) => L.some(x => snK.has(x));
+  const SNMAP = { V: ['الحضور الصفي للمنسقة'], PA: ['التواصل الفردي مع أولياء الأمور', 'فعاليات أولياء الأمور'], WS: ['التطوير الداخلي'], EX: ['التطوير الخارجي'], MT: ['الاجتماعات الداخلية', 'الاجتماعات الخارجية'], PV: ['الزيارات التبادلية'], ACH: ['الإنجازات', 'المشاركات'], LR: ['تفعيل مركز مصادر التعلم', 'تفعيل التعليم الإلكتروني'], AS: ['التقييمات القصيرة', 'الاختبارات التحصيلية', 'تحليل وقراءة النتائج'], PL: ['الخطة السنوية للقسم', 'متابعة الخطط الفصلية'], RA: ['إجراءات رفع التحصيل'], AC: ['الأنشطة الداخلية', 'الأنشطة الخارجية'], OV: ['زيارات مدير المدرسة', 'زيارات نائب المدير للشؤون الأكاديمية', 'زيارات الموجه التربوي'], CH: ['التحديات والحلول'] };
+  const missing = SECTIONS.filter(s => s.k !== 'SN' && !docs.includes(s) && !noted(...(SNMAP[s.k] || []))).map(s => s.t);
+  const inFile = [];
   const notVisited = (T.perTeacher || []).filter(x => !x.c).map(x => 'أ. ' + x.t);
   const fuNot = S.records.filter(r => r.dept === dept && r.item === 'V' && inP(r.date, p) && (r.d.ty || '').includes('متابعة') && r.d.st === 'لم تُنفذ بعد').length;
   const ovNot = S.records.filter(r => r.dept === dept && r.item === 'OV' && inP(r.date, p) && r.d.fus && r.d.fus !== 'تم تنفيذ التوصيات').length;
@@ -114,23 +118,51 @@ function autoFeedback(dept, p) {
   if (asAnal && has('RA')) st.push('تحليل نتائج التقييمات وربطها بإجراءات رفع التحصيل');
   if (docs.length >= 12) st.push(`استكمال توثيق (${docs.length}) من بنود التقرير الخمسة عشر`);
   // التوصيات
-  if (!K.visits) rc.push('تنفيذ الزيارات الصفية لمعلمات القسم وتوثيقها');
+  if (!K.visits) { if (noted('الحضور الصفي للمنسقة')) inFile.push('الزيارات الصفية'); else rc.push('تنفيذ الزيارات الصفية لمعلمات القسم وتوثيقها'); }
   else if (notVisited.length) rc.push('استكمال الزيارات الصفية للمعلمات اللاتي لم تتم زيارتهن: ' + notVisited.join('، '));
   if (fuNot) rc.push(`متابعة تنفيذ التوصيات التي لم تُنفذ بعد في زيارات المتابعة (${fuNot})`);
   if (K.commonRecs && !K.cpActions) rc.push('اتخاذ إجراءات لمعالجة التوصيات المشتركة: ' + T.common.join('؛ '));
   if (ovNot) rc.push('متابعة تنفيذ توصيات زيارات القيادة والتوجيه التربوي');
   if (K.planPct != null && K.planPct < 1) rc.push('متابعة تنفيذ ورش خطة التطوير المهني المتبقية وتوثيق حالتها');
-  if (!has('PL')) rc.push('توثيق متابعة الخطط الفصلية وتغطية المنهج');
-  if (!asAnal) rc.push('تحليل نتائج التقييمات وقراءتها وتوثيقها');
-  if (!has('RA')) rc.push('توثيق إجراءات رفع التحصيل وربطها بأولويات المدرسة');
-  if (!K.meetings) rc.push('عقد اجتماعات القسم الدورية وتوثيق محاورها');
-  if (!K.peer) rc.push('تفعيل الزيارات التبادلية بين المعلمات وربطها باحتياجاتهن');
-  if (!K.parents) rc.push('تفعيل الشراكة مع أولياء الأمور وتوثيق التواصل الفردي');
-  if (!K.elearn) rc.push('توثيق توظيف أدوات التعليم الإلكتروني');
+  if (!has('PL') && !noted(...SNMAP.PL)) rc.push('توثيق متابعة الخطط الفصلية وتغطية المنهج');
+  if (!asAnal && !noted('تحليل وقراءة النتائج')) rc.push('تحليل نتائج التقييمات وقراءتها وتوثيقها');
+  if (!has('RA') && !noted('إجراءات رفع التحصيل')) rc.push('توثيق إجراءات رفع التحصيل وربطها بأولويات المدرسة');
+  if (!K.meetings) noted(...SNMAP.MT) ? inFile.push('الاجتماعات') : rc.push('عقد اجتماعات القسم الدورية وتوثيق محاورها');
+  if (!K.peer) noted('الزيارات التبادلية') ? inFile.push('الزيارات التبادلية') : rc.push('تفعيل الزيارات التبادلية بين المعلمات وربطها باحتياجاتهن');
+  if (!K.parents) noted(...SNMAP.PA) ? inFile.push('التواصل مع أولياء الأمور') : rc.push('تفعيل الشراكة مع أولياء الأمور وتوثيق التواصل الفردي');
+  if (!K.elearn) noted('تفعيل التعليم الإلكتروني') ? inFile.push('التعليم الإلكتروني') : rc.push('توثيق توظيف أدوات التعليم الإلكتروني');
   if (missing.length > 3) rc.push('استكمال توثيق بنود التقرير: ' + missing.join('، '));
+  // قراءة تحليلية: مقارنة بالفترة السابقة وبمتوسط الأقسام، وعمق الزيارات، وربط الإجراءات بالأثر
+  const an = [];
+  const pi = S.periods.findIndex(x => x.name === p.name); const prevP = pi > 0 ? S.periods[pi - 1] : null;
+  const others = adminDepts().filter(x => x !== dept).map(x => buildReport(ctxFor(x, p)).K);
+  const avg = f => { const v = others.map(f).filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const cmp = (v, m, unit) => m == null ? '' : v > m * 1.1 ? ` (أعلى من متوسط الأقسام ${unit(m)})` : v < m * 0.9 ? ` (أقل من متوسط الأقسام ${unit(m)})` : ` (قريب من متوسط الأقسام ${unit(m)})`;
+  const pc = x => Math.round(x * 100) + '%', n1 = x => x.toFixed(1);
+  if (K.visits) an.push(`بلغ معدل الزيارات الصفية ${n1(K.perTeacher)} زيارة لكل معلمة${cmp(K.perTeacher, avg(k => k.perTeacher), n1)}، وشمول المعلمات ${pc(K.visitedPct)}${cmp(K.visitedPct, avg(k => k.visitedPct), pc)}`);
+  const Vs = S.records.filter(r => r.dept === dept && r.item === 'V' && inP(r.date, p));
+  const fuN = Vs.filter(v => (v.d.ty || '').includes('متابعة')).length;
+  if (Vs.length) an.push(fuN ? `شكّلت زيارات المتابعة ${fuN} من ${Vs.length} زيارة، بما يعكس متابعة أثر التوصيات` : 'لم تتضمن الزيارات زيارات متابعة للتحقق من تنفيذ التوصيات السابقة');
+  const weakT = (T.perTeacher || []).map(x => { const cnt = {}; Vs.filter(v => v.d.t === x.t && !(v.d.ty || '').includes('متابعة')).forEach(v => new Set([v.d.r1, v.d.r2, v.d.r3].filter(Boolean)).forEach(r => cnt[r] = (cnt[r] || 0) + 1)); const rep = Object.keys(cnt).filter(r => cnt[r] >= 2); return { t: x.t, n: rep.length, rep }; }).filter(x => x.n);
+  if (weakT.length) an.push('تكررت التوصية نفسها في أكثر من زيارة لدى: ' + weakT.map(x => `أ. ${x.t} («${x.rep[0]}»${x.n > 1 ? ' و' + (x.n - 1) + ' غيرها' : ''})`).join('، ') + '، مما يستدعي خطة دعم فردية ومتابعة لصيقة');
+  if (K.planPct != null) an.push(`نُفّذ ${pc(K.planPct)} من ورش خطة التطوير المهني المقررة${cmp(K.planPct, avg(k => k.planPct), pc)}` + (K.att != null ? `، بنسبة حضور ${pc(K.att)}` : ''));
+  const RA = S.records.filter(r => r.dept === dept && r.item === 'RA' && inP(r.date, p)); const RAi = RA.filter(r => r.d.imp && !/قيد/.test(r.d.imp));
+  if (RA.length) an.push(`وُثّق (${RA.length}) من إجراءات رفع التحصيل` + (!RAi.length ? '، دون توثيق لأثرها المقيس على نتائج الطالبات' : `، منها (${RAi.length}) بأثر موثق` + (RAi.length < RA.length ? '، ويحتاج الباقي إلى قياس أثره بالبيانات' : '')));
+  const noPr = (T.prio || []).map((x, i) => x.n ? null : REF.PRIO[i]).filter(Boolean);
+  if (noPr.length) an.push('لم تُسجَّل إجراءات مرتبطة بـ: ' + noPr.map(x => x.replace(/^الأولوية \d: /, '')).join('، '));
+  const att = S.records.filter(r => r.dept === dept && r.item === 'SN' && inP(r.date, p) && /مرفق|موثق في ملف|في الملف/.test(r.d.t || ''));
+  if (att.length) an.push(`اكتُفي بالإحالة إلى ملفات مرفقة في (${att.length}) من البنود دون تفصيلها في التقرير`);
+  if (prevP) { const KP = buildReport(ctxFor(dept, prevP)).K; const dv = K.visits - KP.visits, dr = K.records - KP.records;
+    an.push(`مقارنةً بـ${prevP.name}: الزيارات ${dv >= 0 ? 'ارتفعت' : 'انخفضت'} بمقدار (${Math.abs(dv)})، والسجلات الموثقة ${dr >= 0 ? 'ارتفعت' : 'انخفضت'} بمقدار (${Math.abs(dr)})`); }
+  if (weakT.length) rc.push('إعداد خطة دعم فردية للمعلمات اللاتي تكررت توصياتهن ومتابعتها بزيارات متابعة موثقة');
+  if (Vs.length && !fuN) rc.push('تنفيذ زيارات متابعة للتحقق من تنفيذ التوصيات السابقة وتوثيق نتائجها');
+  if (RA.length && RAi.length < RA.length) rc.push('قياس أثر إجراءات رفع التحصيل بالمقارنة بين نتائج التقييمات قبل الإجراء وبعده');
+  if (noPr.length) rc.push('ربط إجراءات القسم بجميع أولويات المدرسة، ولا سيما: ' + noPr.map(x => x.replace(/^الأولوية \d: /, '')).join('، '));
+  if (att.length || inFile.length) rc.push('تفصيل الإجراءات المنفذة في متن التقرير بدلاً من الاكتفاء بالإحالة إلى الملفات المرفقة' + (inFile.length ? '، ولا سيما: ' + inFile.join('، ') : ''));
   let t = `أتقدم بخالص الشكر والتقدير للأستاذة ${R.coord || coordOf(dept)} ولمعلمات قسم ${dept} على الجهود المبذولة خلال ${p.name}.`;
   if (st.length) t += '\n\nنقاط التميز:\n' + st.map(x => '• ' + x + '.').join('\n');
-  if (rc.length) t += '\n\nوأوصي بـ:\n' + rc.map(x => '• ' + x + '.').join('\n');
+  if (an.length) t += '\n\nقراءة في مؤشرات الأداء:\n' + an.map(x => '• ' + x + '.').join('\n');
+  if (rc.length) t += '\n\nوأوصي بـ:\n' + [...new Set(rc)].map(x => '• ' + x + '.').join('\n');
   t += '\n\nمع خالص التمنيات بدوام التميز والعطاء.';
   return t;
 }

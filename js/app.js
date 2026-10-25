@@ -80,7 +80,8 @@ function navHTML() {
     const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
     return `<div class="grp">لوحة القيادة</div>${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}
-      <div class="grp">زياراتي</div>${it('a_visits', 'خطة زيارات المعلمات', 'cal')}
+      <div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}
+      <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       <div class="grp">الإعدادات</div>${it('a_accounts', 'حسابات المنسقات', 'user')}`;
   }
   let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a>`;
@@ -113,11 +114,11 @@ function renderApp() {
   if ($('#deptSel')) $('#deptSel').onchange = e => { S.dept = e.target.value; refresh(); };
   bindNav(); show();
 }
-function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a.dataset.v; S.edit = null; $('#side').classList.remove('open'); refresh(); }); }
+function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a.dataset.v; S.edit = null; S.vpv = null; S.fopen = null; $('#side').classList.remove('open'); refresh(); }); }
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles };
   if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
   (map[v] || map.home)(el);
 }
@@ -130,7 +131,7 @@ function C_home(el) {
   setTitle('الرئيسية');
   const p = P(); const R = buildReport(ctxFor(S.dept, p)); const K = R.K;
   const rp = repFor(S.dept, p.name);
-  const filled = SECTIONS.filter(s => S.records.some(r => r.dept === S.dept && r.item === s.k && inP(r.date, p))).length;
+  const filled = SECTIONS.filter(s => s.k !== 'SN' && S.records.some(r => r.dept === S.dept && r.item === s.k && inP(r.date, p))).length;
   const nextPD = S.pd.filter(x => x.dept.split('|').includes(S.dept) && x.date >= today()).sort((a, b) => a.date < b.date ? -1 : 1)[0];
   el.innerHTML = `
   <div class="hero"><div class="pat pattern"></div><h2>أهلاً أ. ${esc(S.user.name)}</h2><p>قسم ${esc(S.dept)} · ${esc(p.name)} (من ${dmy(p.from)} إلى ${dmy(p.to)})</p></div>
@@ -366,7 +367,7 @@ function C_stats(el) {
   const Rs = pers.map(p => buildReport(ctxFor(S.dept, p)));
   const fu = (p, k) => S.records.filter(r => r.dept === S.dept && r.item === 'V' && inP(r.date, p) && (r.d.ty || '').includes('متابعة') && r.d.st === k).length;
   const ovs = (p, k) => S.records.filter(r => r.dept === S.dept && r.item === 'OV' && inP(r.date, p) && r.d.fus === k).length;
-  const docs = p => SECTIONS.filter(s => S.records.some(r => r.dept === S.dept && r.item === s.k && inP(r.date, p))).length;
+  const docs = p => SECTIONS.filter(s => s.k !== 'SN' && S.records.some(r => r.dept === S.dept && r.item === s.k && inP(r.date, p))).length;
   const rowsK = [
     ['السجلات الموثّقة', R => R.K.records], ['البنود الموثّقة (من 15)', (R, i) => docs(pers[i])],
     ['الزيارات الصفية', R => R.K.visits], ['نسبة المعلمات المُزارات', R => fmtPct(R.K.visitedPct)], ['الالتزام بخطة التطوير', R => fmtPct(R.K.planPct)],
