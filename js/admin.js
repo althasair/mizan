@@ -1,7 +1,7 @@
 /* الميزان — لوحة النائب الأكاديمي (خاصة) */
 'use strict';
 
-const adminDepts = () => { const s = []; S.coords.forEach(c => c.dept.forEach(d => { if (!s.includes(d)) s.push(d); })); return s; };
+const adminDepts = () => { const s = []; S.coords.filter(c => c.active !== false).forEach(c => c.dept.forEach(d => { if (!s.includes(d)) s.push(d); })); return s; };
 const coordOf = d => (S.coords.find(c => c.dept.includes(d)) || {}).name || '—';
 const statusChip = rp => { const s = rp ? rp.status : 'مسودة'; const c = s === 'معتمد' ? 'ok' : s === 'موقّع من المنسقة' ? 'tf' : s === 'معاد للتعديل' ? 'bad' : ''; return `<span class="chip ${c}">${esc(s)}</span>`; };
 const nrm = s => String(s || '').replace(/[إأآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
