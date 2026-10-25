@@ -147,9 +147,9 @@ function buildReport(ctx) {
   const LR = Rp('LR');
   T.lrc = sec(LR.filter(r => d(r).k === 'تفعيل مركز مصادر التعلم'), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
   const EL = LR.filter(r => d(r).k === 'توظيف أدوات التعليم الإلكتروني');
-  const elBy = [coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e)) })).filter(x => x.tools.length);
+  const elBy = [REF.ALL_MEMBERS, coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e)) })).filter(x => x.tools.length);
   T.el_n = elBy.reduce((a, x) => a + x.tools.length, 0);
-  T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => `أ. ${x.t}: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
+  T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => (x.t === REF.ALL_MEMBERS ? 'جميع معلمات القسم' : `أ. ${x.t}`) + `: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
 
   /* الإنجازات */
   const ACH = Rp('ACH');
