@@ -3,6 +3,7 @@
 
 const dm = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return `${+dd}/${+m}`; };
 const dmy = d => { if (!d) return ''; const [y, m, dd] = d.split('-'); return `${+dd}/${+m}/${y}`; };
+const bt = d => d ? ' بتاريخ ' + dm(d) : '';
 const A = n => n === ALL() ? n : 'أ. ' + n;
 const ALL = () => REF.ALL_MEMBERS;
 const execs = (a, b, c) => {
@@ -111,7 +112,7 @@ const SECTIONS = [
       { n: 'hrs', h: 'عدد الساعات', ty: 'int' },
       { n: 'ev', h: 'تم رفع الأدلة', ty: 'sel', l: 'yesno' },
     ],
-    tx: r => `أ. ${r.t}: «${r.name}» (${r.ent || ''}${r.mode ? '، ' + r.mode : ''}، ${dm(r.date)})` },
+    tx: r => `${A(r.t)}: «${r.name}»` + ((x => x ? ` (${x})` : '')([r.ent, r.mode, dm(r.date)].filter(Boolean).join('، '))) },
 
   { k: 'MT', g: 'pd', t: 'الاجتماعات', title: 'الاجتماعات الأكاديمية',
     note: 'سجّلي اجتماعات القسم واجتماعات التوجيه والقيادة (يُصنّف داخلياً أو خارجياً تلقائياً). المحاور تُختار من القائمة أو تُكتب يدوياً. للغياب اختاري أسماء المعلمات الغائبات (حتى 3).',
@@ -119,6 +120,7 @@ const SECTIONS = [
       { n: 'date', h: 'التاريخ', ty: 'date' },
       { n: 'ty', h: 'نوع الاجتماع', ty: 'sel', l: 'mt_type', req: 1 },
       { n: 'by', h: 'المنفذ', ty: 'combo', l: 'mt_by' },
+      { n: 'cnt', h: 'عدد الاجتماعات (إن كان السجل يجمع أكثر من اجتماع)', ty: 'int', opt: 1 },
       { n: 't1', h: 'أبرز المحاور (1)', ty: 'combo', l: 'mt_topic' },
       { n: 't2', h: 'أبرز المحاور (2)', ty: 'combo', l: 'mt_topic' },
       { n: 'place', h: 'المكان', ty: 'combo', l: 'mt_place' },
@@ -127,7 +129,7 @@ const SECTIONS = [
       { n: 'a3', h: 'غياب (3)', ty: 'teacherC', opt: 1 },
     ],
     io: r => { const i = REF.L.mt_type.indexOf(r.ty); return i >= 0 ? REF.L.mt_io[i] : 'داخلي'; },
-    tx: r => `${r.ty} بتاريخ ${dm(r.date)}` + (r.by ? ` (المنفذ: ${r.by})` : '')
+    tx: r => `${r.ty}` + (+r.cnt > 1 ? ` (${+r.cnt === 2 ? 'اجتماعان' : +r.cnt <= 10 ? r.cnt + ' اجتماعات' : r.cnt + ' اجتماعاً'})` : '') + bt(r.date) + (r.by ? ` (المنفذ: ${r.by})` : '')
       + ((r.t1 || r.t2) ? '، وناقش: ' + [r.t1, r.t2].filter(Boolean).join('، و') : '')
       + ([r.a1, r.a2, r.a3].some(Boolean) ? '، وغياب: أ. ' + [r.a1, r.a2, r.a3].filter(Boolean).join('، أ. ') : '') },
 
@@ -171,7 +173,7 @@ const SECTIONS = [
       { n: 'note', h: 'ملاحظات', ty: 'text' },
     ],
     cat: r => (r.ty || '').includes('الموجه') ? 'sup' : (r.ty || '').includes('نائب') ? 'vp' : 'pr',
-    tx: r => `الأستاذة ${r.t}` + (r.s ? ` (${r.s})` : '') + ` بتاريخ ${dm(r.date)}` + (r.goal ? '، محور الزيارة: ' + r.goal : '')
+    tx: r => `الأستاذة ${r.t}` + (r.s ? ` (${r.s})` : '') + bt(r.date) + (r.goal ? '، محور الزيارة: ' + r.goal : '')
       + ((r.f1 || r.f2) ? '، وأبرز نقاط القوة: ' + [r.f1, r.f2].filter(Boolean).map(coreOf).join('، و') : '')
       + ((r.i1 || r.i2) ? '، وتحتاج إلى تحسين: ' + [r.i1, r.i2].filter(Boolean).join('، و') : '')
       + (r.mech ? '؛ وتابعت المنسقة التوصيات من خلال: ' + r.mech + (r.fud ? ' بتاريخ ' + dm(r.fud) : '') + (r.fus ? '، والنتيجة: ' + r.fus : '') : '') },
@@ -188,7 +190,7 @@ const SECTIONS = [
       { n: 'how', h: 'كيف ستطبّق ما استفادته', ty: 'combo', l: 'pv_apply' },
       { n: 'yes', h: 'هل لبّت الزيارة احتياجها؟', ty: 'sel', l: 'yesno' },
     ],
-    tx: r => `أ. ${r.v} زارت أ. ${r.t} بتاريخ ${dm(r.date)}` + (r.s ? ' في الصف ' + r.s : '') + (r.why ? '، وسبب التوجيه: ' + r.why : '')
+    tx: r => (r.v === ALL() ? 'زارت معلمات القسم ' : `أ. ${r.v} زارت `) + (/^زميلات/.test(r.t) ? r.t : 'أ. ' + r.t) + bt(r.date) + (r.s ? ' في الصف ' + r.s : '') + (r.why ? '، وسبب التوجيه: ' + r.why : '')
       + (r.got ? '؛ واستفادت: ' + r.got : '') + (r.how ? '؛ وستطبّق ذلك من خلال: ' + r.how : '')
       + (r.yes === 'نعم' ? ' (لبّت الزيارة احتياجها)' : r.yes === 'لا' ? ' (لم تلبِّ الزيارة احتياجها بعد)' : '') },
 
@@ -227,7 +229,7 @@ const SECTIONS = [
       if (!ps.length) { const t = REF.AC_TYPES.find(x => x.t === r.ty); return (t ? t.p : 3) === p; }
       return ps.includes(REF.PRIO[p - 1]) || ps.includes('جميع الأولويات');
     },
-    tx: r => `«${r.name}» (${r.ty}) بتاريخ ${dm(r.date)}` + ([r.e1, r.e2, r.e3].some(Boolean) ? '، تنفيذ: ' + execs(r.e1, r.e2, r.e3) : '')
+    tx: r => `«${r.name}» (${r.ty})` + bt(r.date) + ([r.e1, r.e2, r.e3].some(Boolean) ? '، تنفيذ: ' + execs(r.e1, r.e2, r.e3) : '')
       + (+r.times > 1 ? `، وتم تفعيله (${r.times}) مرات` : '') + (r.tg ? '، واستهدف ' + r.tg : '') + (r.pos ? '، ومن إيجابياته: ' + r.pos : '') + (r.imp ? '، وأثره: ' + r.imp : '') },
 
   { k: 'PA', g: 'part', t: 'أولياء الأمور', title: 'الشراكة مع أولياء الأمور',
@@ -247,7 +249,7 @@ const SECTIONS = [
     ind: r => r.c === REF.BARCODE,
     tx: r => r.c === REF.BARCODE
       ? `متابعة الطالبة ${r.stu || ''}` + (r.s ? ` (${r.s})` : '') + (r.why ? ' بخصوص: ' + r.why : '') + (r.act ? '، وتم: ' + r.act : '') + (r.res ? ` (${r.res})` : '')
-      : r.c + (r.why ? ` «${r.why}»` : '') + ` بتاريخ ${dm(r.date)}` + (r.by ? '، تنفيذ: ' + A(r.by) : '') + (+r.n > 0 ? `، واستفاد منه (${r.n})` : '') + (r.act ? '، ' + r.act : '') + (r.res ? '، والأثر: ' + r.res : '') },
+      : r.c + (r.why ? ` «${r.why}»` : '') + bt(r.date) + (r.by ? '، تنفيذ: ' + A(r.by) : '') + (+r.n > 0 ? `، واستفاد منه (${r.n})` : '') + (r.act ? '، ' + r.act : '') + (r.res ? '، والأثر: ' + r.res : '') },
 
   { k: 'LR', g: 'part', t: 'المصادر والتقنية', title: 'تفعيل مركز مصادر التعلم والتعليم الإلكتروني',
     note: 'اختاري البند أولاً (مركز مصادر التعلم أو أدوات التعليم الإلكتروني) فتظهر قائمة الأدوات المناسبة له. تُجمع الأدوات لكل معلمة دون تكرار في التقرير.',
@@ -259,7 +261,7 @@ const SECTIONS = [
       { n: 's', h: 'الصف', ty: 'sel', l: 'sections' },
       { n: 'imp', h: 'الأثر', ty: 'combo', l: 'lr_impact' },
     ],
-    tx: r => `أ. ${r.t}` + (r.s ? ` (${r.s})` : '') + `: ${r.e} بتاريخ ${dm(r.date)}` + (r.imp ? ' — ' + r.imp : '') },
+    tx: r => `أ. ${r.t}` + (r.s ? ` (${r.s})` : '') + `: ${r.e}` + bt(r.date) + (r.imp ? ' — ' + r.imp : '') },
 
   { k: 'ACH', g: 'part', t: 'الإنجازات والمشاركات', title: 'الإنجازات والمشاركات',
     note: '«الإنجاز» حصول طالبات القسم أو معلماته على مركز أو جائزة في مسابقة أو فعالية. «المشاركة» حضور مسابقة أو برنامج أو فعالية خارجية دون فوز.',
@@ -279,7 +281,7 @@ const SECTIONS = [
     ],
     kind: r => (r.c || '').startsWith('إنجاز') ? 1 : 2,
     tx: r => {
-      const base = `«${r.name}» (${r.field || ''}${r.org ? '، ' + r.org : ''}${r.lvl ? '، ' + r.lvl : ''})` + (+r.n > 0 ? ` بمشاركة ${r.n} طالبات` : r.who ? ' بمشاركة ' + r.who : '')
+      const meta = [r.field, r.org, r.lvl].filter(Boolean).join('، '); const base = `«${r.name}»` + (meta ? ` (${meta})` : '') + (+r.n > 0 ? ` بمشاركة ${r.n} طالبات` : r.who ? ' بمشاركة ' + r.who : '')
         + (r.sup ? ' بإشراف ' + A(r.sup) : '') + (r.imp ? '، وأثرها: ' + r.imp : '');
       return (r.c || '').startsWith('إنجاز') ? (r.res ? 'تحقيق ' + r.res + ' في ' : 'الفوز في ') + base : 'المشاركة في ' + base;
     } },

@@ -17,7 +17,8 @@ function buildReport(ctx) {
   const { dept, P } = ctx;
   const R = k => ctx.recs.filter(r => r.dept === dept && r.item === k);
   const Rp = k => R(k).filter(r => inP(r.date, P));
-  const d = r => (r.d.date ? r.d : Object.assign({}, r.d, { date: r.date }));
+  const d = r => (r.d.nd ? Object.assign({}, r.d, { date: '' }) : r.d.date ? r.d : Object.assign({}, r.d, { date: r.date }));
+  const nMT = L => L.reduce((a, r) => a + (+r.d.cnt > 1 ? +r.d.cnt : 1), 0);
   const members = ctx.staff.filter(s => s.dept === dept);
   const coord = (members.find(s => s.role === 'منسقة') || {}).name || ctx.coordName || '';
   const teachers = members.filter(s => s.role !== 'منسقة').map(s => s.name);
@@ -62,15 +63,15 @@ function buildReport(ctx) {
       + (att != null ? `وبلغت نسبة حضور المعلمات للبرامج المنفذة ${Math.round(att * 100)}%.` : '');
 
   /* التطوير الخارجي */
-  const EX = Rp('EX'); const exK = uniq(EX.map(r => d(r).t)).filter(t => teachers.includes(t)).length;
+  const EX = Rp('EX'); const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NT : uniq(EX.map(r => d(r).t)).filter(t => teachers.includes(t)).length;
   T.ex_n = EX.length; T.ex_k = exK;
   T.pd_ext = !EX.length ? 'لم تُسجَّل مشاركات في برامج تطوير مهني خارجية خلال الفترة.'
     : (NT ? `شاركت ${exK} من أصل ${NT} من معلمات القسم في برامج تطوير مهني خارجية بنسبة ${pct(exK, NT)}، ` : '') + `بإجمالي (${EX.length}) برنامجاً: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
 
   /* الاجتماعات */
   const MT = Rp('MT'); const MTi = MT.filter(r => SEC.MT.io(d(r)) === 'داخلي'), MTe = MT.filter(r => SEC.MT.io(d(r)) === 'خارجي');
-  T.mt_int = MTi.length ? `عقد القسم (${MTi.length}) من الاجتماعات الداخلية: ` + MTi.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات داخلية خلال الفترة.';
-  T.mt_ext = MTe.length ? `شارك القسم في (${MTe.length}) من الاجتماعات الخارجية: ` + MTe.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات خارجية خلال الفترة.';
+  T.mt_int = MTi.length ? `عقد القسم (${nMT(MTi)}) من الاجتماعات الداخلية: ` + MTi.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات داخلية خلال الفترة.';
+  T.mt_ext = MTe.length ? `شارك القسم في (${nMT(MTe)}) من الاجتماعات الخارجية: ` + MTe.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات خارجية خلال الفترة.';
 
   /* زيارات القيادة */
   const OV = Rp('OV');
@@ -79,7 +80,7 @@ function buildReport(ctx) {
     T[k] = L.length ? `${lab} (${L.length}) من معلمات القسم: ` + L.map(r => SEC.OV.tx(d(r))).join('؛ ') + '.' : 'لا توجد زيارات مسجلة خلال الفترة.';
   });
   const PV = Rp('PV'); const pvMet = PV.filter(r => d(r).yes === 'نعم').length;
-  T.ov_peer = PV.length ? `نفّذت معلمات القسم (${PV.length}) من الزيارات التبادلية، لبّى (${pvMet}) منها احتياج المعلمة: ` + PV.map(r => SEC.PV.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل زيارات تبادلية خلال الفترة.';
+  T.ov_peer = PV.length ? `نفّذت معلمات القسم (${PV.length}) من الزيارات التبادلية` + (PV.some(r => d(r).yes) ? `، لبّى (${pvMet}) منها احتياج المعلمة` : '') + ': ' + PV.map(r => SEC.PV.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل زيارات تبادلية خلال الفترة.';
 
   /* الحضور الصفي للمنسقة */
   const V = Rp('V').map(r => ({ ...d(r), date: r.date }));
@@ -206,7 +207,7 @@ function buildReport(ctx) {
   const K = {
     visits: vN, visitedPct: NT ? vK / NT : 0, perTeacher: NT ? vN / NT : 0,
     planPct: planN ? planDone / planN : null, att: att, extPct: NT ? exK / NT : 0,
-    meetings: MT.length, activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
+    meetings: nMT(MT), activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
     peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && inP(r.date || SEC.WS.when(r.d), P)).length,
     commonRecs: T.common.length, cpActions: CP.length,
   };
