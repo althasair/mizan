@@ -36,8 +36,10 @@ function buildReport(ctx) {
   T.pl_sem = sec(PL.filter(r => d(r).c === 'الخطة الفصلية'), r => SEC.PL.tx(d(r)), 'لم تُسجَّل متابعة الخطط الفصلية خلال الفترة.', 'تمت متابعة تغطية المعايير وفق الخطط الفصلية: ');
 
   /* التقييمات */
-  const AS = Rp('AS'); const ASs = AS.filter(r => SEC.AS.cat(d(r)) === 'قصير'), ASa = AS.filter(r => SEC.AS.cat(d(r)) === 'تحصيلي');
-  T.as_short = sec(ASs, r => SEC.AS.tx(d(r)), 'لم تُسجَّل تقييمات قصيرة خلال الفترة.', `نفّذ القسم (${ASs.length}) من التقييمات القصيرة والتطبيقات: `);
+  const AS = Rp('AS'); const prevYr = r => /^نتائج/.test(d(r).lvl || '');
+  const ASs = AS.filter(r => SEC.AS.cat(d(r)) === 'قصير'), ASa = AS.filter(r => SEC.AS.cat(d(r)) === 'تحصيلي' && !prevYr(r));
+  const nAS = ASs.reduce((a, r) => a + (+d(r).n > 0 ? +d(r).n : 1), 0);
+  T.as_short = sec(ASs, r => SEC.AS.tx(d(r)), 'لم تُسجَّل تقييمات قصيرة خلال الفترة.', `نفّذ القسم (${nAS}) من التقييمات القصيرة والتطبيقات: `);
   T.as_ach = sec(ASa, r => SEC.AS.tx(d(r)), 'لم تُسجَّل اختبارات تحصيلية خلال الفترة.', 'الاختبارات التحصيلية: ');
   const ASn = AS.filter(r => SEC.AS.an(d(r)));
   T.as_anal = sec(ASn, r => SEC.AS.an(d(r)), 'لم يُسجَّل تحليل للنتائج خلال الفترة.', 'تمت قراءة النتائج وتحليلها: ');
@@ -60,13 +62,15 @@ function buildReport(ctx) {
     : (planN ? `نفّذ القسم (${planDone}) من أصل (${planN}) من البرامج المقررة في خطة التطوير المهني خلال الفترة بنسبة ${pct(planDone, planN)}. ` : '')
       + (done.length ? 'قام القسم بتنفيذ: ' + done.map(o => SEC.WS.tx(o.x)).join('؛ ') + '. ' : '')
       + (post.length ? 'كما تم ' + post.map(o => SEC.WS.tx(o.x)).join('؛ ') + '. ' : '')
-      + (att != null ? `وبلغت نسبة حضور المعلمات للبرامج المنفذة ${Math.round(att * 100)}%.` : '');
+      + (att != null ? `وبلغت نسبة حضور المعلمات للبرامج المسجَّل فيها عدد الحاضرات ${Math.round(att * 100)}%.` : '');
 
   /* التطوير الخارجي */
-  const EX = Rp('EX'); const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NT : uniq(EX.map(r => d(r).t)).filter(t => teachers.includes(t)).length;
-  T.ex_n = EX.length; T.ex_k = exK;
+  const EX = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
+  const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NM : uniq(EX.map(r => d(r).t)).filter(t => allM.includes(t)).length;
+  const exP = uniq(EX.map(r => d(r).name)).length;
+  T.ex_n = exP; T.ex_k = exK;
   T.pd_ext = !EX.length ? 'لم تُسجَّل مشاركات في برامج تطوير مهني خارجية خلال الفترة.'
-    : (NT ? `شاركت ${exK} من أصل ${NT} من معلمات القسم في برامج تطوير مهني خارجية بنسبة ${pct(exK, NT)}، ` : '') + `بإجمالي (${EX.length}) برنامجاً: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
+    : (NM ? `شاركت ${exK} من أصل ${NM} من أعضاء القسم في برامج تطوير مهني خارجية بنسبة ${pct(exK, NM)}، ` : '') + `بإجمالي (${exP}) ${exP === 1 ? 'برنامج' : 'برامج'}: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
 
   /* الاجتماعات */
   const MT = Rp('MT'); const MTi = MT.filter(r => SEC.MT.io(d(r)) === 'داخلي'), MTe = MT.filter(r => SEC.MT.io(d(r)) === 'خارجي');
@@ -96,8 +100,8 @@ function buildReport(ctx) {
     const Tt = timesWord(c) + ' ' + Q + mm.map(x => x.name).join(' و') + (mm.length === 1 ? ` (${mm[0].dates})` : '، بمعدل ' + mm.map(x => (x.n === 1 ? 'مرة' : x.n === 2 ? 'مرتين' : x.n + ' مرات') + ` في ${x.name} (${x.dates})`).join(' و'));
     const U = REF.SECTIONS.filter(s => vs.some(v => v.s === s)).join('، ');
     const AG = uniq(vs.map(v => v.subj).filter(Boolean)).sort((a, b) => subjAll.indexOf(a) - subjAll.indexOf(b)).join(' و');
-    const Vs = REF.CRIT.filter(cr => vs.some(v => v.f1 === cr.label || v.f2 === cr.label)).map(cr => cr.core).join('، و');
-    const W = REF.REC.filter(rc => vs.some(v => !isFU(v) && [v.r1, v.r2, v.r3].includes(rc))).join('، و');
+    const Vs = uniq(vs.flatMap(v => [v.f1, v.f2]).filter(Boolean).map(coreOf)).join('، و');
+    const W = uniq(vs.filter(v => !isFU(v)).flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)).join('، و');
     const X = REF.REC.map((rc, i) => {
       const f = vs.filter(v => isFU(v) && [v.r1, v.r2, v.r3].includes(rc));
       if (!f.length) return '';
@@ -112,14 +116,15 @@ function buildReport(ctx) {
       + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (Y ? ' ' + Y : '');
     return { t, c, kul: vs.filter(v => v.kj === 'كلية').length, juz: vs.filter(v => v.kj === 'جزئية').length, fu: vs.filter(isFU).length, z };
   });
+  const kjTxt = per => { const k = per.reduce((a, p) => a + p.kul, 0), j = per.reduce((a, p) => a + p.juz, 0), f = per.reduce((a, p) => a + p.fu, 0); const parts = []; if (k || j) parts.push(`كلية: ${k}، جزئية: ${j}`); if (f) parts.push(`منها ${f} من زيارات المتابعة`); return parts.length ? ' (' + parts.join('، ') + ')' : ''; };
   const vN = per.reduce((a, p) => a + p.c, 0), vK = per.filter(p => p.c).length, vMax = Math.max(0, ...per.map(p => p.c));
   T.v_n = vN; T.v_k = vK; T.nteach = NT;
   T.v_sum = !vN ? 'لم تُسجَّل زيارات صفية للمنسقة خلال الفترة.'
-    : `نفّذت المنسقة زيارات صفية بلغ عددها (${vN}) زيارة خلال الفترة، شملت ${vK} من أصل ${NT} معلمات بنسبة ${pct(vK, NT)} (كلية: ${per.reduce((a, p) => a + p.kul, 0)}، جزئية: ${per.reduce((a, p) => a + p.juz, 0)}، منها ${per.reduce((a, p) => a + p.fu, 0)} زيارات متابعة)، وكانت أكثر المعلمات زيارةً: أ. ${per.filter(p => p.c === vMax).map(p => p.t).join('، ')} (${vMax}).`
+    : `نفّذت المنسقة زيارات صفية بلغ عددها (${vN}) زيارة خلال الفترة، شملت ${vK} من أصل ${NT} معلمات بنسبة ${pct(vK, NT)}${kjTxt(per)}، وكانت أكثر المعلمات زيارةً: أ. ${per.filter(p => p.c === vMax).map(p => p.t).join('، ')} (${vMax}).`
       + (per.some(p => !p.c) ? ' ولم تتم زيارة: ' + per.filter(p => !p.c).map(p => p.t).join('، ') + '.' : '');
   T.v_ch = per.map(p => p.z);
   // التوصيات المشتركة (تكررت لدى معلمتين فأكثر)
-  const recStats = REF.REC.map((rc, i) => {
+  const recStats = uniq([...REF.REC, ...V.flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)]).map((rc, i) => {
     const l = V.filter(v => !isFU(v) && [v.r1, v.r2, v.r3].includes(rc));
     return { rc, i, n: l.length, k: uniq(l.map(v => v.t)).length };
   });
@@ -186,6 +191,11 @@ function buildReport(ctx) {
     return { txt: parts.length ? 'تحققت من خلال: ' + parts.join('، ') + '.' : 'لم تُسجَّل إجراءات مرتبطة بهذه الأولوية خلال الفترة.', n };
   });
 
+  /* ملاحظات المنسقة على البنود */
+  const isEmpty = x => typeof x === 'string' && /^(لم |لا توجد)/.test(x);
+  Rp('SN').forEach(r => { const key = REF.SN_KEYS[d(r).k]; if (!key || T[key] == null) return; const t = String(d(r).t || '').trim().replace(/[.。]?$/, '.');
+    T[key] = isEmpty(T[key]) ? t : T[key] + ' ' + t; });
+
   /* هيكل التقرير الرسمي */
   const rows = [
     ['التخطيط', [['الخطة السنوية للقسم', [T.pl_annual]], ['متابعة الخطط الفصلية', [T.pl_sem]]]],
@@ -206,7 +216,7 @@ function buildReport(ctx) {
   /* مؤشرات */
   const K = {
     visits: vN, visitedPct: NT ? vK / NT : 0, perTeacher: NT ? vN / NT : 0,
-    planPct: planN ? planDone / planN : null, att: att, extPct: NT ? exK / NT : 0,
+    planPct: planN ? planDone / planN : null, att: att, extPct: NM ? exK / NM : 0,
     meetings: nMT(MT), activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
     peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && inP(r.date || SEC.WS.when(r.d), P)).length,
     commonRecs: T.common.length, cpActions: CP.length,
