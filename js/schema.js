@@ -11,6 +11,7 @@ const execs = (a, b, c) => {
   if (v.includes(ALL())) return ALL();
   return v.length ? 'أ. ' + v.join('، أ. ') : '';
 };
+const paInd = r => r.c === REF.BARCODE || (!!r.stu && !/جميع/.test(String(r.n || '')) && !['مبادرة لأولياء الأمور', 'درس مشاهدة لأولياء الأمور', 'ورشة أو محاضرة لأولياء الأمور'].includes(r.c));
 const coreOf = lbl => { const c = REF.CRIT.find(x => x.label === lbl); return c ? c.core : lbl; };
 
 /* أنواع الحقول:
@@ -51,7 +52,7 @@ const SECTIONS = [
       { n: 'note', h: 'ملاحظات', ty: 'text' },
     ],
     cat: r => { const i = REF.L.as_type.indexOf(r.ty); return i >= 0 ? REF.L.as_cat[i] : 'قصير'; },
-    tx: r => r.ty + ((+r.n > 1) ? ` (${r.n})` : '') + ' — ' + r.lvl + (r.corr ? '، ' + r.corr : ''),
+    tx: r => r.ty + ((+r.n > 1) ? ` (${r.n})` : '') + ' — ' + r.lvl + (r.corr ? '، ' + r.corr : '') + (r.note ? ` (${r.note})` : ''),
     an: r => (!r.an || r.an === 'لا ينطبق') ? '' : `${r.ty} (${r.lvl}): ${r.an}` + (r.pass !== '' && r.pass != null ? `، ونسبة النجاح ${r.pass}%` : '') },
 
   { k: 'RA', g: 'plan', t: 'رفع التحصيل', title: 'التحصيل الأكاديمي: إجراءات رفع التحصيل',
@@ -86,13 +87,13 @@ const SECTIONS = [
       { n: 'o', h: 'الأثر الملاحظ', ty: 'combo', l: 'ws_impact', show: r => (r.g || '').startsWith('تمت') },
     ],
     // تاريخ الاحتساب في الفترة
-    when: r => (r.g || '').startsWith('تمت') ? (r.h || r.planned) : (r.planned || r.h),
+    when: r => (r.g || '').startsWith('تمت') ? (r.h || r.planned || r.date) : (r.planned || r.h || r.date),
     title_: r => (r.b === REF.OUT_OF_PLAN || !r.b) ? r.c : r.b,
     tx: r => {
-      const title = (r.b === REF.OUT_OF_PLAN || !r.b) ? r.c : r.b, typ = r.type || 'برنامج';
+      const title = (r.b === REF.OUT_OF_PLAN || !r.b) ? r.c : (r.c && r.c !== r.b ? `${r.c}» ضمن برنامج «${r.b}` : r.b), typ = r.type || 'برنامج';
       if ((r.g || '').startsWith('تمت')) {
         const pct = (+r.j > 0 && r.k !== '' && r.k != null) ? Math.round(100 * r.k / r.j) + '%' : '';
-        return `${typ} «${title}» بتاريخ ${dmy(r.h || r.planned)}` + (r.pres ? ' بتقديم: ' + r.pres : '')
+        return `${typ} «${title}»` + ((r.h || r.planned) ? ` بتاريخ ${dmy(r.h || r.planned)}` : '') + (r.pres ? ' بتقديم: ' + r.pres : '')
           + (r.k !== '' && r.k != null && +r.j > 0 ? `، وحضرتها ${r.k} من أصل ${r.j} معلمات بنسبة ${pct}` : '')
           + (r.g === 'تمت بعد التأجيل' ? ' (نُفذت بعد تأجيلها من موعدها المقرر' + (r.planned ? ' ' + dm(r.planned) : '') + (r.i ? ' بسبب ' + r.i : '') + ')' : '')
           + (r.m ? '، ومن إيجابياتها: ' + r.m : '') + (r.nn && r.nn !== 'لا توجد تحديات' ? '، ومن التحديات: ' + r.nn : '') + (r.o ? '، وأثرها: ' + r.o : '');
@@ -112,7 +113,7 @@ const SECTIONS = [
       { n: 'hrs', h: 'عدد الساعات', ty: 'int' },
       { n: 'ev', h: 'تم رفع الأدلة', ty: 'sel', l: 'yesno' },
     ],
-    tx: r => `${A(r.t)}: «${r.name}»` + ((x => x ? ` (${x})` : '')([r.ent, r.mode, dm(r.date)].filter(Boolean).join('، '))) },
+    tx: r => `${A(r.t)}: «${r.name}»` + ((x => x ? ` (${x})` : '')([r.ent, r.mode, +r.hrs > 0 ? (+r.hrs === 1 ? 'ساعة واحدة' : +r.hrs === 2 ? 'ساعتان' : r.hrs + ' ساعات') : '', dm(r.date)].filter(Boolean).join('، '))) },
 
   { k: 'MT', g: 'pd', t: 'الاجتماعات', title: 'الاجتماعات الأكاديمية',
     note: 'سجّلي اجتماعات القسم واجتماعات التوجيه والقيادة (يُصنّف داخلياً أو خارجياً تلقائياً). المحاور تُختار من القائمة أو تُكتب يدوياً. للغياب اختاري أسماء المعلمات الغائبات (حتى 3).',
@@ -246,9 +247,9 @@ const SECTIONS = [
       { n: 'n', h: 'عدد المستفيدين', ty: 'int', show: r => r.c !== REF.BARCODE },
       { n: 'res', h: 'النتيجة / الأثر', ty: 'combo', l: 'pa_result' },
     ],
-    ind: r => r.c === REF.BARCODE,
-    tx: r => r.c === REF.BARCODE
-      ? `متابعة الطالبة ${r.stu || ''}` + (r.s ? ` (${r.s})` : '') + (r.why ? ' بخصوص: ' + r.why : '') + (r.act ? '، وتم: ' + r.act : '') + (r.res ? ` (${r.res})` : '')
+    ind: r => paInd(r),
+    tx: r => paInd(r)
+      ? `متابعة الطالبة ${r.stu || ''}` + (r.s ? ` (${r.s})` : '') + (r.by ? ` من قِبل أ. ${r.by}` : '') + (r.why ? ' بخصوص: ' + r.why : '') + (r.act ? '، وتم: ' + r.act : '') + (r.res ? ` (${r.res})` : '')
       : r.c + (r.why ? ` «${r.why}»` : '') + bt(r.date) + (r.by ? '، تنفيذ: ' + A(r.by) : '') + (+r.n > 0 ? `، واستفاد منه (${r.n})` : '') + (r.act ? '، ' + r.act : '') + (r.res ? '، والأثر: ' + r.res : '') },
 
   { k: 'LR', g: 'part', t: 'المصادر والتقنية', title: 'تفعيل مركز مصادر التعلم والتعليم الإلكتروني',
