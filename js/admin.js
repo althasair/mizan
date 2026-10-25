@@ -88,17 +88,66 @@ function A_reports(el) {
 function adminRepButtons(rp) {
   return `<button class="btn sec" id="fbBtn">التغذية الراجعة</button>${rp && rp.status === 'موقّع من المنسقة' ? '<button class="btn tf" id="apBtn">اعتماد بتوقيعي</button><button class="btn sec" id="rtBtn">إعادة للتعديل</button>' : ''}`;
 }
+/* ------------------------------------------------------------------ التغذية الراجعة التلقائية (مسودة تراجعها النائب) */
+function autoFeedback(dept, p) {
+  const R = buildReport(ctxFor(dept, p)), K = R.K, T = R.T;
+  const docs = SECTIONS.filter(s => S.records.some(r => r.dept === dept && r.item === s.k && inP(r.date, p)));
+  const missing = SECTIONS.filter(s => !docs.includes(s)).map(s => s.t);
+  const notVisited = (T.perTeacher || []).filter(x => !x.c).map(x => 'أ. ' + x.t);
+  const fuNot = S.records.filter(r => r.dept === dept && r.item === 'V' && inP(r.date, p) && (r.d.ty || '').includes('متابعة') && r.d.st === 'لم تُنفذ بعد').length;
+  const ovNot = S.records.filter(r => r.dept === dept && r.item === 'OV' && inP(r.date, p) && r.d.fus && r.d.fus !== 'تم تنفيذ التوصيات').length;
+  const has = k => S.records.some(r => r.dept === dept && r.item === k && inP(r.date, p));
+  const asAnal = S.records.some(r => r.dept === dept && r.item === 'AS' && inP(r.date, p) && SEC.AS.an(r.d));
+  const st = [], rc = [];
+  // نقاط التميز
+  if (K.visits && K.visitedPct >= 0.8) st.push(`شمول الزيارات الصفية ${fmtPct(K.visitedPct)} من معلمات القسم بإجمالي (${K.visits}) زيارة`);
+  if (K.planPct === 1) st.push('الالتزام التام بتنفيذ ورش خطة التطوير المهني في مواعيدها');
+  else if (K.planPct >= 0.75) st.push(`تنفيذ ${fmtPct(K.planPct)} من ورش خطة التطوير المهني المقررة`);
+  if (K.att != null && K.att >= 0.85) st.push(`ارتفاع نسبة حضور المعلمات للورش الداخلية (${fmtPct(K.att)})`);
+  if (K.extPct >= 0.5) st.push(`مشاركة ${fmtPct(K.extPct)} من المعلمات في برامج التطوير المهني الخارجية`);
+  if (K.commonRecs && K.cpActions) st.push('اتخاذ إجراءات عملية لمعالجة التوصيات المشتركة بين المعلمات');
+  if (K.activities >= 3) st.push(`تنوع الأنشطة والمبادرات المنفذة (${K.activities})`);
+  if (K.achievements) st.push(`تحقيق (${K.achievements}) من الإنجازات والمراكز`);
+  if (K.peer && K.peerMet) st.push('تفعيل الزيارات التبادلية بما يلبي احتياجات المعلمات');
+  if (K.parents >= 5) st.push('تفعيل الشراكة مع أولياء الأمور وتوثيق التواصل معهم');
+  if (K.elearn >= 3) st.push('توظيف أدوات التعليم الإلكتروني وتنويعها');
+  if (asAnal && has('RA')) st.push('تحليل نتائج التقييمات وربطها بإجراءات رفع التحصيل');
+  if (docs.length >= 12) st.push(`استكمال توثيق (${docs.length}) من بنود التقرير الخمسة عشر`);
+  // التوصيات
+  if (!K.visits) rc.push('تنفيذ الزيارات الصفية لمعلمات القسم وتوثيقها');
+  else if (notVisited.length) rc.push('استكمال الزيارات الصفية للمعلمات اللاتي لم تتم زيارتهن: ' + notVisited.join('، '));
+  if (fuNot) rc.push(`متابعة تنفيذ التوصيات التي لم تُنفذ بعد في زيارات المتابعة (${fuNot})`);
+  if (K.commonRecs && !K.cpActions) rc.push('اتخاذ إجراءات لمعالجة التوصيات المشتركة: ' + T.common.join('؛ '));
+  if (ovNot) rc.push('متابعة تنفيذ توصيات زيارات القيادة والتوجيه التربوي');
+  if (K.planPct != null && K.planPct < 1) rc.push('متابعة تنفيذ ورش خطة التطوير المهني المتبقية وتوثيق حالتها');
+  if (!has('PL')) rc.push('توثيق متابعة الخطط الفصلية وتغطية المنهج');
+  if (!asAnal) rc.push('تحليل نتائج التقييمات وقراءتها وتوثيقها');
+  if (!has('RA')) rc.push('توثيق إجراءات رفع التحصيل وربطها بأولويات المدرسة');
+  if (!K.meetings) rc.push('عقد اجتماعات القسم الدورية وتوثيق محاورها');
+  if (!K.peer) rc.push('تفعيل الزيارات التبادلية بين المعلمات وربطها باحتياجاتهن');
+  if (!K.parents) rc.push('تفعيل الشراكة مع أولياء الأمور وتوثيق التواصل الفردي');
+  if (!K.elearn) rc.push('توثيق توظيف أدوات التعليم الإلكتروني');
+  if (missing.length > 3) rc.push('استكمال توثيق بنود التقرير: ' + missing.join('، '));
+  let t = `أتقدم بخالص الشكر والتقدير للأستاذة ${R.coord || coordOf(dept)} ولمعلمات قسم ${dept} على الجهود المبذولة خلال ${p.name}.`;
+  if (st.length) t += '\n\nنقاط التميز:\n' + st.map(x => '• ' + x + '.').join('\n');
+  if (rc.length) t += '\n\nوأوصي بـ:\n' + rc.map(x => '• ' + x + '.').join('\n');
+  t += '\n\nمع خالص التمنيات بدوام التميز والعطاء.';
+  return t;
+}
+
 function bindAdminRep(rp, dept, p) {
-  const fbBox = (v) => `<textarea id="fbt" style="width:100%;min-height:110px;border:1px solid var(--line);border-radius:12px;padding:8px;margin-bottom:10px">${esc(v || '')}</textarea>`;
+  const fbBox = (v) => `<div class="row" style="margin-bottom:6px"><span style="font-size:12.5px;color:var(--muted)">${v ? 'التغذية الراجعة المحفوظة' : 'مسودة مكتوبة تلقائياً من أداء القسم — راجعيها وأضيفي ملاحظاتك'}</span><span class="sp"></span><button class="btn sm sec" type="button" id="fbAuto">إعادة التوليد التلقائي</button></div>
+    <textarea id="fbt" style="width:100%;min-height:260px;border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;line-height:1.8">${esc(v || autoFeedback(dept, p))}</textarea>`;
+  const bindAuto = m => { $('#fbAuto', m).onclick = () => { if (!$('#fbt', m).value.trim() || confirm('سيُستبدل النص الحالي بمسودة جديدة من الأداء. متابعة؟')) $('#fbt', m).value = autoFeedback(dept, p); }; };
   if ($('#fbBtn')) $('#fbBtn').onclick = () => {
     const m = document.createElement('div'); m.className = 'modal';
-    m.innerHTML = `<div class="box"><h3>التغذية الراجعة — ${esc(dept)}</h3>${fbBox(rp && rp.feedback)}<div class="row"><button class="btn" id="fs">حفظ</button><button class="btn sec" id="fc">إلغاء</button></div></div>`;
-    document.body.appendChild(m); $('#fc', m).onclick = () => m.remove();
+    m.innerHTML = `<div class="box" style="max-width:640px"><h3>التغذية الراجعة — ${esc(dept)} · ${esc(p.name)}</h3>${fbBox(rp && rp.feedback)}<div class="row"><button class="btn" id="fs">حفظ وإظهارها للمنسقة</button><button class="btn sec" id="fc">إلغاء</button></div></div>`;
+    document.body.appendChild(m); bindAuto(m); $('#fc', m).onclick = () => m.remove();
     $('#fs', m).onclick = async () => { const j = await call('feedback', { dept, period: p.name, from: p.from, to: p.to, feedback: $('#fbt', m).value }); upsertRep(j.report); m.remove(); toast('تم الحفظ'); show(); };
   };
   if ($('#apBtn')) $('#apBtn').onclick = () => pinModal('اعتماد التقرير', 'يُضاف توقيعك على التقرير ويظهر للمنسقة. يمكنكِ كتابة التغذية الراجعة أولاً:', async (pin, m) => {
     const j = await call('approve', { dept, period: p.name, pin, feedback: $('#fbt', m).value }); upsertRep(j.report); toast('تم الاعتماد ✓'); show();
-  }, fbBox(rp && rp.feedback));
+  }, fbBox(rp && rp.feedback)) || (() => { const m = $$('.modal').pop(); $('.box', m).style.maxWidth = '640px'; bindAuto(m); })();
   if ($('#rtBtn')) $('#rtBtn').onclick = async () => { const fb = prompt('سبب الإعادة / الملاحظات للمنسقة:', rp.feedback || ''); if (fb === null) return; const j = await call('return', { dept, period: p.name, feedback: fb }); upsertRep(j.report); toast('أُعيد التقرير للمنسقة'); show(); };
 }
 
