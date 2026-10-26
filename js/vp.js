@@ -3,7 +3,7 @@
 'use strict';
 
 let FORMS = null;
-const loadForms = async () => FORMS || (FORMS = await fetch('data/forms.json').then(r => r.json()));
+const loadForms = async () => FORMS || (FORMS = await fetch('data/forms.json?v=' + (window.MIZAN_V || Date.now())).then(r => r.json()));
 const DAYS7 = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const dayOf = d => d ? DAYS7[new Date(d + 'T12:00:00').getDay()] : '';
 const SEMS = ['الفصل الأول', 'الفصل الثاني'];

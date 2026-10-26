@@ -17,7 +17,7 @@ async function call(a, p) { busy(true); try { return await API.call(a, p); } cat
 
 /* ------------------------------------------------------------------ الإقلاع */
 async function start() {
-  REF = await fetch('data/ref.json').then(r => r.json());
+  REF = await fetch('data/ref.json?v=' + (window.MIZAN_V || Date.now())).then(r => r.json());
   const tok = sessionStorage.getItem('mizan_tok');
   if (tok) { S.token = tok; try { await boot(); return; } catch (e) { sessionStorage.removeItem('mizan_tok'); } }
   renderLogin();
