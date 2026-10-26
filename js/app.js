@@ -54,7 +54,7 @@ function renderLogin() {
   const go = async () => {
     if (pin.length < 4) return;
     $('#err').textContent = '';
-    try { const j = await API.call('login', { pin }); S.token = j.token; sessionStorage.setItem('mizan_tok', j.token); await boot(); }
+    try { const j = await API.call('login', { pin, app: 'mizan' }); S.token = j.token; sessionStorage.setItem('mizan_tok', j.token); await boot(); }
     catch (e) { $('#err').textContent = e.message; pin = ''; draw(); }
   };
   $$('.pad button').forEach(b => b.onclick = () => { const k = b.dataset.k; if (k === 'del') pin = pin.slice(0, -1); else if (k === 'ok') return go(); else if (pin.length < 8) pin += k; draw(); });

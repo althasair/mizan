@@ -73,7 +73,7 @@ function T_act(el) { return T_list(el, 'نشاط'); }
 
 /* ------------------------------------------------------------------ النائب: مبادرات المعلمات وأنشطتهن */
 function A_tacts(el) {
-  setTitle('مبادرات المعلمات وأنشطتهن');
+  setTitle('مبادرات المعلمات وأنشطتهن (من سبع سنابل)');
   const p = P(); S.taF = S.taF || { kind: '', dept: '', all: false };
   const F = S.taF;
   const L = S.records.filter(r => r.item === 'TA' && (F.all || inP(r.date, p)) && (!F.kind || r.d.kind === F.kind) && (!F.dept || r.dept === F.dept)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));

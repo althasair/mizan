@@ -54,12 +54,15 @@ function userById_(id) {
   for (const r of t.rows) if (String(r[0]) === id) return { id: String(r[0]), role: roleOf_(r), dept: String(r[2]).split('|').map(s => s.trim()).filter(Boolean), name: String(r[3]), pin: String(r[4]) };
   return null;
 }
-function login_(pin) {
+function login_(pin, app) {
   const cache = CacheService.getScriptCache();
   const fails = Number(cache.get('fails') || 0);
   if (fails >= 25) fail_('تم إيقاف الدخول مؤقتاً بسبب محاولات خاطئة متكررة. حاولي بعد 10 دقائق.');
   const u = findUserByPin_(pin);
   if (!u) { cache.put('fails', String(fails + 1), 600); Utilities.sleep(700); fail_('الرقم السري غير صحيح'); }
+  // المعلمات يدخلن من «سبع سنابل» فقط، والمنسقات من «الميزان» فقط
+  if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
+  if (app !== 'sanabil' && u.role === 'teacher') fail_('رقمكِ للدخول إلى منصة سبع سنابل — مبادراتي وأنشطتي');
   const token = Utilities.getUuid();
   cache.put('tok_' + token, u.id, SESSION_SECONDS);
   log_(u, 'دخول', u.dept.join('، '));
@@ -308,7 +311,7 @@ function sendForm_(u, p) {
 function route_(req) {
   const a = req.action;
   if (a === 'ping') return { ok: true, name: 'الميزان', at: now_() };
-  if (a === 'login') return login_(req.pin);
+  if (a === 'login') return login_(req.pin, req.app);
   const u = auth_(req.token);
   switch (a) {
     case 'boot': return boot_(u);
