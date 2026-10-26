@@ -187,7 +187,12 @@ function bindAdminRep(rp, dept, p) {
 function A_accounts(el) {
   setTitle('حسابات المنسقات');
   el.innerHTML = `<div class="note">الأرقام السرية محفوظة في قاعدة البيانات الخاصة بكِ على Google ولا تظهر هنا. يمكنكِ تعيين رقم جديد لأي منسقة عند الحاجة.</div>
-  <div class="card"><table class="t"><tr><th>المنسقة</th><th>القسم</th><th></th></tr>${S.coords.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.dept.join(' و'))}</td><td><button class="btn sm sec" data-pin="${esc(c.id)}">تعيين رقم سري جديد</button></td></tr>`).join('')}</table></div>`;
+  <div class="card"><table class="t"><tr><th>المنسقة</th><th>القسم</th><th>التوقيع</th><th></th></tr>${S.coords.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.dept.join(' و'))}</td><td><span class="sigbox" data-sv="${esc(c.id)}" style="display:inline-block;min-width:90px;height:34px;vertical-align:middle"></span> <button class="btn sm ghost" data-sg="${esc(c.id)}">رفع التوقيع</button></td><td><button class="btn sm sec" data-pin="${esc(c.id)}">تعيين رقم سري جديد</button></td></tr>`).join('')}</table></div>
+  <input type="file" id="sigF" accept="image/png,image/jpeg" style="display:none">`;
+  $$('[data-sv]', el).forEach(async b => { try { const d = (await API.call('signature', { who: b.dataset.sv })).data; b.innerHTML = d ? `<img src="${d}" style="max-height:34px;max-width:140px">` : '<small style="color:var(--bad)">لا يوجد</small>'; } catch (e) {} });
+  let sgFor = null;
+  $$('[data-sg]', el).forEach(b => b.onclick = () => { sgFor = b.dataset.sg; $('#sigF').value = ''; $('#sigF').click(); });
+  $('#sigF').onchange = e => { const f = e.target.files[0]; if (!f || !sgFor) return; const r = new FileReader(); r.onload = async () => { await call('setSig', { id: sgFor, data: r.result }); toast('تم حفظ التوقيع ✓'); show(); }; r.readAsDataURL(f); };
   $$('[data-pin]', el).forEach(b => b.onclick = async () => { const v = prompt('الرقم السري الجديد (4–8 أرقام):'); if (!v) return; await call('setPin', { id: b.dataset.pin, newPin: v }); toast('تم التغيير — أبلغي المنسقة بالرقم الجديد'); });
 }
 

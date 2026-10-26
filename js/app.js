@@ -300,6 +300,8 @@ async function C_report(el, deptArg) {
   const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
   let sig = '';
   if (rp && rp.status === 'معتمد') { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
+  let csig = '';
+  if (rp && rp.coordSig) { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
   const canSign = !isAdmin() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
   el.innerHTML = `
     <div class="row noprint" style="margin-bottom:14px">
@@ -309,7 +311,7 @@ async function C_report(el, deptArg) {
       ${isAdmin() ? adminRepButtons(rp) : ''}
       <button class="btn sec" onclick="window.print()">طباعة / حفظ PDF</button>
     </div>
-    ${paperHTML(R, rp, sig)}`;
+    ${paperHTML(R, rp, sig, csig)}`;
   if ($('#sign')) $('#sign').onclick = () => pinModal('توقيع التقرير', 'بالتوقيع تُقفل سجلات هذه الفترة ويُرسل التقرير للنائب الأكاديمي للاعتماد. أدخلي رقمك السري:', async pin => {
     const snap = buildReport(ctxFor(dept, p)); delete snap.T.perTeacher;
     const j = await call('sign', { dept, period: p.name, from: p.from, to: p.to, pin, snap: { rows: snap.rows, coord: snap.coord, NT: snap.NT, T: { calendar: snap.T.calendar }, K: snap.K, P: snap.P, dept } });
@@ -318,7 +320,7 @@ async function C_report(el, deptArg) {
   if (isAdmin()) bindAdminRep(rp, dept, p);
 }
 function upsertRep(r) { const i = S.reports.findIndex(x => x.dept === r.dept && x.period === r.period); if (i >= 0) S.reports[i] = r; else S.reports.push(r); }
-function paperHTML(R, rp, sig) {
+function paperHTML(R, rp, sig, csig) {
   const P_ = R.P;
   const body = R.rows.map(([main, subs]) => {
     const total = subs.reduce((a, s) => a + s[1].length, 0);
@@ -333,7 +335,7 @@ function paperHTML(R, rp, sig) {
     });
     return h;
   }).join('');
-  const coordSig = rp && rp.coordSig ? `<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
+  const coordSig = rp && rp.coordSig ? `${csig ? `<img src="${csig}" alt="">` : ''}<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
   const vpSig = rp && rp.status === 'معتمد' ? `${sig ? `<img src="${sig}" alt="">` : ''}<div class="stamp">اعتُمد إلكترونياً · ${esc(rp.vpAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
   return `<div class="paper">
     <img class="lh-top" src="assets/lh-top.jpg" alt="">

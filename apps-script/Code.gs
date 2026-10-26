@@ -218,7 +218,30 @@ function feedback_(u, p) {
   log_(u, 'تغذية راجعة', p.dept, p.period);
   return repObj_(t.rows[i]);
 }
+function sigData_(name) {
+  const it = DriveApp.getFolderById(PRIVATE_FOLDER).getFilesByName(name);
+  if (!it.hasNext()) return '';
+  const b = it.next().getBlob();
+  return 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes());
+}
+// توقيع المنسقة: للنائب، أو للمنسقة نفسها فقط
+function coordSig_(u, p) {
+  if (u.role !== 'admin' && u.id !== p.who) fail_('التوقيع غير متاح');
+  return { data: sigData_('sig-' + p.who + '.png') };
+}
+function setSig_(u, p) {
+  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!/^c\d+$/.test(String(p.id))) fail_('حساب غير صالح');
+  const m = String(p.data || '').match(/^data:(image\/(png|jpeg));base64,(.+)$/);
+  if (!m) fail_('صيغة الصورة غير مدعومة (PNG أو JPG)');
+  const folder = DriveApp.getFolderById(PRIVATE_FOLDER); const name = 'sig-' + p.id + '.png';
+  const old = folder.getFilesByName(name); while (old.hasNext()) old.next().setTrashed(true);
+  folder.createFile(Utilities.newBlob(Utilities.base64Decode(m[3]), m[1], name));
+  log_(u, 'تحديث توقيع منسقة', '', p.id);
+  return { ok: true };
+}
 function signature_(u, p) {
+  if (p.who) return coordSig_(u, p);
   // توقيع النائب لا يُعطى إلا للنائب نفسها، أو لتقرير معتمد يخص قسم المنسقة
   if (u.role !== 'admin') {
     const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
@@ -279,6 +302,7 @@ function route_(req) {
     case 'signature': return signature_(u, req);
     case 'setPin': return setPin_(u, req);
     case 'sendForm': return sendForm_(u, req);
+    case 'setSig': return setSig_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');

@@ -345,7 +345,7 @@ function fileForm(el, kind, T, sem) {
       const j = await call('save', { rec: { id: rec && rec.id, dept: T.dept, item: kind, date: d.date, sum: (kind === 'CF' ? 'متابعة ملفات المنسقة: ' : 'متابعة ملفات: ') + T.name + ' — ' + sem, d, key: T.key + '|' + sem } });
       const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); return j.record; };
     $('#fs').onclick = async () => { await save(); toast('تم الحفظ ✓'); show(); };
-    if ($('#fp')) $('#fp').onclick = async () => { const r = await save(); await showPaper(el, D.title, fileInner(D, T, r, kind), '<button class="btn tf" id="pSend">إرسال للموظفة</button>'); $('#pBack').onclick = () => show(); $('#pSend').onclick = () => sendFile(D, T, r, kind); };
+    if ($('#fp')) $('#fp').onclick = async () => { const r = await save(); await showPaper(el, D.title, await withCSig(fileInner(D, T, r, kind), T, kind), '<button class="btn tf" id="pSend">إرسال للموظفة</button>'); $('#pBack').onclick = () => show(); $('#pSend').onclick = () => sendFile(D, T, r, kind); };
     if ($('#fsend')) $('#fsend').onclick = async () => { const r = await save(); sendFile(D, T, r, kind); };
     if ($('#fdel')) $('#fdel').onclick = async () => { if (!confirm('حذف هذه الاستمارة؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); S.fopen = null; show(); };
   };
@@ -357,7 +357,7 @@ function fileInner(D, T, r, kind) {
     return `<tr>${kind === 'CF' ? (x.first ? `<td class="dm" rowspan="${x.span}">${x.di + 1}.</td><td class="dm" rowspan="${x.span}">${esc(x.dom)}</td><td rowspan="${x.span}" class="j" style="font-size:9.5px">${esc(x.ind)}</td>` : '') : (i === 0 ? `<td class="dm" rowspan="${D.rows.length}">${esc(D.role)}</td>` : '') + `<td style="text-align:center;width:5%">${x.n}</td>`}
       <td style="font-size:10px">${esc(x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
   const head = kind === 'CF' ? '<tr><th>م</th><th>المجال</th><th>المؤشرات</th><th>الأدلة</th><th>المتابعة</th></tr>' : '<tr><th>المسمى المستهدف</th><th>الرقم</th><th>المهام الأكاديمية</th><th>متابعة تنفيذ المهام</th><th>الملاحظات والتوصيات</th></tr>';
-  const sigs = D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>${s}<br>أ. ${VP_NAME}{{SIG}}</td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}</td>` : `<td>${s}</td>`).join('');
+  const sigs = D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>${s}<br>أ. ${VP_NAME}{{SIG}}</td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
   return `<h1>${esc(D.title)}</h1><div class="sub">${esc(d.sem)} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     <tr><td class="k">المدرسة</td><td colspan="3">${esc(SCHOOL())}</td></tr>
@@ -369,10 +369,15 @@ function fileInner(D, T, r, kind) {
   <div class="fnote">تنويه: يستخدم هذا النموذج من قبل نائب المدير للشؤون الأكاديمية بصورة فصلية.</div>
   <table class="sg"><tr>${sigs}</tr></table>`;
 }
+async function withCSig(inner, T, kind) {
+  if (kind !== 'CF' || !inner.includes('{{CSIG}}')) return inner.replace(/\{\{CSIG\}\}/g, '');
+  let d = ''; try { d = (await API.call('signature', { who: T.key })).data; } catch (e) {}
+  return inner.replace(/\{\{CSIG\}\}/g, d ? `<img src="${d}" alt="">` : '');
+}
 async function sendFile(D, T, r, kind) {
   const to = T.email || staffBy(T.name).email;
   if (!confirm(`إرسال «${D.title}» بتوقيعك إلى أ. ${T.name}${to ? ' (' + to + ')' : ''}؟`)) return;
-  const ok = await sendForm({ to, name: T.name, subject: `${D.title} — ${r.d.sem}`, what: `${D.title} الخاصة بكِ عن ${r.d.sem}`, inner: fileInner(D, T, r, kind), file: `${D.title} - ${T.name} - ${r.d.sem}` });
+  const ok = await sendForm({ to, name: T.name, subject: `${D.title} — ${r.d.sem}`, what: `${D.title} الخاصة بكِ عن ${r.d.sem}`, inner: await withCSig(fileInner(D, T, r, kind), T, kind), file: `${D.title} - ${T.name} - ${r.d.sem}` });
   if (ok) await markSent(r);
 }
 function A_cfiles(el) { return A_files(el, 'CF'); }
