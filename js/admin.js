@@ -222,6 +222,34 @@ function sanabilMeans() {
   return out;
 }
 
+/* تحصيل شعبة في مادة من سنابل (قراءة فقط) مع مقارنتها ببقية شعب المستوى نفسه */
+function sanabilClass(sec0, subj) {
+  let A = null; try { A = JSON.parse(localStorage.getItem('sab3_tahleel_v1') || 'null'); } catch (e) {}
+  if (!A || !A.cur || !sec0 || !subj) return null;
+  const pers = Object.keys(A.cur).map(Number).sort((a, b) => a - b); const cur = A.cur[pers[pers.length - 1]] || {};
+  const secKey = s => { const m = String(s || '').match(/(1[0-2])\s*[\/\-]\s*(\d+)/); return m ? m[1] + '-' + m[2] : ''; };
+  const sec = secKey(sec0); if (!sec) return null;
+  const bySec = {}; Object.values(cur).forEach(o => { const k = secKey(o.s); if (k) (bySec[k] = bySec[k] || []).push(o.g || {}); });
+  const rows = bySec[sec]; if (!rows) return null;
+  const keys = [...new Set(rows.flatMap(g => Object.keys(g)))];
+  let toks = String(subj).replace(/\(.*?\)/g, '').split(/\+|،| و(?=ال)/).map(x => x.trim()).filter(Boolean);
+  const key = (() => { for (const t of toks) { const k = keys.find(k => nrm(k) === nrm(t)) || keys.find(k => nrm(k).includes(nrm(t)) || nrm(t).includes(nrm(k))); if (k) return k; } return null; })();
+  if (!key) return null;
+  const st = L => { const v = L.map(g => g[key]).filter(x => typeof x === 'number'); return v.length ? { mean: v.reduce((a, b) => a + b, 0) / v.length, n: v.length, pass: v.filter(x => x >= 50).length / v.length * 100, low: v.filter(x => x < 70).length, top: v.filter(x => x >= 90).length } : null; };
+  const me = st(rows); if (!me) return null;
+  const lvl = sec.split('-')[0];
+  const sibs = Object.keys(bySec).filter(k => k.split('-')[0] === lvl).map(k => ({ k, s: st(bySec[k]) })).filter(x => x.s).sort((a, b) => b.s.mean - a.s.mean);
+  const all = sibs.flatMap(x => bySec[x.k]); const lv = st(all);
+  const rank = sibs.findIndex(x => x.k === sec) + 1;
+  const band = m => m >= 90 ? 'ممتاز' : m >= 80 ? 'جيد جداً' : m >= 70 ? 'جيد' : m >= 50 ? 'مقبول' : 'ضعيف';
+  const diff = lv ? me.mean - lv.mean : 0;
+  const rel = !lv || sibs.length < 2 ? '' : diff >= 3 ? 'أعلى من' : diff <= -3 ? 'أدنى من' : 'قريب من';
+  const LV = { 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر' }[lvl] || lvl;
+  const txt = `بلغ متوسط تحصيل الصف ${sec} في مادة ${key} ${me.mean.toFixed(1)}% (${band(me.mean)})، ونسبة النجاح ${Math.round(me.pass)}%` + (me.top ? `، و(${me.top}) طالبات بنسبة 90% فأعلى` : '') + (me.low ? `، و(${me.low}) طالبات دون 70%` : '')
+    + (rel ? `، وهو ${rel} متوسط شعب الصف ${LV} في المادة (${lv.mean.toFixed(1)}%)، ويحتل الترتيب (${rank}) من (${sibs.length}) شعب` : '') + '.';
+  return { sec, key, me, lv, rank, of: sibs.length, band: band(me.mean), rel, txt, per: pers[pers.length - 1] };
+}
+
 /* ------------------------------------------------------------------ خطة زيارات النائب */
 const CORE12 = ['التربية الإسلامية', 'اللغة العربية', 'اللغة الإنجليزية', 'الرياضيات', 'الكيمياء', 'الفيزياء', 'الأحياء'];
 function vpCfg() { let c = {}; try { c = JSON.parse(localStorage.getItem('mizan_vp_cfg') || '{}'); } catch (e) {} return Object.assign({ start: '2026-11-01', end: '2026-12-03' }, c); }

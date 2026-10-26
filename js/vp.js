@@ -114,7 +114,8 @@ function vpVisitForm(el, rec) {
   const draw = () => {
     const s = staffBy(d.t); const secs = String(s.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const subs = uniqA(String(s.subj || '').split(/\+|،/).map(x => x.trim()));
-    const san = d.t ? sanabilFor(d.t) : null;
+    const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
+    if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
     const strongI = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1);
     const weakI = F.items.map((x, i) => i).filter(i => d.rt[i] === 2 || d.rt[i] === 3);
     const stOpts = [...strongI.flatMap(i => F.items[i].s), ...F.items.flatMap(x => x.s)];
@@ -133,7 +134,7 @@ function vpVisitForm(el, rec) {
       <div class="fld"><label>نوع المتابعة</label><select id="fMode">${['ميدانيّة', 'عن بُعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>كليّة / جزئيّة</label><select id="fKj">${['كليّة', 'جزئيّة'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="fLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-      <div class="fld" style="grid-column:1/-1"><label>التحصيل الأكاديمي لطالبات المعلمة ${san ? `<small style="color:var(--tiffany-d)">· متوسط سنابل ${san.mean.toFixed(1)}${san.low ? ` (${san.low} دون 70)` : ''}</small>` : ''}</label><input list="dlAch" id="fAch" value="${esc(d.ach || (san ? `متوسط تحصيل طالباتها ${san.mean.toFixed(1)}%` : ''))}">${dl('dlAch', [...(san ? [`متوسط تحصيل طالباتها ${san.mean.toFixed(1)}%` + (san.low ? ` ووجود (${san.low}) دون 70%` : '')] : []), ...F.ach])}</div>
+      <div class="fld" style="grid-column:1/-1"><label>تحصيل الصف في المادة ${cls ? `<small style="color:var(--tiffany-d)">· محسوب تلقائياً من سنابل (الفترة ${esc(cls.per)})</small>` : `<small style="color:var(--muted)">· ${d.s && d.subj ? 'لا تتوفر نتائج هذا الصف في سنابل على هذا المتصفح — افتحي سنابل مرة واحدة على نفس المتصفح أو اكتبي يدوياً' : 'اختاري الصف والمادة فيظهر التحصيل تلقائياً'}</small>`}</label><textarea id="fAch" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px;line-height:1.8">${esc(d.ach || '')}</textarea>${cls ? `<div class="row" style="margin-top:4px;gap:6px"><span class="chip ${cls.band === 'ممتاز' || cls.band === 'جيد جداً' ? 'ok' : cls.band === 'جيد' ? 'tf' : cls.band === 'مقبول' ? 'warn' : 'bad'}">${esc(cls.band)} · ${cls.me.mean.toFixed(1)}%</span>${cls.rel ? `<span class="chip">${esc(cls.rel)} متوسط المستوى (${cls.lv.mean.toFixed(1)}%)</span><span class="chip">الترتيب ${cls.rank} من ${cls.of}</span>` : ''}<button type="button" class="btn sm ghost" id="achRe">إعادة الحساب</button></div>` : ''}</div>
     </form></div>
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
@@ -150,12 +151,15 @@ function vpVisitForm(el, rec) {
       </div></div>`;
     const grab = () => {
       d.t = $('#fT').value.trim(); d.date = $('#fD').value; d.subj = $('#fSub').value.trim(); d.s = $('#fSec').value.trim(); d.topic = $('#fTop').value.trim();
-      d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; d.ach = $('#fAch').value.trim(); d.pre = $('#fPre').value.trim();
+      d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; { const v = $('#fAch').value.trim(); if (v !== d.ach) d.achAuto = 0; d.ach = v; } d.pre = $('#fPre').value.trim();
       $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
       d.st = $$('[data-st]', el).map(i => i.value.trim()); d.im = $$('[data-im]', el).map(i => i.value.trim());
     };
     $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); d.subj = String(st.subj || '').split(/\+|،/)[0].trim(); d.s = ''; draw(); };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
+    const reAch = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
+    $('#fSec').onchange = reAch; $('#fSub').onchange = reAch;
+    if ($('#achRe')) $('#achRe').onclick = () => { grab(); d.ach = ''; d.achAuto = 1; draw(); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 2 || k === 3) && !d.rc[i]) d.rc[i] = FORMS.visit.items[i].r[0]; if (k < 2 && d.rc[i] === FORMS.visit.items[i].r[0]) delete d.rc[i]; } draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     $('#addSt').onclick = () => { grab(); d.st.push(''); draw(); };
