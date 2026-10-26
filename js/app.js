@@ -253,7 +253,7 @@ function setVal(frm, n, v) { const i = $(`[data-n="${n}"]`, frm); if (i && (i.va
 function recHTML(r) {
   const sec = SEC[r.item]; const tx = sec ? sec.tx(r.d) : r.sum;
   return `<div class="rec"><div class="dt">${dm(r.date)}<small>${r.date ? r.date.slice(0, 4) : ''}</small></div><div class="tx">${esc(tx)}<div class="by">أدخلته: ${esc(r.by || '')}${r.up && r.up !== r.at ? ' · عُدّل ' + esc(r.up) : ''}</div></div>
-    <div class="ops"><button class="btn sm sec" data-ed="${r.id}">تعديل</button><button class="btn sm ghost" data-del="${r.id}">حذف</button></div></div>`;
+    <div class="ops"><button class="btn sm sec" data-ed="${r.id}">تعديل</button>${isAdmin() || r.item !== 'AC' ? `<button class="btn sm ghost" data-del="${r.id}">حذف</button>` : ''}</div></div>`;
 }
 function wsPlanHTML() {
   const mine = S.pd.filter(x => x.dept.split('|').includes(S.dept)).sort((a, b) => (a.date || '9').localeCompare(b.date || '9'));

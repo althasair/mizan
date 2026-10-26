@@ -11,6 +11,7 @@ const SS_ID = '1H49-iBPf3wM87IRhxOkUuZO89vDetj_Rv714knzSt-g';
 const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزان — ملفات خاصة» في Drive
 const SIG_FILE = 'signature-vp.png';
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
+const PROTECTED_ITEMS = ['AC'];                                 // لا يحذفها إلا النائب الأكاديمي
 const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];                 // بنود خاصة بالنائب لا تراها المنسقات
 
 const SH = {
@@ -156,6 +157,7 @@ function deleteRecord_(u, id) {
     for (let i = 0; i < t.rows.length; i++) {
       if (String(t.rows[i][0]) === String(id)) {
         if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
+        if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
         if (u.role !== 'admin') assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
         t.sh.deleteRow(i + 2); log_(u, 'حذف سجل', t.rows[i][1], t.rows[i][2] + ' — ' + String(t.rows[i][4]).slice(0, 80));
         return { id: id };

@@ -62,9 +62,11 @@ function A_boards(el) {
   setTitle('لوحات التميز');
   const p = P(); const R = S.records.filter(r => inP(r.date, p));
   const add = (m, k, n = 1) => { if (k && k !== REF.ALL_MEMBERS) m[k] = (m[k] || 0) + n; };
-  const str = {}, act = {}, enr = {};
+  const str = {}, act = {}, enr = {}, ini = {}; const actL = {}, iniL = {};
   R.filter(r => r.item === 'V' || r.item === 'OV').forEach(r => { add(str, r.d.t, (r.d.f1 ? 1 : 0) + (r.d.f2 ? 1 : 0)); });
-  R.filter(r => r.item === 'AC').forEach(r => [r.d.e1, r.d.e2, r.d.e3].forEach(t => add(act, t, Math.max(1, +r.d.times || 1))));
+  const isIni = r => /مبادر/.test(r.d.ty || '') || /مبادر/.test(r.d.name || '');
+  R.filter(r => r.item === 'AC').forEach(r => { const M = isIni(r) ? ini : act, ML = isIni(r) ? iniL : actL;
+    [r.d.e1, r.d.e2, r.d.e3].forEach(t => { if (!t || t === REF.ALL_MEMBERS) return; add(M, t, Math.max(1, +r.d.times || 1)); (ML[t] = ML[t] || []).push(String(r.d.name || '').replace(/\s*—.*$/, '').slice(0, 45)); }); });
   // الحصص الإثرائية والتعزيز من سبع سنابل (ملفات Forms المرفوعة هناك — قراءة فقط من نفس المتصفح)
   let SB = null; try { SB = JSON.parse(localStorage.getItem('sab3_sanabil_v1') || 'null'); } catch (e) {}
   const toStaff = n => { if (!n) return ''; const k = nameKey(n); const st = S.staff.find(x => nameKey(x.full || x.name) === k || nameKey(x.name) === k) || S.staff.find(x => nrm(x.name) === nrm(n)); return st ? st.name : String(n).trim(); };
@@ -82,7 +84,8 @@ function A_boards(el) {
   el.innerHTML = `<div class="note">تُحسب اللوحات من سجلات ${esc(p.name)}. خاصة بكِ ولا تظهر للمنسقات أو المعلمات.</div>
   <div class="grid g2">
     ${board('الأعلى في نقاط القوة بالزيارات', str, 'نقطة قوة', 'لا توجد زيارات موثّقة بنقاط قوة')}
-    ${board('الأكثر تفعيلاً للأنشطة', act, 'تنفيذ', 'لا توجد أنشطة بأسماء منفذات')}
+    ${board('الأكثر تنفيذاً للمبادرات', ini, 'مبادرة', 'لا توجد مبادرات بأسماء منفذات', n => esc((iniL[n] || []).slice(0, 3).join('، ')))}
+    ${board('الأكثر تفعيلاً للأنشطة', act, 'نشاط', 'لا توجد أنشطة بأسماء منفذات', n => esc((actL[n] || []).slice(0, 3).join('، ')))}
     ${board('الأكثر تنفيذاً للحصص الإثرائية', enr, 'حصة', sbNote || 'لا توجد حصص إثرائية مسجلة في سبع سنابل خلال الفترة', n => enrK[n] ? `فردية ${enrK[n].i} · جماعية ${enrK[n].g}` : '')}
     ${board('الأكثر تعزيزاً وتحفيزاً للطالبات', rein, 'تعزيز', sbNote || 'لا توجد سجلات تعزيز (مجتمع الشيماء) خلال الفترة')}
   </div>`;
