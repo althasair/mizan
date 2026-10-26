@@ -50,6 +50,7 @@ function paperWrap(inner, imgs) {
   return `<div class="fp"><img class="lh" src="${imgs.top}" alt=""><div class="in">${inner}</div><img class="lh" src="${imgs.bot}" alt="" style="margin-top:6mm"></div>`;
 }
 function docHTML(inner, imgs, title) {
+  inner = inner.replace(/<th(?=[\s>])/g, '<th bgcolor="#7A1F33"').replace(/<td class="(k|dm)"/g, '<td bgcolor="#F6ECEE" class="$1"');
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4;margin:0}body{margin:0}${FORM_CSS}</style></head><body>${paperWrap(inner, imgs)}</body></html>`;
 }
 const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM Plex Sans Arabic',Arial,sans-serif;font-size:15px;line-height:1.9;color:#1E2230">
@@ -155,7 +156,7 @@ function vpVisitForm(el, rec) {
       </div></div>`;
     const grab = () => {
       d.t = $('#fT').value.trim(); d.date = $('#fD').value; d.subj = $('#fSub').value.trim(); d.s = $('#fSec').value.trim(); d.topic = $('#fTop').value.trim();
-      d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; { const v = $('#fAch').value.trim(); if (v !== d.ach) d.achAuto = 0; d.ach = v; } d.pre = $('#fPre').value.trim();
+      d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; { const v = $('#fAch').value.trim(); if (v !== d.ach) d.achAuto = 0; d.ach = v; } d.pre = $('#fPre').value.trim(); if (d.t) d.pre = d.pre.replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`);
       $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
       d.st = $$('[data-st]', el).map(i => i.value.trim()); d.im = $$('[data-im]', el).map(i => i.value.trim());
     };
@@ -220,7 +221,7 @@ function visitInner(r) {
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
-  <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc(d.pre || '')}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
+  <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
   <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع نائب المدير للشؤون الأكاديمية<br>أ. ${VP_NAME}{{SIG}}</td></tr></table>`;
 }
 async function previewVisit(el, r) {
