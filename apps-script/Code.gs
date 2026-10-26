@@ -11,7 +11,7 @@ const SS_ID = '1H49-iBPf3wM87IRhxOkUuZO89vDetj_Rv714knzSt-g';
 const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزان — ملفات خاصة» في Drive
 const SIG_FILE = 'signature-vp.png';
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
-const PROTECTED_ITEMS = ['AC'];                                 // لا يحذفها إلا النائب الأكاديمي
+const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
 const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];                 // بنود خاصة بالنائب لا تراها المنسقات
 
 const SH = {
@@ -38,18 +38,20 @@ function log_(user, op, dept, details) {
 function fail_(msg) { throw new Error(msg); }
 
 /* ------------------------------------------------------------------ الدخول */
+function roleOf_(r) { return r[0] === 'admin' ? 'admin' : String(r[1]).trim() === 'معلمة' ? 'teacher' : 'coord'; }
+const TEACHER_ITEMS = ['TA'];                                   // ما تسجّله المعلمة بنفسها (مبادرات وأنشطة)
 function findUserByPin_(pin) {
   const t = rows_(SH.users);
   for (const r of t.rows) {
     if (String(r[4]).trim() === String(pin).trim() && String(r[5]).trim() !== 'لا') {
-      return { id: String(r[0]), role: r[0] === 'admin' ? 'admin' : 'coord', dept: String(r[2]).split('|').map(s => s.trim()).filter(Boolean), name: String(r[3]) };
+      return { id: String(r[0]), role: roleOf_(r), dept: String(r[2]).split('|').map(s => s.trim()).filter(Boolean), name: String(r[3]) };
     }
   }
   return null;
 }
 function userById_(id) {
   const t = rows_(SH.users);
-  for (const r of t.rows) if (String(r[0]) === id) return { id: String(r[0]), role: r[0] === 'admin' ? 'admin' : 'coord', dept: String(r[2]).split('|').map(s => s.trim()).filter(Boolean), name: String(r[3]), pin: String(r[4]) };
+  for (const r of t.rows) if (String(r[0]) === id) return { id: String(r[0]), role: roleOf_(r), dept: String(r[2]).split('|').map(s => s.trim()).filter(Boolean), name: String(r[3]), pin: String(r[4]) };
   return null;
 }
 function login_(pin) {
@@ -76,12 +78,23 @@ function checkPin_(u, pin) {
 function canDept_(u, dept) { return u.role === 'admin' || u.dept.indexOf(dept) >= 0; }
 
 /* ------------------------------------------------------------------ قراءة البيانات */
+function bootTeacher_(u) {
+  const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
+  const me = rows_(SH.teachers).rows.filter(r => r[1] === u.name).map(r => ({ dept: r[0], name: r[1], role: r[3], subj: r[4], secs: String(r[5]), load: Number(r[6]) || 0 }));
+  const all = rows_(SH.rec).rows.filter(r => r[0]);
+  const recs = all.filter(r => r[2] === 'TA').map(recObj_).filter(x => x.d && x.d.t === u.name);
+  // أسماء الأنشطة القائمة في المدرسة (للاختيار منها)
+  const acts = {};
+  all.forEach(r => { if (r[2] !== 'AC' && r[2] !== 'TA') return; let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {} if (r[2] === 'TA' && d.kind !== 'نشاط') return; const n = String(d.name || '').replace(/\s*—.*$/, '').trim(); if (n) acts[n] = 1; });
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: me, coords: [], records: recs, reports: [], acts: Object.keys(acts).sort(), server: now_() };
+}
 function boot_(u) {
+  if (u.role === 'teacher') return bootTeacher_(u);
   const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
   const cal = rows_(SH.cal).rows.filter(r => r[0]).map(r => ({ t: r[0], from: iso_(r[1]), to: iso_(r[2]), k: r[3] }));
   const pd = rows_(SH.pd).rows.filter(r => r[3]).map((r, i) => ({ i: i, sem: r[0], dept: r[1], need: r[2], title: r[3], type: r[4], hrs: r[5], date: iso_(r[6]), by: r[7], n: r[8], impact: r[9] }))
     .filter(p => u.role === 'admin' || p.dept === 'خطة المدرسة العامة' || p.dept.split('|').some(d => u.dept.indexOf(d) >= 0));
-  const coords = rows_(SH.users).rows.filter(r => r[0] && r[0] !== 'admin').map(r => ({ id: r[0], dept: String(r[2]).split('|'), name: r[3], active: r[5] !== 'لا' }));
+  const coords = rows_(SH.users).rows.filter(r => r[0] && roleOf_(r) === 'coord').map(r => ({ id: r[0], dept: String(r[2]).split('|'), name: r[3], active: r[5] !== 'لا' }));
   const staff = rows_(SH.teachers).rows.filter(r => r[1] && r[8] !== 'لا').map(r => {
     const o = { dept: r[0], name: r[1], role: r[3], subj: r[4], secs: String(r[5]), load: Number(r[6]) || 0 };
     if (u.role === 'admin') { o.full = r[2]; o.email = r[7]; }
@@ -96,6 +109,7 @@ function recObj_(r) {
   return { id: String(r[0]), dept: r[1], item: r[2], date: iso_(r[3]), sum: r[4], d: d, by: r[6], at: iso_(r[7]), up: iso_(r[8]) };
 }
 function listRecords_(u) {
+  if (u.role === 'teacher') return rows_(SH.rec).rows.filter(r => r[0] && r[2] === 'TA').map(recObj_).filter(x => x.d && x.d.t === u.name);
   return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_)
     .filter(x => u.role === 'admin' || (u.dept.indexOf(x.dept) >= 0 && ADMIN_ITEMS.indexOf(x.item) < 0));
 }
@@ -112,7 +126,11 @@ function saveRecord_(u, rec) {
   if (!rec || !rec.item || !rec.dept) fail_('بيانات ناقصة');
   if (!canDept_(u, rec.dept)) fail_('لا تملكين صلاحية على هذا القسم');
   if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند خاص بالنائب الأكاديمي');
-  if (u.role !== 'admin') assertNotLocked_(rec.dept, rec.date);
+  if (u.role === 'teacher') {
+    if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
+    rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
+  } else if (TEACHER_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند تسجّله المعلمة بنفسها');
+  if (u.role === 'coord') assertNotLocked_(rec.dept, rec.date);
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const t = rows_(SH.rec);
@@ -132,6 +150,7 @@ function saveRecord_(u, rec) {
       for (let i = 0; i < t.rows.length; i++) {
         if (String(t.rows[i][0]) === String(rec.id)) {
           if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
+          if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (t.rows[i][2] !== 'TA' || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
           t.sh.getRange(i + 2, 2, 1, 8).setValues([[rec.dept, rec.item, rec.date || '', rec.sum || '', payload, u.name, t.rows[i][7], now_()]]);
           log_(u, 'تعديل سجل', rec.dept, rec.item + ' — ' + (rec.sum || '').slice(0, 80));
           return recObj_([rec.id, rec.dept, rec.item, rec.date || '', rec.sum || '', payload, u.name, t.rows[i][7], now_()]);

@@ -28,7 +28,7 @@ const DEMO = {
   KEY: 'mizan_demo_v1',
   db() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) {}
-    if (d && d.v === 5) return d;
+    if (d && d.v === 6) return d;
     const staff = [
       ['الكيمياء', 'منى السالم', 'منسقة', 'الكيمياء', '12-3', 4], ['الكيمياء', 'ريم الكعبي', 'معلمة', 'الكيمياء', '12-1، 12-2', 16], ['الكيمياء', 'لطيفة المري', 'معلمة', 'الكيمياء', '11-1، 11-3', 16],
       ['الكيمياء', 'دانة الهاجري', 'معلمة', 'العلوم + الكيمياء', '11-2، 11-6', 12], ['الرياضيات', 'سلمى العتيبي', 'منسقة', 'الرياضيات', '12-3', 6],
@@ -50,10 +50,11 @@ const DEMO = {
     ];
     const pd = [{ i: 0, sem: 'الفصل الأول', dept: 'الكيمياء', title: 'تطبيق أساليب تغذية راجعة إبداعية', type: 'حلقة نقاشية', hrs: '1', date: '2026-10-21', by: 'منى السالم', n: 4 },
                 { i: 1, sem: 'الفصل الأول', dept: 'الرياضيات', title: 'تنويع مستويات الأسئلة الصفية', type: 'حصة نموذجية', hrs: '1', date: '2026-10-11', by: 'نوال الخاطر', n: 4 }];
-    d = { v: 5, staff, recs, pd, reps: [], users: [
+    d = { v: 6, staff, recs, pd, reps: [], users: [
       { id: 'admin', role: 'admin', dept: ['جميع الأقسام'], name: 'النائب الأكاديمي (معاينة)', pin: '000000' },
       { id: 'c1', role: 'coord', dept: ['الكيمياء'], name: 'منى السالم', pin: '1111' },
-      { id: 'c2', role: 'coord', dept: ['الرياضيات'], name: 'سلمى العتيبي', pin: '2222' }] };
+      { id: 'c2', role: 'coord', dept: ['الرياضيات'], name: 'سلمى العتيبي', pin: '2222' },
+      { id: 't1', role: 'teacher', dept: ['الكيمياء'], name: 'ريم الكعبي', pin: '3333' }] };
     localStorage.setItem(this.KEY, JSON.stringify(d)); return d;
   },
   save(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); },
@@ -68,16 +69,19 @@ const DEMO = {
     if (!me) throw new Error('انتهت الجلسة، الرجاء الدخول مرة أخرى');
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
     const vis = r => me.role === 'admin' || (can(r.dept) && !['VPV', 'FILES', 'NOTE'].includes(r.item));
+    if (a === 'boot' && me.role === 'teacher') return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), coords: [], records: d.recs.filter(r => r.item === 'TA' && r.d.t === me.name), reports: [], acts: [...new Set(d.recs.filter(r => r.item === 'AC').map(r => r.d.name))] };
     if (a === 'boot') return { ok: 1, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (a === 'save') {
-      const r = p.rec; if (!can(r.dept)) throw new Error('لا تملكين صلاحية على هذا القسم');
+      const r = p.rec; if (me.role === 'teacher') { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; }
+      if (!can(r.dept)) throw new Error('لا تملكين صلاحية على هذا القسم');
       if (r.key && d.recs.some(x => x.dept === r.dept && x.item === r.item && x.d && x.d._key === r.key && x.id !== r.id)) throw new Error('هذا السجل موجود مسبقاً (تم منع التكرار)');
       if (r.key) r.d._key = r.key;
       const o = { id: r.id || 'd' + Date.now().toString(36), dept: r.dept, item: r.item, date: r.date, sum: r.sum, d: r.d, by: me.name, at: new Date().toISOString().slice(0, 10) };
       const i = d.recs.findIndex(x => x.id === o.id); if (i >= 0) d.recs[i] = o; else d.recs.push(o); this.save(d); return { ok: 1, record: o };
     }
     if (a === 'saveMany') { const saved = [], skipped = []; for (const rec of p.list) { try { saved.push((await this.call('save', { rec })).record); } catch (e) { skipped.push(e.message); } } return { ok: 1, saved, skipped }; }
+    if (a === 'delete' && me.role !== 'admin' && ['AC', 'TA'].includes((d.recs.find(x => x.id === p.id) || {}).item)) throw new Error('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
     if (a === 'delete') { d.recs = d.recs.filter(x => x.id !== p.id); this.save(d); return { ok: 1 }; }
     const fr = () => d.reps.findIndex(x => x.dept === p.dept && x.period === p.period);
     if (a === 'sign') { if (String(p.pin) !== me.pin) throw new Error('الرقم السري غير صحيح — التوقيع يتم برقمك السري فقط'); const o = { id: 'p' + Date.now(), dept: p.dept, period: p.period, from: p.from, to: p.to, status: 'موقّع من المنسقة', coordSig: me.name, coordAt: new Date().toLocaleString('en-GB'), snap: p.snap, feedback: '' }; const i = fr(); if (i >= 0) { o.feedback = d.reps[i].feedback; d.reps[i] = o; } else d.reps.push(o); this.save(d); return { ok: 1, report: o }; }

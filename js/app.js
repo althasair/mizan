@@ -24,7 +24,7 @@ async function start() {
 }
 async function boot() {
   const j = await call('boot');
-  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports });
+  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, acts: j.acts || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
   S.dept = S.dept || (isAdmin() ? null : S.user.dept[0]);
@@ -76,11 +76,13 @@ const ICON = {
 };
 function navHTML() {
   const cnt = k => S.records.filter(r => r.item === k && r.dept === S.dept && inP(r.date, P())).length;
+  if (isTeacher()) return T_navHTML();
   if (isAdmin()) {
     const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
     return `<div class="grp">لوحة القيادة</div>${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}
       <div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}
+      <div class="grp">المعلمات</div>${it('a_tacts', 'مبادرات المعلمات وأنشطتهن', 'star')}
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       <div class="grp">الإعدادات</div>${it('a_accounts', 'حسابات المنسقات', 'user')}`;
   }
@@ -94,13 +96,13 @@ function navHTML() {
 }
 function renderApp() {
   document.onkeydown = null;
-  const deptSel = !isAdmin() && S.user.dept.length > 1 ? `<select id="deptSel">${S.user.dept.map(d => `<option ${d === S.dept ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : '';
+  const deptSel = !isAdmin() && !isTeacher() && S.user.dept.length > 1 ? `<select id="deptSel">${S.user.dept.map(d => `<option ${d === S.dept ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : '';
   document.body.innerHTML = `
   <div class="app">
     <aside class="side" id="side">
       <div class="head band"><img src="assets/logo.png" alt=""><div><b>الميزان</b><small>ميزان تربوي</small></div></div>
       <nav id="nav">${navHTML()}</nav>
-      <div class="who"><b>${esc(S.user.name)}</b>${isAdmin() ? 'نائب المدير للشؤون الأكاديمية' : 'منسقة ' + esc(S.user.dept.join(' و'))}${API.live() ? '' : ' · <span style="color:var(--tiffany)">معاينة</span>'}<br><button id="out">تسجيل الخروج</button></div>
+      <div class="who"><b>${esc(S.user.name)}</b>${isAdmin() ? 'نائب المدير للشؤون الأكاديمية' : isTeacher() ? 'معلمة ' + esc(S.user.dept.join(' و')) : 'منسقة ' + esc(S.user.dept.join(' و'))}${API.live() ? '' : ' · <span style="color:var(--tiffany)">معاينة</span>'}<br><button id="out">تسجيل الخروج</button></div>
     </aside>
     <main class="main">
       <div class="topbar"><button class="menu-btn" id="menu">☰</button><h1 id="ttl"></h1>${deptSel}
@@ -118,7 +120,8 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act };
+  if (isTeacher() && !['t_ini', 't_act'].includes(v)) return T_home(el);
   if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
   (map[v] || map.home)(el);
 }

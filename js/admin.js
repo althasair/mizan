@@ -65,6 +65,7 @@ function A_boards(el) {
   const str = {}, act = {}, enr = {}, ini = {}; const actL = {}, iniL = {};
   R.filter(r => r.item === 'V' || r.item === 'OV').forEach(r => { add(str, r.d.t, (r.d.f1 ? 1 : 0) + (r.d.f2 ? 1 : 0)); });
   const isIni = r => /مبادر/.test(r.d.ty || '') || /مبادر/.test(r.d.name || '');
+  R.filter(r => r.item === 'TA').forEach(r => { const ini2 = r.d.kind === 'مبادرة'; const M = ini2 ? ini : act, ML = ini2 ? iniL : actL; add(M, r.d.t); (ML[r.d.t] = ML[r.d.t] || []).push(String(r.d.name || '').slice(0, 45)); });
   R.filter(r => r.item === 'AC').forEach(r => { const M = isIni(r) ? ini : act, ML = isIni(r) ? iniL : actL;
     [r.d.e1, r.d.e2, r.d.e3].forEach(t => { if (!t || t === REF.ALL_MEMBERS) return; add(M, t, Math.max(1, +r.d.times || 1)); (ML[t] = ML[t] || []).push(String(r.d.name || '').replace(/\s*—.*$/, '').slice(0, 45)); }); });
   // الحصص الإثرائية والتعزيز من سبع سنابل (ملفات Forms المرفوعة هناك — قراءة فقط من نفس المتصفح)
