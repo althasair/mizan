@@ -138,9 +138,10 @@ function vpVisitForm(el, rec) {
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
-      return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}</td>
+      return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}${x.ind ? `<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--tiffany-d);font-size:11.5px">ما يجب توفره (${x.ind.length})</summary><ul style="margin:4px 0;padding-inline-start:16px;font-size:11.5px;color:var(--muted)">${x.ind.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}</td>
         ${F.scale.map((_, k) => `<td class="ck ${d.rt[i] === k ? 'on' : ''}" data-i="${i}" data-k="${k}" style="text-align:center;cursor:pointer;font-size:18px;color:var(--tiffany-d)">${d.rt[i] === k ? '✓' : ''}</td>`).join('')}
-        <td><input list="dlR${i}" data-rc="${i}" value="${esc(d.rc[i] || '')}" style="width:100%;min-width:180px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px" placeholder="—">${dl('dlR' + i, x.r)}</td></tr>`; }).join('')}</table></div></div>
+        <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
+          <select data-add="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ إضافة توصية (${x.r.length})…</option>${x.r.map(t => `<option>${esc(t)}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div></div>
     <div class="card"><h2>ملاحظات وتوصيات عامّة</h2>
       <div class="fld"><label>الديباجة</label><input list="dlPre" id="fPre" value="${esc(d.pre || F.preamble.replace('{name}', d.t || '...'))}" style="width:100%">${dl('dlPre', F.pre_opts.map(x => x.replace('{name}', d.t || '...')))}</div>
       <div class="grid g2" style="margin-top:8px">
@@ -156,6 +157,7 @@ function vpVisitForm(el, rec) {
     $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); d.subj = String(st.subj || '').split(/\+|،/)[0].trim(); d.s = ''; draw(); };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 2 || k === 3) && !d.rc[i]) d.rc[i] = FORMS.visit.items[i].r[0]; if (k < 2 && d.rc[i] === FORMS.visit.items[i].r[0]) delete d.rc[i]; } draw(); });
+    $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     $('#addSt').onclick = () => { grab(); d.st.push(''); draw(); };
     $('#addIm').onclick = () => { grab(); d.im.push(''); draw(); };
     $('#vb').onclick = () => { S.vpv = null; show(); };
