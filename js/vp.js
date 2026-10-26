@@ -56,8 +56,8 @@ function docHTML(inner, imgs, title) {
 const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM Plex Sans Arabic',Arial,sans-serif;font-size:12pt;line-height:1.9;color:#1E2230;text-align:justify;max-width:640px">
   <p style="margin:0 0 10px">الأستاذة الفاضلة/ <b>${esc(name)}</b> المحترمة،</p>
   <p style="margin:0 0 10px">السلام عليكم ورحمة الله وبركاته، وبعد،</p>
-  <p style="margin:0 0 10px">فإنني فخورة بكِ لكونكِ من ضمن معلمات مدرسة الشيماء الثانوية للبنات، وأقدّر ما تبذلينه من جهد مخلص في سبيل تعلّم طالباتنا.</p>
-  <p style="margin:0 0 10px">ويسعدني أن أرفق لكِ ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
+  <p style="margin:0 0 10px">فخورة لكونكِ ضمن فريق الشيماء، وأقدّر ما تبذلينه من جهد مخلص في سبيل تعلّم طالباتنا.</p>
+  <p style="margin:0 0 10px">أرفق لكِ غاليتي ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
   <p style="margin:0 0 10px">سائلةً المولى لكِ دوام التوفيق والسداد.</p>
   <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>آسيا الذبياني</b><br>نائب المدير للشؤون الأكاديمية<br>${esc(SCHOOL())}</p></div>`;
 async function sendForm({ to, name, subject, what, inner, file }) {
