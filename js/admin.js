@@ -65,15 +65,26 @@ function A_boards(el) {
   const str = {}, act = {}, enr = {};
   R.filter(r => r.item === 'V' || r.item === 'OV').forEach(r => { add(str, r.d.t, (r.d.f1 ? 1 : 0) + (r.d.f2 ? 1 : 0)); });
   R.filter(r => r.item === 'AC').forEach(r => [r.d.e1, r.d.e2, r.d.e3].forEach(t => add(act, t, Math.max(1, +r.d.times || 1))));
-  R.filter(r => (r.item === 'RA' && /إثرائ/.test(r.d.item || '')) || r.item === 'EN').forEach(r => add(enr, r.d.by || r.d.t, Math.max(1, +r.d.n || 1)));
+  // الحصص الإثرائية والتعزيز من سبع سنابل (ملفات Forms المرفوعة هناك — قراءة فقط من نفس المتصفح)
+  let SB = null; try { SB = JSON.parse(localStorage.getItem('sab3_sanabil_v1') || 'null'); } catch (e) {}
+  const toStaff = n => { if (!n) return ''; const k = nameKey(n); const st = S.staff.find(x => nameKey(x.full || x.name) === k || nameKey(x.name) === k) || S.staff.find(x => nrm(x.name) === nrm(n)); return st ? st.name : String(n).trim(); };
+  const inPer = dt => { const x = String(dt || '').slice(0, 10); return !x || (x >= p.from && x <= p.to); };
+  const enrK = {}, rein = {};
+  const acts = (SB && SB.actions) || [];
+  acts.filter(a => a.type === 3 && inPer(a.date)).forEach(a => { const t = toStaff(a.teacher); if (!t) return; add(enr, t); const kind = a.src === 'group' || (a.src !== 'indiv' && a.whole) ? 'g' : 'i'; enrK[t] = enrK[t] || { i: 0, g: 0 }; enrK[t][kind]++; });
+  R.filter(r => (r.item === 'RA' && /إثرائ/.test(r.d.item || ''))).forEach(r => add(enr, r.d.by || r.d.t, 1));
+  acts.filter(a => a.type === 6 && inPer(a.date)).forEach(a => add(rein, toStaff(a.teacher), Math.max(1, (a.students || []).length || 1)));
+  ((SB && SB.honors) || []).filter(h => inPer(h.date)).forEach(h => add(rein, toStaff(h.by), Math.max(1, +h.total || 1)));
+  const sbNote = !SB ? 'لم تُقرأ بيانات سبع سنابل على هذا المتصفح — افتحي منصة سبع سنابل مرة واحدة على نفس المتصفح ثم عودي هنا' : '';
   const deptOf = n => (S.staff.find(s => s.name === n) || {}).dept || '';
-  const board = (t, m, unit, empty) => { const L = Object.entries(m).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
-    return `<div class="card"><h2>${t}</h2>${L.length ? L.map(([n, v], i) => `<div class="row" style="margin:7px 0"><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span><span class="sp"><b>${esc(n)}</b> <small style="color:var(--muted)">${esc(deptOf(n))}</small></span><span class="chip ok">${v} ${unit}</span></div>`).join('') : `<div class="empty">${empty}</div>`}</div>`; };
+  const board = (t, m, unit, empty, extra) => { const L = Object.entries(m).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 10);
+    return `<div class="card"><h2>${t}</h2>${L.length ? L.map(([n, v], i) => `<div class="row" style="margin:7px 0"><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span><span class="sp"><b>${esc(n)}</b> <small style="color:var(--muted)">${esc(deptOf(n))}</small>${extra ? `<br><small style="color:var(--tiffany-d)">${extra(n)}</small>` : ''}</span><span class="chip ok">${v} ${unit}</span></div>`).join('') : `<div class="empty">${empty}</div>`}</div>`; };
   el.innerHTML = `<div class="note">تُحسب اللوحات من سجلات ${esc(p.name)}. خاصة بكِ ولا تظهر للمنسقات أو المعلمات.</div>
-  <div class="grid g3">
+  <div class="grid g2">
     ${board('الأعلى في نقاط القوة بالزيارات', str, 'نقطة قوة', 'لا توجد زيارات موثّقة بنقاط قوة')}
     ${board('الأكثر تفعيلاً للأنشطة', act, 'تنفيذ', 'لا توجد أنشطة بأسماء منفذات')}
-    ${board('الأكثر تنفيذاً للجلسات الإثرائية', enr, 'جلسة', 'تُحسب من «حصص إثرائية» في رفع التحصيل، ومن ملفات Forms عند استيرادها')}
+    ${board('الأكثر تنفيذاً للحصص الإثرائية', enr, 'حصة', sbNote || 'لا توجد حصص إثرائية مسجلة في سبع سنابل خلال الفترة', n => enrK[n] ? `فردية ${enrK[n].i} · جماعية ${enrK[n].g}` : '')}
+    ${board('الأكثر تعزيزاً وتحفيزاً للطالبات', rein, 'تعزيز', sbNote || 'لا توجد سجلات تعزيز (مجتمع الشيماء) خلال الفترة')}
   </div>`;
 }
 

@@ -83,7 +83,7 @@ async function A_vpvisit(el) {
   const inS = L.filter(r => r.date >= R.from && r.date <= R.to);
   const pool = S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
   const seen = new Set(inS.map(r => r.d.t));
-  const lv = r => { const rt = r.d.rt || {}; const v = Object.values(rt).filter(x => x < 4); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+  const lv = r => { const rt = r.d.rt || {}; const v = Object.values(rt).filter(x => x < 5); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   el.innerHTML = `
   <div class="tabs">${SEMS.map(s => `<button class="${s === sem ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>
   <div class="grid g4">
@@ -94,7 +94,7 @@ async function A_vpvisit(el) {
   </div>
   <div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">زياراتي الصفية — ${sem}</h2><span class="sp"></span><button class="btn" id="nv">+ حضور جديد (تعبئة الاستمارة)</button></div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th><th>القسم</th><th>الصف</th><th>الموضوع</th><th>التحصيل الأكاديمي</th><th>المستوى العام</th><th>الإرسال</th><th></th></tr>
-  ${inS.map(r => { const a = lv(r); const ok = a == null ? '' : a < 0.75 ? 'ok' : a < 1.6 ? 'tf' : a < 2.4 ? 'warn' : 'bad';
+  ${inS.map(r => { const a = lv(r); const ok = a == null ? '' : a < 1.25 ? 'ok' : a < 2.2 ? 'tf' : a < 3.2 ? 'warn' : 'bad';
     const lbl = a == null ? '—' : FORMS.visit.scale[Math.round(a)];
     return `<tr><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.topic || '')}</td><td style="font-size:12px">${esc(r.d.ach || '')}</td><td>${a == null ? '<span class="chip">بلا استمارة</span>' : `<span class="chip ${ok}">${esc(lbl)}</span>`}</td><td>${r.d.sent ? `<span class="chip ok">${dm(r.d.sent)}</span>` : '<span class="chip">لم تُرسل</span>'}</td>
       <td><button class="btn sm sec" data-o="${r.id}">فتح</button></td></tr>`; }).join('') || '<tr><td colspan="9"><div class="empty">لا توجد زيارات في هذا الفصل بعد</div></td></tr>'}</table></div></div>
@@ -110,14 +110,18 @@ function sanabilFor(name) {
 function vpVisitForm(el, rec) {
   const F = FORMS.visit; const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.vpvT || '', date: today(), mode: 'ميدانيّة', kj: 'كليّة', rt: {}, rc: {}, st: ['', '', ''], im: ['', '', ''] };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.st = d.st || ['', '', '']; d.im = d.im || ['', '', ''];
-  const tch = S.staff.filter(s => +s.load > 0 || s.role === 'معلمة');
+  const subjToks = st => String(st.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\/| و(?=ال)/).map(x => x.trim()).filter(Boolean);
+  const allSubj = uniqA([...S.staff.flatMap(subjToks), ...(REF.L.subject_all || [])]);
+  const teaches = (st, sub) => !sub || subjToks(st).some(x => nrm(x) === nrm(sub) || nrm(x).includes(nrm(sub)) || nrm(sub).includes(nrm(x))) || nrm(st.dept || '') === nrm(sub);
+  const tchAll = S.staff.filter(s => +s.load > 0 || s.role === 'معلمة');
   const draw = () => {
+    const tch = tchAll.filter(x => teaches(x, d.subj)).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
     const s = staffBy(d.t); const secs = String(s.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const subs = uniqA(String(s.subj || '').split(/\+|،/).map(x => x.trim()));
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
     const strongI = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1);
-    const weakI = F.items.map((x, i) => i).filter(i => d.rt[i] === 2 || d.rt[i] === 3);
+    const weakI = F.items.map((x, i) => i).filter(i => d.rt[i] === 3 || d.rt[i] === 4);
     const stOpts = [...strongI.flatMap(i => F.items[i].s), ...F.items.flatMap(x => x.s)];
     const imOpts = [...weakI.flatMap(i => [d.rc[i], ...F.items[i].r]), ...F.items.flatMap(x => x.r)];
     let lastD = '';
@@ -125,17 +129,17 @@ function vpVisitForm(el, rec) {
     <div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="vb">رجوع للقائمة</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="vdel">حذف</button>' : ''}<button class="btn sec" id="vauto">اقتراح نقاط القوة والتحسين من التقديرات</button><button class="btn" id="vsave">حفظ</button>${rec ? '<button class="btn sec" id="vprev">معاينة الاستمارة</button><button class="btn tf" id="vsend">إرسال للمعلمة</button>' : ''}</div>
     <div class="card"><h2>${esc(F.title)} <span class="sub">نموذج (9) من الدليل الإرشادي — تُعبَّأ من قِبل نائب المدير للشؤون الأكاديمية</span></h2>
     <form class="form" id="vh" onsubmit="return false">
-      <div class="fld"><label>المعلّمة</label><input list="dlT" id="fT" value="${esc(d.t)}" placeholder="اختاري المعلمة">${dl('dlT', tch.map(x => x.name))}</div>
+      <div class="fld"><label>المادّة <small style="color:var(--muted)">· اختاريها أولاً</small></label><select id="fSub"><option value="">اختاري المادة…</option>${allSubj.map(x => `<option ${nrm(x) === nrm(d.subj || '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
+      <div class="fld"><label>المعلّمة ${d.subj ? `<small style="color:var(--muted)">· معلمات ${esc(d.subj)} (${tch.length})</small>` : ''}</label><select id="fT"><option value="">${d.subj ? 'اختاري المعلمة…' : 'اختاري المادة أولاً'}</option>${tch.map(x => `<option ${x.name === d.t ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+      <div class="fld"><label>الصّف</label><input list="dlSec" id="fSec" value="${esc(d.s || '')}" placeholder="${secs.length ? 'شعب المعلمة' : ''}">${dl('dlSec', [...secs, ...REF.SECTIONS])}</div>
       <div class="fld"><label>التاريخ</label><input type="date" id="fD" value="${esc(d.date)}"></div>
       <div class="fld"><label>اليوم</label><input id="fDay" value="${esc(dayOf(d.date))}" disabled></div>
-      <div class="fld"><label>المادّة</label><input list="dlSub" id="fSub" value="${esc(d.subj || subs[0] || '')}">${dl('dlSub', [...subs, ...(REF.L.subject_all || [])])}</div>
-      <div class="fld"><label>الصّف</label><input list="dlSec" id="fSec" value="${esc(d.s || '')}">${dl('dlSec', [...secs, ...REF.SECTIONS])}</div>
       <div class="fld"><label>الموضوع</label><input id="fTop" value="${esc(d.topic || '')}" placeholder="عنوان الدرس"></div>
       <div class="fld"><label>نوع المتابعة</label><select id="fMode">${['ميدانيّة', 'عن بُعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>كليّة / جزئيّة</label><select id="fKj">${['كليّة', 'جزئيّة'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="fLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld" style="grid-column:1/-1"><label>تحصيل الصف في المادة ${cls ? `<small style="color:var(--tiffany-d)">· محسوب تلقائياً من سنابل (الفترة ${esc(cls.per)})</small>` : `<small style="color:var(--muted)">· ${d.s && d.subj ? 'لا تتوفر نتائج هذا الصف في سنابل على هذا المتصفح — افتحي سنابل مرة واحدة على نفس المتصفح أو اكتبي يدوياً' : 'اختاري الصف والمادة فيظهر التحصيل تلقائياً'}</small>`}</label><textarea id="fAch" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px;line-height:1.8">${esc(d.ach || '')}</textarea>${cls ? `<div class="row" style="margin-top:4px;gap:6px"><span class="chip ${cls.band === 'ممتاز' || cls.band === 'جيد جداً' ? 'ok' : cls.band === 'جيد' ? 'tf' : cls.band === 'مقبول' ? 'warn' : 'bad'}">${esc(cls.band)} · ${cls.me.mean.toFixed(1)}%</span>${cls.rel ? `<span class="chip">${esc(cls.rel)} متوسط المستوى (${cls.lv.mean.toFixed(1)}%)</span><span class="chip">الترتيب ${cls.rank} من ${cls.of}</span>` : ''}<button type="button" class="btn sm ghost" id="achRe">إعادة الحساب</button></div>` : ''}</div>
-    </form></div>
+    </form>${achMini(d.t, d.subj)}</div>
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
@@ -155,19 +159,19 @@ function vpVisitForm(el, rec) {
       $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
       d.st = $$('[data-st]', el).map(i => i.value.trim()); d.im = $$('[data-im]', el).map(i => i.value.trim());
     };
-    $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); d.subj = String(st.subj || '').split(/\+|،/)[0].trim(); d.s = ''; draw(); };
+    $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); if (!d.subj || !teaches(st, d.subj)) d.subj = subjToks(st)[0] || ''; const sc = String(st.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean); d.s = sc.length === 1 ? sc[0] : ''; if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
     const reAch = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
-    $('#fSec').onchange = reAch; $('#fSub').onchange = reAch;
+    $('#fSec').onchange = reAch; $('#fSub').onchange = () => { grab(); if (d.t && !teaches(staffBy(d.t), d.subj)) { d.t = ''; d.s = ''; } if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     if ($('#achRe')) $('#achRe').onclick = () => { grab(); d.ach = ''; d.achAuto = 1; draw(); };
-    $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 2 || k === 3) && !d.rc[i]) d.rc[i] = FORMS.visit.items[i].r[0]; if (k < 2 && d.rc[i] === FORMS.visit.items[i].r[0]) delete d.rc[i]; } draw(); });
+    $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 3 || k === 4) && !d.rc[i]) d.rc[i] = FORMS.visit.items[i].r[0]; if (k < 2 && d.rc[i] === FORMS.visit.items[i].r[0]) delete d.rc[i]; } draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     $('#addSt').onclick = () => { grab(); d.st.push(''); draw(); };
     $('#addIm').onclick = () => { grab(); d.im.push(''); draw(); };
     $('#vb').onclick = () => { S.vpv = null; show(); };
     $('#vauto').onclick = () => {
       grab(); const sI = F.items.map((x, i) => i).filter(i => d.rt[i] === 0).concat(F.items.map((x, i) => i).filter(i => d.rt[i] === 1));
-      const wI = F.items.map((x, i) => i).filter(i => d.rt[i] === 3).concat(F.items.map((x, i) => i).filter(i => d.rt[i] === 2));
+      const wI = F.items.map((x, i) => i).filter(i => d.rt[i] === 4).concat(F.items.map((x, i) => i).filter(i => d.rt[i] === 3));
       if (!sI.length && !wI.length) return toast('ضعي التقديرات (✓) أولاً', 1);
       d.st = sI.slice(0, 3).map(i => F.items[i].s[0]); while (d.st.length < 2) d.st.push('');
       d.im = wI.slice(0, 3).map(i => d.rc[i] || F.items[i].r[0]); while (d.im.length < 2) d.im.push('');
@@ -188,6 +192,21 @@ function vpVisitForm(el, rec) {
   };
   draw();
 }
+/* رسم مصغّر لتحصيل طالبات المعلمة في المادة حسب المستوى (من سنابل) */
+function achMini(t, subj) {
+  if (!t || !subj || typeof sanabilClass !== 'function') return '';
+  const st = staffBy(t); const secs = String(st.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
+  const L = { 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر' }; const agg = {};
+  secs.forEach(sc => { const c = sanabilClass(sc, subj); if (!c) return; const lv = c.sec.split('-')[0]; const a = agg[lv] = agg[lv] || { sum: 0, n: 0, lvMean: c.lv ? c.lv.mean : null }; a.sum += c.me.mean * c.me.n; a.n += c.me.n; });
+  const lvls = ['10', '11', '12'].filter(l => secs.some(x => x.startsWith(l)));
+  if (!lvls.length) return '';
+  const col = m => m >= 90 ? '#1F8F5B' : m >= 80 ? '#2E9E6E' : m >= 70 ? '#B7791F' : m >= 50 ? '#D2691E' : '#B42335';
+  const tot = Object.values(agg).reduce((a, x) => ({ s: a.s + x.sum, n: a.n + x.n }), { s: 0, n: 0 });
+  const bar = (lbl, m, sub) => `<div style="display:flex;align-items:center;gap:6px;flex:1;min-width:190px"><span style="font-size:11.5px;width:68px;color:var(--navy);font-weight:600">${lbl}</span>${m == null ? '<span style="font-size:11px;color:var(--muted)">لا توجد نتائج</span>' : `<span style="flex:1;height:9px;background:#EEF0F3;border-radius:6px;overflow:hidden"><i style="display:block;height:100%;width:${Math.min(100, m)}%;background:${col(m)}"></i></span><b style="font-size:11.5px;color:${col(m)}">${m.toFixed(1)}%</b>${sub ? `<small style="font-size:10px;color:var(--muted)">${sub}</small>` : ''}`}</div>`;
+  return `<div style="margin-top:10px;border:1px solid var(--line);border-radius:12px;padding:6px 10px;background:linear-gradient(90deg,#F6FBFA,#fff)"><div style="font-size:11px;color:var(--tiffany-d);margin-bottom:3px">تحصيل طالبات أ. ${esc(t)} في ${esc(subj)} — من سنابل</div><div style="display:flex;flex-wrap:wrap;gap:4px 14px">
+    ${lvls.map(l => { const a = agg[l]; const m = a && a.n ? a.sum / a.n : null; return bar(L[l], m, m != null && a.lvMean != null ? `المستوى ${a.lvMean.toFixed(0)}%` : ''); }).join('')}
+    ${tot.n && Object.keys(agg).length > 1 ? bar('الإجمالي', tot.s / tot.n, '') : ''}</div></div>`;
+}
 function visitInner(r) {
   const F = FORMS.visit, d = r.d; let lastD = '';
   const ys = (v, x) => v === x ? '☑' : '☐';
@@ -198,7 +217,7 @@ function visitInner(r) {
     <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">نائب المدير للشؤون الأكاديمية</td><td>أ. ${VP_NAME}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانيّة')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئيّة')} جزئيّة &nbsp; ${ys(d.kj, 'كليّة')} كليّة</td></tr>
     <tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
-  <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:8%;font-size:9px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
+  <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc(d.pre || '')}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
