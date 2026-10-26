@@ -53,17 +53,31 @@ function docHTML(inner, imgs, title) {
   inner = inner.replace(/<th(?=[\s>])/g, '<th bgcolor="#7A1F33"').replace(/<td class="(k|dm)"/g, '<td bgcolor="#F6ECEE" class="$1"');
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>${esc(title)}</title><style>@page{size:A4;margin:0}body{margin:0}${FORM_CSS}</style></head><body>${paperWrap(inner, imgs)}</body></html>`;
 }
-const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM Plex Sans Arabic',Arial,sans-serif;font-size:15px;line-height:1.9;color:#1E2230">
-  <p>الأستاذة الفاضلة/ <b>${esc(name)}</b> المحترمة،</p>
-  <p>السلام عليكم ورحمة الله وبركاته،</p>
-  <p>يسعدني أن أرفق لكِ <b>${esc(what)}</b>، مع خالص الشكر والتقدير لجهودكِ المخلصة وعطائكِ المتميز الذي يُسهم في الارتقاء بتعلّم طالباتنا وتحقيق رؤية مدرستنا «متعلم ريادي لتنمية مستدامة».</p>
-  <p>آمل التكرّم بالاطلاع على الاستمارة والتوقيع عليها، ثم إعادة إرسالها، سائلةً المولى لكِ دوام التوفيق والسداد.</p>
-  <p style="margin-top:18px">مع خالص التقدير،<br><b>آسيا الذبياني</b><br>نائب المدير للشؤون الأكاديمية<br>${esc(SCHOOL())}</p></div>`;
+const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM Plex Sans Arabic',Arial,sans-serif;font-size:12pt;line-height:1.9;color:#1E2230;text-align:justify;max-width:640px">
+  <p style="margin:0 0 10px">الأستاذة الفاضلة/ <b>${esc(name)}</b> المحترمة،</p>
+  <p style="margin:0 0 10px">السلام عليكم ورحمة الله وبركاته، وبعد،</p>
+  <p style="margin:0 0 10px">فإنني فخورة بكِ لكونكِ من ضمن معلمات مدرسة الشيماء الثانوية للبنات، وأقدّر ما تبذلينه من جهد مخلص في سبيل تعلّم طالباتنا.</p>
+  <p style="margin:0 0 10px">ويسعدني أن أرفق لكِ ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
+  <p style="margin:0 0 10px">سائلةً المولى لكِ دوام التوفيق والسداد.</p>
+  <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>آسيا الذبياني</b><br>نائب المدير للشؤون الأكاديمية<br>${esc(SCHOOL())}</p></div>`;
 async function sendForm({ to, name, subject, what, inner, file }) {
   if (!to) { toast('لا يوجد بريد إلكتروني مسجّل لهذه الموظفة', 1); return false; }
-  const imgs = await lhImgs();
-  const html = docHTML(inner.replace(/\{\{SIG\}\}/g, '{{SIG}}'), imgs, file);
-  await call('sendForm', { to, subject, html, body: emailBody(name, what), file });
+  const imgs = await lhImgs(); const sig = await vpSig();
+  const body = emailBody(name, what);
+  // معاينة قبل الإرسال: نص البريد + الاستمارة المرفقة كما ستصل
+  const ok = await new Promise(res => {
+    const m = document.createElement('div'); m.className = 'modal';
+    m.innerHTML = `<div class="box" style="max-width:900px;width:96vw;max-height:92vh;overflow:auto"><h3>معاينة قبل الإرسال</h3>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">إلى: <b dir="ltr">${esc(to)}</b> · الموضوع: <b>${esc(subject)}</b> · المرفق: <b>${esc(file)}.pdf</b></div>
+      <div style="border:1px solid var(--line);border-radius:12px;padding:14px 18px;background:#fff">${body}</div>
+      <details style="margin-top:10px" open><summary style="cursor:pointer;color:var(--tiffany-d)">الاستمارة المرفقة</summary><style>${FORM_CSS}</style><div style="border:1px solid var(--line);margin-top:6px;zoom:.8">${paperWrap(inner.replace(/\{\{SIG\}\}/g, sig ? `<img src="${sig}" alt="">` : ''), imgs)}</div></details>
+      <div class="row" style="margin-top:12px"><button class="btn tf" id="sOk">إرسال الآن</button><button class="btn sec" id="sNo">إلغاء</button></div></div>`;
+    document.body.appendChild(m);
+    $('#sOk', m).onclick = () => { m.remove(); res(true); }; $('#sNo', m).onclick = () => { m.remove(); res(false); };
+  });
+  if (!ok) return false;
+  const html = docHTML(inner, imgs, file);
+  await call('sendForm', { to, subject, html, body, file });
   toast('تم الإرسال إلى ' + to + ' ✓'); return true;
 }
 async function showPaper(el, title, inner, actions) {
@@ -230,7 +244,6 @@ async function previewVisit(el, r) {
 }
 async function sendVisit(r) {
   const s = staffBy(r.d.t);
-  if (!confirm(`إرسال استمارة الإشراف بتوقيعك إلى أ. ${r.d.t}${s.email ? ' (' + s.email + ')' : ''}؟`)) return;
   const ok = await sendForm({ to: s.email, name: r.d.t, subject: `استمارة الإشراف على الأداء — ${dmy(r.date)}`, what: `استمارة الإشراف على أدائكِ في حصة ${r.d.subj || ''}${r.d.s ? ' للصف ' + r.d.s : ''} بتاريخ ${dmy(r.date)}`, inner: visitInner(r), file: `استمارة الإشراف - ${r.d.t} - ${r.date}` });
   if (ok) await markSent(r);
 }
@@ -402,7 +415,6 @@ async function withCSig(inner, T, kind) {
 }
 async function sendFile(D, T, r, kind) {
   const to = T.email || staffBy(T.name).email;
-  if (!confirm(`إرسال «${D.title}» بتوقيعك إلى أ. ${T.name}${to ? ' (' + to + ')' : ''}؟`)) return;
   const ok = await sendForm({ to, name: T.name, subject: `${D.title} — ${r.d.sem}`, what: `${D.title} الخاصة بكِ عن ${r.d.sem}`, inner: await withCSig(fileInner(D, T, r, kind), T, kind), file: `${D.title} - ${T.name} - ${r.d.sem}` });
   if (ok) await markSent(r);
 }
