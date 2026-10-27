@@ -39,7 +39,8 @@ function fail_(msg) { throw new Error(msg); }
 
 /* ------------------------------------------------------------------ الدخول */
 function roleOf_(r) { return r[0] === 'admin' ? 'admin' : String(r[1]).trim() === 'معلمة' ? 'teacher' : 'coord'; }
-const TEACHER_ITEMS = ['TA'];                                   // ما تسجّله المعلمة بنفسها (مبادرات وأنشطة)
+const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
+const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
   const t = rows_(SH.users);
   for (const r of t.rows) {
@@ -60,9 +61,8 @@ function login_(pin, app) {
   if (fails >= 25) fail_('تم إيقاف الدخول مؤقتاً بسبب محاولات خاطئة متكررة. حاولي بعد 10 دقائق.');
   const u = findUserByPin_(pin);
   if (!u) { cache.put('fails', String(fails + 1), 600); Utilities.sleep(700); fail_('الرقم السري غير صحيح'); }
-  // المعلمات يدخلن من «سبع سنابل» فقط، والمنسقات من «الميزان» فقط
+  // المنسقات من «الميزان» فقط؛ والمعلمات يدخلن «الميزان» بتبويبات محدودة، و«سبع سنابل» لمبادراتهن وأنشطتهن
   if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
-  if (app !== 'sanabil' && u.role === 'teacher') fail_('رقمكِ للدخول إلى منصة سبع سنابل — مبادراتي وأنشطتي');
   const token = Utilities.getUuid();
   cache.put('tok_' + token, u.id, SESSION_SECONDS);
   log_(u, 'دخول', u.dept.join('، '));
@@ -85,11 +85,12 @@ function bootTeacher_(u) {
   const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
   const me = rows_(SH.teachers).rows.filter(r => r[1] === u.name).map(r => ({ dept: r[0], name: r[1], role: r[3], subj: r[4], secs: String(r[5]), load: Number(r[6]) || 0 }));
   const all = rows_(SH.rec).rows.filter(r => r[0]);
-  const recs = all.filter(r => r[2] === 'TA').map(recObj_).filter(x => x.d && x.d.t === u.name);
+  const recs = all.filter(r => TEACHER_ITEMS.indexOf(r[2]) >= 0).map(recObj_).filter(x => x.d && (x.d.t === u.name || (x.item === 'TPV' && x.d.v === u.name) || (x.item === 'TWS' && x.d.by === u.name)));
+  const staffAll = rows_(SH.teachers).rows.filter(r => r[1] && r[8] !== 'لا').map(r => ({ dept: r[0], name: r[1], role: r[3] }));
   // أسماء الأنشطة القائمة في المدرسة (للاختيار منها)
   const acts = {};
   all.forEach(r => { if (r[2] !== 'AC' && r[2] !== 'TA') return; let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {} if (r[2] === 'TA' && d.kind !== 'نشاط') return; const n = String(d.name || '').replace(/\s*—.*$/, '').trim(); if (n) acts[n] = 1; });
-  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: me, coords: [], records: recs, reports: [], acts: Object.keys(acts).sort(), server: now_() };
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: me, staffAll: staffAll, coords: [], records: recs, reports: [], acts: Object.keys(acts).sort(), server: now_() };
 }
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
@@ -112,9 +113,9 @@ function recObj_(r) {
   return { id: String(r[0]), dept: r[1], item: r[2], date: iso_(r[3]), sum: r[4], d: d, by: r[6], at: iso_(r[7]), up: iso_(r[8]) };
 }
 function listRecords_(u) {
-  if (u.role === 'teacher') return rows_(SH.rec).rows.filter(r => r[0] && r[2] === 'TA').map(recObj_).filter(x => x.d && x.d.t === u.name);
+  if (u.role === 'teacher') return bootTeacher_(u).records;
   return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_)
-    .filter(x => u.role === 'admin' || (u.dept.indexOf(x.dept) >= 0 && ADMIN_ITEMS.indexOf(x.item) < 0));
+    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
 }
 function repObj_(r) {
   let snap = null; try { snap = r[11] ? JSON.parse(r[11]) : null; } catch (e) {}
@@ -132,6 +133,9 @@ function saveRecord_(u, rec) {
   if (u.role === 'teacher') {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
+    const T = rows_(SH.teachers).rows; const dOf = n => { const x = T.find(r => r[1] === n); return x ? String(x[0]) : ''; };
+    if (rec.item === 'TPV') rec.d.vdept = dOf(rec.d.v);
+    if (rec.item === 'TWS') rec.d.bydept = rec.d.role === 'قدّمتُ لتطوير الزملاء' ? rec.dept : dOf(rec.d.by);
   } else if (TEACHER_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند تسجّله المعلمة بنفسها');
   if (u.role === 'coord') assertNotLocked_(rec.dept, rec.date);
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
@@ -153,7 +157,7 @@ function saveRecord_(u, rec) {
       for (let i = 0; i < t.rows.length; i++) {
         if (String(t.rows[i][0]) === String(rec.id)) {
           if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
-          if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (t.rows[i][2] !== 'TA' || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
+          if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(t.rows[i][2]) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
           t.sh.getRange(i + 2, 2, 1, 8).setValues([[rec.dept, rec.item, rec.date || '', rec.sum || '', payload, u.name, t.rows[i][7], now_()]]);
           log_(u, 'تعديل سجل', rec.dept, rec.item + ' — ' + (rec.sum || '').slice(0, 80));
           return recObj_([rec.id, rec.dept, rec.item, rec.date || '', rec.sum || '', payload, u.name, t.rows[i][7], now_()]);
@@ -180,6 +184,8 @@ function deleteRecord_(u, id) {
       if (String(t.rows[i][0]) === String(id)) {
         if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
+        if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
+        else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('هذا السجل تسجّله المعلمة بنفسها');
         if (u.role !== 'admin') assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
         t.sh.deleteRow(i + 2); log_(u, 'حذف سجل', t.rows[i][1], t.rows[i][2] + ' — ' + String(t.rows[i][4]).slice(0, 80));
         return { id: id };
@@ -337,6 +343,26 @@ function sendVisitC_(u, p) {
   return { sent: true, record: recObj_(row) };
 }
 
+
+/* ------------------------------------------------------------------ مرفقات المعلمات (كشوف الحضور وأوراق العمل) — في المجلد الخاص */
+function upload_(u, p) {
+  const m = String(p.data || '').match(/^data:([\w.+\/-]+);base64,(.+)$/);
+  if (!m) fail_('صيغة الملف غير مدعومة');
+  const bytes = Utilities.base64Decode(m[2]); if (bytes.length > 8 * 1024 * 1024) fail_('حجم الملف أكبر من 8 ميجابايت');
+  const root = DriveApp.getFolderById(PRIVATE_FOLDER); const it = root.getFoldersByName('مرفقات المعلمات');
+  const folder = it.hasNext() ? it.next() : root.createFolder('مرفقات المعلمات');
+  const name = String(p.name || 'ملف').replace(/[\\/:*?"<>|]/g, '-').slice(0, 120);
+  const f = folder.createFile(Utilities.newBlob(bytes, m[1], name)); f.setDescription(u.id + '|' + u.dept.join('|'));
+  log_(u, 'رفع مرفق', u.dept.join('، '), name);
+  return { fid: f.getId(), name: name };
+}
+function getFile_(u, p) {
+  const f = DriveApp.getFileById(String(p.fid)); if (f.getParents().next().getName() !== 'مرفقات المعلمات') fail_('غير مسموح');
+  const [owner, ...depts] = String(f.getDescription() || '').split('|');
+  if (!(u.role === 'admin' || owner === u.id || (u.role === 'coord' && depts.some(d => u.dept.indexOf(d) >= 0)))) fail_('غير مسموح');
+  const b = f.getBlob(); return { name: f.getName(), data: 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes()) };
+}
+
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -357,6 +383,8 @@ function route_(req) {
     case 'setPin': return setPin_(u, req);
     case 'sendForm': return sendForm_(u, req);
     case 'sendVisitC': return sendVisitC_(u, req);
+    case 'upload': return upload_(u, req);
+    case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }

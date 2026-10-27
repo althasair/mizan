@@ -28,7 +28,7 @@ const DEMO = {
   KEY: 'mizan_demo_v1',
   db() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) {}
-    if (d && d.v === 6) return d;
+    if (d && d.v === 7) return d;
     const staff = [
       ['الكيمياء', 'منى السالم', 'منسقة', 'الكيمياء', '12-3', 4], ['الكيمياء', 'ريم الكعبي', 'معلمة', 'الكيمياء', '12-1، 12-2', 16], ['الكيمياء', 'لطيفة المري', 'معلمة', 'الكيمياء', '11-1، 11-3', 16],
       ['الكيمياء', 'دانة الهاجري', 'معلمة', 'العلوم + الكيمياء', '11-2، 11-6', 12], ['الرياضيات', 'سلمى العتيبي', 'منسقة', 'الرياضيات', '12-3', 6],
@@ -50,11 +50,11 @@ const DEMO = {
     ];
     const pd = [{ i: 0, sem: 'الفصل الأول', dept: 'الكيمياء', title: 'تطبيق أساليب تغذية راجعة إبداعية', type: 'حلقة نقاشية', hrs: '1', date: '2026-10-21', by: 'منى السالم', n: 4 },
                 { i: 1, sem: 'الفصل الأول', dept: 'الرياضيات', title: 'تنويع مستويات الأسئلة الصفية', type: 'حصة نموذجية', hrs: '1', date: '2026-10-11', by: 'نوال الخاطر', n: 4 }];
-    d = { v: 6, staff, recs, pd, reps: [], users: [
+    d = { v: 7, staff, recs, pd, reps: [], users: [
       { id: 'admin', role: 'admin', dept: ['جميع الأقسام'], name: 'النائب الأكاديمي (معاينة)', pin: '000000' },
       { id: 'c1', role: 'coord', dept: ['الكيمياء'], name: 'منى السالم', pin: '1111' },
       { id: 'c2', role: 'coord', dept: ['الرياضيات'], name: 'سلمى العتيبي', pin: '2222' },
-      { id: 't1', role: 'teacher', dept: ['الكيمياء'], name: 'ريم الكعبي', pin: '3333' }] };
+      { id: 't1', role: 'teacher', dept: ['الكيمياء'], name: 'ريم الكعبي', pin: '3333' }, { id: 't2', role: 'teacher', dept: ['الرياضيات'], name: 'نوال الخاطر', pin: '4444' }] };
     localStorage.setItem(this.KEY, JSON.stringify(d)); return d;
   },
   save(d) { localStorage.setItem(this.KEY, JSON.stringify(d)); },
@@ -68,12 +68,12 @@ const DEMO = {
     if (a === 'login') { const u = d.users.find(x => x.pin === String(p.pin)); if (!u) throw new Error('الرقم السري غير صحيح'); sessionStorage.setItem('mizan_demo_u', u.id); return { ok: 1, token: 'demo', user: strip(u) }; }
     if (!me) throw new Error('انتهت الجلسة، الرجاء الدخول مرة أخرى');
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
-    const vis = r => me.role === 'admin' || (can(r.dept) && !['VPV', 'FILES', 'NOTE'].includes(r.item));
-    if (a === 'boot' && me.role === 'teacher') return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), coords: [], records: d.recs.filter(r => r.item === 'TA' && r.d.t === me.name), reports: [], acts: [...new Set(d.recs.filter(r => r.item === 'AC').map(r => r.d.name))] };
+    const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE'].includes(r.item));
+    if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
     if (a === 'boot') return { ok: 1, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (a === 'save') {
-      const r = p.rec; if (me.role === 'teacher') { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; }
+      const r = p.rec; if (me.role === 'teacher') { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; const dOf = n => (d.staff.find(s => s.name === n) || {}).dept || ''; if (r.item === 'TPV') r.d.vdept = dOf(r.d.v); if (r.item === 'TWS') r.d.bydept = r.d.role === 'قدّمتُ لتطوير الزملاء' ? r.dept : dOf(r.d.by); }
       if (!can(r.dept)) throw new Error('لا تملكين صلاحية على هذا القسم');
       if (r.key && d.recs.some(x => x.dept === r.dept && x.item === r.item && x.d && x.d._key === r.key && x.id !== r.id)) throw new Error('هذا السجل موجود مسبقاً (تم منع التكرار)');
       if (r.key) r.d._key = r.key;
@@ -92,6 +92,8 @@ const DEMO = {
     if (a === 'setSig') return { ok: 1 };
     if (a === 'signature') return { ok: 1, data: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="120"><path d="M20 90 C80 10,140 10,160 60 S260 100,280 30" stroke="#1B2A6E" stroke-width="4" fill="none"/><text x="150" y="112" font-size="12" text-anchor="middle" fill="#999">توقيع تجريبي</text></svg>') };
     if (a === 'setPin') { const u = d.users.find(x => x.id === p.id); u.pin = String(p.newPin); this.save(d); return { ok: 1 }; }
+    if (a === 'upload') return { ok: 1, fid: 'demo' + Date.now(), name: p.name };
+    if (a === 'file') return { ok: 1, name: 'ملف.txt', data: 'data:text/plain;base64,' + btoa('demo') };
     if (a === 'sendForm') { console.log('معاينة: لا يُرسل بريد فعلي', p.to, p.subject); return { ok: 1, sent: true }; }
     if (a === 'logout') { sessionStorage.removeItem('mizan_demo_u'); return { ok: 1 }; }
     throw new Error('عملية غير معروفة');

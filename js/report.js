@@ -181,6 +181,55 @@ function buildReport(ctx) {
   /* الأولويات */
   const firstBy = (list, keyf) => { const s = new Set(); return list.filter(r => { const k = keyf(r); if (s.has(k)) return false; s.add(k); return true; }); };
   const RAf = firstBy(RA, r => d(r).item), ACf = firstBy(AC, r => d(r).name);
+
+  /* ---------- ما تسجّله المعلمات بأنفسهن (الميزان برقم المعلمة) ---------- */
+  {
+    const TT = it => ctx.recs.filter(r => r.item === it && inP(r.date, P) && r.d);
+    const mineD = it => TT(it).filter(r => r.dept === dept || (extraT.includes(r.d.t)));
+    const lst = a => (Array.isArray(a) ? a : [a]).filter(Boolean).map(x => String(x).replace(/[.،؛\s]+$/, ''));
+    const add = (k, txt) => { if (!txt) return; T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt : (T[k] ? T[k] + ' ' + txt : txt); };
+    const nz = s => String(s || '').replace(/\s+/g, ' ').trim();
+    const dateTxt = d0 => d0 ? ` (${dm(d0)})` : '';
+    // الزيارات التبادلية التي سجّلتها معلمات القسم
+    const PVt = mineD('TPV');
+    if (PVt.length) add('ov_peer', `وسجّلت معلمات القسم (${PVt.length}) ${PVt.length >= 3 && PVt.length <= 10 ? 'زيارات تبادلية' : 'زيارة تبادلية'}: ` + PVt.map(r => `حضرت أ. ${r.d.t} حصة أ. ${r.d.v}` + (r.d.vdept && r.d.vdept !== dept ? ` (${r.d.vdept})` : '') + dateTxt(r.date) + (lst(r.d.pick).length ? ' لتميّزها في ' + lst(r.d.pick).join('، و') : '') + (lst(r.d.saw).length ? '، واستفادت: ' + lst(r.d.saw).join('، و') : '') + (lst(r.d.apply).length ? '، وستطبّق' + (r.d.how === 'بعد تكييفه' ? ' بعد التكييف' : '') + ': ' + lst(r.d.apply).join('، و') : '')).join('؛ ') + '.');
+    // الحرص على التطوير الذاتي: ثلاث زيارات فأكثر في شهر واحد
+    const byM = {}; PVt.forEach(r => { const k = r.d.t + '|' + String(r.date).slice(0, 7); byM[k] = (byM[k] || 0) + 1; });
+    const keen = uniq(Object.entries(byM).filter(([, n]) => n >= 3).map(([k]) => k.split('|')[0]));
+    if (keen.length) add('ov_peer', `وتُعدّ ${keen.map(t => 'أ. ' + t).join(' و')} من الحريصات على التطوير الذاتي، إذ نفّذت ثلاث زيارات تبادلية فأكثر في شهر واحد، بارك الله جهودها.`);
+    // توظيف جوانب التميز والاستفادة من الكفاءات
+    const host = TT('TPV').filter(r => r.d.vdept === dept);
+    const WS = TT('TWS');
+    const pres = WS.filter(r => r.dept === dept && r.d.role === 'قدّمتُ لتطوير الزملاء');
+    const attOur = WS.filter(r => r.d.role === 'حضرتُ ورشة داخلية' && r.d.bydept === dept && r.d.by !== r.d.t);
+    const parts = [];
+    const hBy = {}; host.forEach(r => { const o = hBy[r.d.v] = hBy[r.d.v] || { n: 0, deps: new Set(), picks: new Set() }; o.n++; if (r.dept !== dept) o.deps.add(r.dept); lst(r.d.pick).forEach(x => o.picks.add(x)); });
+    Object.entries(hBy).forEach(([t, o]) => parts.push(`أ. ${t} من خلال الحضور الصفي، إذ حضرت لها ${o.n === 1 ? 'معلمة واحدة' : o.n === 2 ? 'معلمتان' : '(' + o.n + ') معلمات'}` + (o.deps.size ? ' من ' + (o.deps.size > 1 ? 'أقسام ' : 'قسم ') + [...o.deps].join(' و') : ' من القسم') + (o.picks.size ? ' لتميّزها في ' + [...o.picks].slice(0, 3).join('، و') : '')));
+    const used = new Set();
+    pres.forEach(r => { const att = attOur.filter(a => a.d.by === r.d.t && nz(a.d.title) === nz(r.d.title)); att.forEach(a => used.add(a.id));
+      const deps = uniq(att.map(a => a.dept).filter(x => x !== dept));
+      parts.push(`أ. ${r.d.t} بتقديمها ${r.d.type || 'ورشة'} «${nz(r.d.title)}»` + dateTxt(r.date) + (r.d.aud ? `، واستفادت منها ${r.d.aud}` : '') + (deps.length ? `، وحضرتها معلمات من ${deps.length > 1 ? 'أقسام ' : 'قسم '}${deps.join(' و')}` : '')); });
+    const restA = {}; attOur.filter(a => !used.has(a.id)).forEach(a => { const k = a.d.by + '|' + nz(a.d.title); const o = restA[k] = restA[k] || { by: a.d.by, title: nz(a.d.title), date: a.date, deps: new Set() }; if (a.dept !== dept) o.deps.add(a.dept); });
+    Object.values(restA).forEach(o => parts.push(`أ. ${o.by} بتقديمها ورشة «${o.title}»` + dateTxt(o.date) + (o.deps.size ? ` لمعلمات من ${o.deps.size > 1 ? 'أقسام ' : 'قسم '}${[...o.deps].join(' و')}` : '')));
+    T.excel = parts.length ? 'تم توظيف جوانب التميز والاستفادة من كفاءات معلمات القسم: ' + parts.join('؛ و') + '.' : '';
+    if (T.excel) add('pd_int', T.excel);
+    // ورش حضرتها معلمات القسم
+    const inT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة داخلية'), exT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة خارجية');
+    if (inT.length) add('pd_int', 'وحضرت معلمات القسم: ' + inT.map(r => `أ. ${r.d.t} ورشة «${nz(r.d.title)}» من تقديم أ. ${r.d.by}` + dateTxt(r.date)).join('؛ ') + '.');
+    if (exT.length) add('pd_ext', 'وسجّلت معلمات القسم مشاركتهن في: ' + exT.map(r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + (r.d.byx ? ` من تقديم ${r.d.byx}` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
+    // التواصل مع أولياء الأمور
+    const PAt = mineD('TPA');
+    if (PAt.length) { const by = {}; PAt.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ways: new Set() }; o.n += +r.d.n > 0 ? +r.d.n : 1; if (r.d.way) o.ways.add(r.d.way); });
+      add('pa_ind', 'وسجّلت المعلمات تواصلهن مع أولياء الأمور: ' + Object.entries(by).map(([t, o]) => `أ. ${t} (${o.n}) ${o.ways.size ? '— ' + [...o.ways].join('، ') : ''}`).join('؛ ') + '.'); }
+    // الإنجازات والمشاركات
+    const AH = mineD('TACH'); const AHw = AH.filter(r => /إنجاز/.test(r.d.kind)), AHp = AH.filter(r => !/إنجاز/.test(r.d.kind));
+    const ahTx = r => `«${nz(r.d.name)}»` + (r.d.ent ? ` (${r.d.ent})` : '') + (r.d.res ? `، ${r.d.res}` : '') + ` بإشراف أ. ${r.d.t}` + dateTxt(r.date);
+    if (AHw.length) add('ach', 'ومن إنجازات الطالبات بإشراف معلمات القسم: ' + AHw.map(ahTx).join('؛ ') + '.');
+    if (AHp.length) add('part', 'وشاركت الطالبات بإشراف معلمات القسم في: ' + AHp.map(ahTx).join('؛ ') + '.');
+    // الأنشطة والمبادرات التي سجّلتها المعلمات (عدا ما نُقل من تقارير الربع الأول)
+    const TAt = mineD('TA').filter(r => !r.d.q1);
+    if (TAt.length) add('ac_int', 'وسجّلت المعلمات: ' + TAt.map(r => `${r.d.kind} «${nz(r.d.name)}» — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
+  }
   T.prio = [1, 2, 3, 4].map(p => {
     const parts = [];
     const ra = RAf.filter(r => (d(r).p ? REF.PRIO.indexOf(d(r).p) + 1 : 1) === p).map(r => d(r).item);
