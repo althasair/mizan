@@ -34,7 +34,7 @@ function cvStatus(t, mk) {
   if (inM.length >= P.n) { st = 'مكتملة' + (inM.length > P.n ? ` (+${inM.length - P.n} إضافية)` : ''); cls = 'ok'; }
   else if (!isCur) { st = `ناقصة (${P.n - inM.length})`; cls = 'bad'; }
   else if (!last) { st = 'لم تُزَر بعد'; cls = 'bad'; }
-  else if (gap > P.max) { st = `متأخرة — مضى ${gap} يوماً`; cls = 'bad'; }
+  else if (gap > P.max) { st = `تأخر موعد الحضور (${gap} يوماً)`; cls = 'bad'; }
   else if (gap >= P.min) { st = 'مستحقة الآن'; cls = 'warn'; }
   else { st = `التالية بعد ${P.min - gap} يوم`; cls = 'tf'; }
   const close = [];
@@ -62,9 +62,10 @@ async function C_visit(el) {
     ${kpi('زيارات متقاربة', close.length, 'فاصل أقل من المطلوب', 'var(--gold)')}
   </div>
   <div class="note">الخطة الشهرية لكل معلمة: زيارتان (كلية ثم جزئية) بفاصل 10–15 يوماً، ما عدا: ${Object.entries(VPLAN).map(([n, p]) => `أ. ${esc(n)} (${p.n} زيارات: ${esc(p.lbl)})`).join('، ')}. ويمكنكِ إضافة زيارات إضافية. <b>كل زيارة تبدأ بمتابعة توصيات الزيارة السابقة</b>، كلية كانت أو جزئية، وتنعكس الزيارة تلقائياً على تقرير القسم.</div>
-  ${(late.length || close.length || order.length) ? `<div class="card" style="border-inline-start:4px solid var(--maroon)"><h2>تنبيهات</h2><ul style="margin:0;padding-inline-start:18px;line-height:2">
-    ${late.map(x => `<li><b>أ. ${esc(x.t)}</b>: ${esc(x.st)} — المطلوب ${x.P.n} في الشهر، المنفذ ${x.inM.length}.</li>`).join('')}
-    ${close.map(c => `<li><b>أ. ${esc(c.t)}</b>: زيارة ${dm(c.r.date)} بعد ${c.g} ${c.g === 1 ? 'يوم' : 'أيام'} فقط من سابقتها — لا يتيح هذا الفاصل للمعلمة تطبيق التوصيات.</li>`).join('')}
+  ${(late.length || close.length || order.length) ? `<div class="card" style="border-inline-start:4px solid var(--gold)"><h2>تنبيهات لتنظيم وقتكِ <span class="sub">خاصة بكِ وحدكِ — لا تظهر في التقرير الشهري ولا لأي جهة أخرى</span></h2>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:6px">الغاية أن تتاح للمعلمة فرصة (10–15) يوماً بعد كل زيارة لتطبيق التوصيات قبل الزيارة التالية. وإن كنتِ ترغبين بالحضور لمعلمة أكثر من المطلوب، فلا حرج في تجاهل هذه التنبيهات.</div><ul style="margin:0;padding-inline-start:18px;line-height:2">
+    ${late.map(x => `<li><b>أ. ${esc(x.t)}</b>: ${x.last ? 'تأخر موعد الحضور' + (x.gap != null ? ` (مضى ${x.gap} يوماً على آخر زيارة)` : '') : 'لم تُزر بعد'} — المخطط ${x.P.n} في الشهر، والمنفذ ${x.inM.length}.</li>`).join('')}
+    ${close.map(c => `<li><b>أ. ${esc(c.t)}</b>: زيارة ${dm(c.r.date)} بعد ${c.g} ${c.g === 1 ? 'يوم' : 'أيام'} فقط من سابقتها — قد لا يتيح هذا الفاصل للمعلمة تطبيق التوصيات.</li>`).join('')}
     ${order.map(o => `<li><b>أ. ${esc(o.t)}</b>: زيارة ${dm(o.r.date)} سُجّلت ${esc(o.r.d.kj)} والمتوقع وفق الخطة ${esc(o.exp)}.</li>`).join('')}</ul></div>` : ''}
   <div class="card"><div class="row"><h2 style="margin:0">خطة ${mName(mk)}</h2><span class="sp"></span><button class="btn" id="cvNew">+ حضور صفي جديد</button></div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الخطة</th><th>زيارات الشهر</th><th>آخر زيارة</th><th>التالية المتوقعة</th><th>الحالة</th><th></th></tr>
@@ -123,7 +124,7 @@ function cvForm(el, rec) {
       <div class="fld" style="grid-column:1/-1"><label>تحصيل الصف في المادة ${cls ? '<small style="color:var(--tiffany-d)">· محسوب تلقائياً من سنابل</small>' : ''}</label><textarea id="cAch" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px;line-height:1.8">${esc(d.ach || '')}</textarea></div>
     </form>
     ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات شهرياً (${esc(P.lbl)})</span><span class="chip">زيارات الشهر قبل هذه: ${inM.length}</span>
-      ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المطلوب' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
+      ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المقترح (تنبيه لكِ فقط)' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
     ${achMini(d.t, d.subj)}</div>
 
@@ -181,7 +182,7 @@ function cvForm(el, rec) {
     const miss = d.fu.filter(x => !x.st);
     if (miss.length) { toast(`حدّدي مدى تنفيذ توصيات الزيارة السابقة (${miss.length}) — بند ثابت في كل زيارة`, 1); return null; }
     const P = planOf(d.t); const prev = prevOf();
-    if (prev && daysBtw(prev.date, d.date) < P.min && !confirm(`الفاصل بين هذه الزيارة والسابقة (${dm(prev.date)}) ${daysBtw(prev.date, d.date)} أيام فقط، والمطلوب ${P.min} أيام على الأقل ليتسنى للمعلمة تطبيق التوصيات. هل تريدين الحفظ مع ذلك؟`)) return null;
+    if (prev && daysBtw(prev.date, d.date) < P.min && !confirm(`تنبيه خاص بكِ لتنظيم الوقت: الفاصل بين هذه الزيارة والسابقة (${dm(prev.date)}) ${daysBtw(prev.date, d.date)} أيام، والمقترح ${P.min} أيام على الأقل ليتسنى للمعلمة تطبيق التوصيات.\n\nإن كنتِ ترغبين بالحضور لها أكثر من المطلوب فاضغطي «موافق» وتجاهلي هذا التنبيه، ولن يظهر في التقرير.`)) return null;
     d.str = d.str.filter(Boolean); d.imp = d.imp.filter(Boolean);
     // حقول التقرير الشهري (بند الحضور الصفي)
     const before = cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && r.date <= d.date && r.d.kj === 'كلية').length;
