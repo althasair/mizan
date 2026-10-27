@@ -86,7 +86,7 @@ function navHTML() {
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       <div class="grp">الإعدادات</div>${it('a_accounts', 'حسابات المنسقات', 'user')}`;
   }
-  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a>`;
+  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a><div class="grp">الحضور الصفي</div><a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطته الشهرية</span></a>`;
   GROUPS.forEach(g => {
     h += `<div class="grp">${g.t}</div>`;
     SECTIONS.filter(s => s.g === g.id).forEach(s => { const n = cnt(s.k); h += `<a class="it ${S.view === 'sec:' + s.k ? 'on' : ''}" data-v="sec:${s.k}">${ICON.dot}<span>${s.t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; });
@@ -116,11 +116,11 @@ function renderApp() {
   if ($('#deptSel')) $('#deptSel').onchange = e => { S.dept = e.target.value; refresh(); };
   bindNav(); show();
 }
-function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a.dataset.v; S.edit = null; S.vpv = null; S.fopen = null; $('#side').classList.remove('open'); refresh(); }); }
+function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a.dataset.v; S.edit = null; S.vpv = null; S.fopen = null; S.cvv = null; $('#side').classList.remove('open'); refresh(); }); }
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act, c_visit: C_visit };
   if (isTeacher() && !['t_ini', 't_act'].includes(v)) return T_home(el);
   if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
   (map[v] || map.home)(el);

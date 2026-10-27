@@ -108,9 +108,9 @@ function buildReport(ctx) {
     const U = REF.SECTIONS.filter(s => vs.some(v => v.s === s)).join('، ');
     const AGl = uniq(vs.map(v => v.subj).filter(Boolean)).sort((a, b) => subjAll.indexOf(a) - subjAll.indexOf(b)); const AG = AGl.join(' و');
     const Vs = uniq(vs.flatMap(v => [v.f1, v.f2]).filter(Boolean).map(coreOf)).join('، و');
-    const W = uniq(vs.filter(v => !isFU(v)).flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)).join('، و');
+    const W = uniq(vs.filter(v => !isFU(v) || v.form).flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)).join('، و');
     const X = REF.REC.map((rc, i) => {
-      const f = vs.filter(v => isFU(v) && [v.r1, v.r2, v.r3].includes(rc));
+      const f = vs.filter(v => isFU(v) && !(v.fu && v.fu.length) && !v.form && [v.r1, v.r2, v.r3].includes(rc));
       if (!f.length) return '';
       const p = f.filter(v => v.st === 'تم التنفيذ جزئياً').length, n = f.filter(v => v.st === 'لم تُنفذ بعد').length;
       if (f.length - p - n > 0) return REF.CRIT[i].done;
@@ -118,9 +118,12 @@ function buildReport(ctx) {
       if (n) return 'ما زالت بحاجة إلى ' + REF.CRIT[i].core;
       return '';
     }).filter(Boolean).join('، و');
+    const XF = vs.filter(v => (v.fu || []).length).map(v => { const g = k => v.fu.filter(x => x.st === k).map(x => '«' + String(x.r).trim().replace(/[.،؛\s]+$/, '') + '»');
+      const p = [g('تم التنفيذ').length ? 'تم تنفيذ ' + g('تم التنفيذ').join('، و') : '', g('تم التنفيذ جزئياً').length ? 'تحسّن جزئي في ' + g('تم التنفيذ جزئياً').join('، و') : '', g('لم تُنفذ بعد').length ? 'ما زالت بحاجة إلى ' + g('لم تُنفذ بعد').join('، و') : ''].filter(Boolean);
+      return p.length ? `وفي متابعة توصيات زيارة ${dm(v.prevDate)} (في زيارة ${dm(v.date)}): ${p.join('؛ و')}.` : ''; }).filter(Boolean).join(' ');
     const Y = (x => x.length ? x.join('؛ ') + '.' : '')(uniq(vs.map(v => String(v.note || '').replace(/\s*\n\s*/g, ' ').trim().replace(/[.。]+$/, '')).filter(Boolean)));
     const z = `• تم الحضور للأستاذة ${t} ${Tt}` + (U ? (U.includes('،') ? ' في الصفوف (' : ' في الصف (') + U + ')' : '') + (AG ? (AGl.length > 1 ? ' في مادتي ' : ' في مادة ') + AG : '') + '.'
-      + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (Y ? ' ' + Y : '');
+      + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (XF ? ' ' + XF : '') + (Y ? ' ' + Y : '');
     return { t, c, kul: vs.filter(v => v.kj === 'كلية').length, juz: vs.filter(v => v.kj === 'جزئية').length, fu: vs.filter(isFU).length, z };
   });
   const kjTxt = per => { const k = per.reduce((a, p) => a + p.kul, 0), j = per.reduce((a, p) => a + p.juz, 0), f = per.reduce((a, p) => a + p.fu, 0); const parts = []; if (k || j) parts.push(`كلية: ${k}، جزئية: ${j}`); if (f) parts.push(`منها ${f} من زيارات المتابعة`); return parts.length ? ' (' + parts.join('، ') + ')' : ''; };

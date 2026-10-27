@@ -307,6 +307,36 @@ function sendForm_(u, p) {
   return { sent: true };
 }
 
+
+/* إرسال المنسقة استمارة الإشراف لمعلمة قسمها: يظهر المرسل باسم المنسقة، والرد يصل إليها، ونسخة لها */
+function sendVisitC_(u, p) {
+  if (u.role !== 'coord') fail_('للمنسقات فقط');
+  const t = rows_(SH.rec); let i = -1;
+  for (let k = 0; k < t.rows.length; k++) if (String(t.rows[k][0]) === String(p.id)) { i = k; break; }
+  if (i < 0) fail_('الزيارة غير موجودة');
+  const row = t.rows[i]; if (row[2] !== 'V' || !canDept_(u, row[1])) fail_('غير مسموح');
+  const d = JSON.parse(row[5] || '{}');
+  const T = rows_(SH.teachers).rows;
+  const tr = T.find(r => r[1] === d.t && r[0] === row[1]) || T.find(r => r[1] === d.t);
+  const to = tr && String(tr[7] || '').trim(); if (!to || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) fail_('لا يوجد بريد إلكتروني مسجّل للمعلمة');
+  const cr = T.find(r => r[1] === u.name); const me = cr && String(cr[7] || '').trim();
+  const sig = sigData_('sig-' + u.id + '.png');
+  const html = String(p.html || '').replace(/\{\{SIG\}\}/g, sig ? '<img src="' + sig + '" alt="">' : '');
+  const name = String(p.file || 'استمارة').replace(/[\\/:*?"<>|]/g, '-');
+  const pdf = Utilities.newBlob(html, 'text/html', name + '.html').getAs('application/pdf').setName(name + '.pdf');
+  try {
+    const root = DriveApp.getFolderById(PRIVATE_FOLDER); const f = root.getFoldersByName('الاستمارات المرسلة');
+    (f.hasNext() ? f.next() : root.createFolder('الاستمارات المرسلة')).createFile(pdf.copyBlob().setName(name + '.pdf'));
+  } catch (e) {}
+  const opt = { to: to, subject: String(p.subject || name), htmlBody: String(p.body || ''), attachments: [pdf], name: u.name + ' — منسقة قسم ' + row[1] };
+  if (me && /@/.test(me)) { opt.replyTo = me; opt.cc = me; }
+  MailApp.sendEmail(opt);
+  d.sent = now_().slice(0, 10); row[5] = JSON.stringify(d);
+  t.sh.getRange(i + 2, 6).setValue(row[5]); t.sh.getRange(i + 2, 9).setValue(now_());
+  log_(u, 'إرسال استمارة زيارة', row[1], name + ' ← ' + to);
+  return { sent: true, record: recObj_(row) };
+}
+
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -326,6 +356,7 @@ function route_(req) {
     case 'signature': return signature_(u, req);
     case 'setPin': return setPin_(u, req);
     case 'sendForm': return sendForm_(u, req);
+    case 'sendVisitC': return sendVisitC_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
