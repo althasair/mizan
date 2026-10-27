@@ -11,10 +11,12 @@ const TWS_ROLE = ['حضرتُ ورشة داخلية', 'حضرتُ ورشة خا�
 const TWS_TYPE = ['ورشة', 'جلسة نقاش', 'درس تطبيقي أو نموذجي', 'ورقة عمل', 'نموذج مميز', 'فكرة أو ممارسة', 'مجتمع تعلم مهني'];
 const TPA_WAY = ['اتصال هاتفي', 'رسالة نصية أو واتساب', 'حضور فعالية في المدرسة', 'حضور درس معايشة أو مشاهدة', 'مشاركة في جدارية أو نشاط', 'رسالة صوتية للطالبة', 'اجتماع فردي'];
 const TPA_TOPIC = ['متابعة المستوى الأكاديمي', 'السلوك والانضباط', 'الغياب والتأخر', 'التعزيز والتحفيز', 'دعوة لفعالية أو نشاط', 'تكريم الطالبة'];
+const TPA_RES = ['ولي الأمر متعاون، وتعهّد بمتابعة الطالبة', 'تم الاتفاق على خطة متابعة مشتركة بين المعلمة وولي الأمر', 'تعهّد ولي الأمر بمتابعة الواجبات والمذاكرة اليومية', 'تعهّد ولي الأمر بالتزام الطالبة بالحضور وعدم الغياب', 'تعهّد ولي الأمر بحضور الطالبة الحصص الإثرائية أو الساعات المكتبية', 'تعهّد ولي الأمر بمتابعة سلوك الطالبة والتزامها', 'طلب ولي الأمر تقريراً دورياً عن مستوى الطالبة', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'تمت إحالة الحالة إلى الأخصائية الاجتماعية أو النفسية', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة', 'أبدى ولي الأمر تجاوباً جزئياً', 'أبدى ولي الأمر شكره ورضاه عن متابعة المعلمة', 'تم إبلاغ ولي الأمر بتميّز الطالبة وتكريمها', 'لم يُبدِ ولي الأمر تعاوناً', 'لا يوجد رد من ولي الأمر', 'رقم التواصل غير صحيح أو مغلق'];
 const TACH_KIND = ['مشاركة', 'إنجاز (مركز أو جائزة)'];
 const TACH_LVL = ['على مستوى المدرسة', 'على مستوى الدولة', 'دولي'];
 const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف الحادي عشر', 'طالبات الصف الثاني عشر', 'جميع الطالبات', 'طالبات شعبتي', 'الطالبات الواعدات', 'الموهوبات والمتفوقات', 'أولياء الأمور', 'المعلمات'];
 
+(() => { const st = document.createElement('style'); st.textContent = '.multi label,#stuPanel label,.tradio label{display:flex!important;align-items:center;gap:6px;font-weight:400!important;font-size:12.5px}.multi input[type=checkbox],#stuPanel input[type=checkbox],.tradio input[type=radio]{width:auto!important;margin:0;flex:none}.multi,#stuPanel{text-align:right}'; document.head.appendChild(st); })();
 /* الفترة الحالية حسب التاريخ: تدخل المعلمة عليها مباشرة */
 function curPer() { const t = today(); return S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0]; }
 const mine = it => S.records.filter(r => r.item === it && r.d && r.d.t === S.user.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -49,7 +51,7 @@ const fSel = (n, opts, v, ph) => `<select data-n="${n}"><option value="">${esc(p
 const fCombo = (n, opts, v, ph) => `<input data-n="${n}" list="dl_${n}" value="${esc(v || '')}" placeholder="${esc(ph || 'اختاري من القائمة أو اكتبي')}"><datalist id="dl_${n}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
 const fMulti = (n, opts, v) => { const cur = Array.isArray(v) ? v : (v ? [v] : []); const extra = cur.filter(x => !opts.includes(x));
   return `<div class="multi" data-m="${n}" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:170px;overflow:auto;font-size:12px;line-height:1.9">${opts.map(o => `<label style="display:block"><input type="checkbox" value="${esc(o)}" ${cur.includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}<input data-mx="${n}" value="${esc(extra.join('، '))}" placeholder="أخرى (اكتبي)" style="width:100%;margin-top:4px;font-size:12px"></div>`; };
-const fRadio = (n, opts, v) => `<div class="row" style="gap:14px;font-size:13px">${opts.map(o => `<label><input type="radio" name="r_${n}" value="${esc(o)}" ${o === v ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
+const fRadio = (n, opts, v) => `<div class="row tradio" style="gap:14px;font-size:13px">${opts.map(o => `<label><input type="radio" name="r_${n}" value="${esc(o)}" ${o === v ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
 const staffSel = (n, v) => { const by = {}; others().forEach(s => (by[s.dept] = by[s.dept] || []).push(s.name));
   return `<select data-n="${n}"><option value="">اختاري المعلمة…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, 'ar')).map(dp => `<optgroup label="${esc(dp)}">${by[dp].sort((a, b) => a.localeCompare(b, 'ar')).map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('')}</optgroup>`).join('')}</select>`; };
 function readT(form) {
@@ -69,7 +71,7 @@ function T_page(el, cfg) {
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : (S.tDraft ? S.tDraft : Object.assign({ date: today() }, cfg.blank || {})); S.tDraft = null;
   const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.form(d)}
      ${fld('التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
-     <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
+     <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
   el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td><button class="btn sm sec" data-e="${r.id}">فتح</button></td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
@@ -78,7 +80,7 @@ function T_page(el, cfg) {
   if (cfg.bind) cfg.bind(el, d);
   if ($('#tcx')) $('#tcx').onclick = () => { S.edit = null; show(); };
   if ($('#tdel')) $('#tdel').onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); S.edit = null; refresh(); };
-  if ($('#tsave')) $('#tsave').onclick = async () => {
+  const doSave = async (copy) => {
     const f = $('#tf'); const r = Object.assign({}, d, readT(f));
     if (cfg.files) for (const k of cfg.files) { const inp = $(`[data-file="${k}"]`, f); if (inp && inp.files[0]) { const fl = inp.files[0]; if (fl.size > 8e6) return toast('حجم الملف أكبر من 8 ميجابايت', 1); const j = await call('upload', { name: fl.name, data: await fileToData(fl) }); r[k] = { fid: j.fid, name: j.name }; } }
     if (cfg.pre) cfg.pre(r, f);
@@ -86,9 +88,12 @@ function T_page(el, cfg) {
     if (!r.date || r.date < p.from || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن ' + p.name, 1);
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.user.dept[0], item: cfg.item, date: r.date, sum: cfg.sum(r), d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
+    if (copy) { S.tDraft = Object.assign({}, r, { s: '', stu: [], n: '' }); delete S.tDraft._key; S.edit = 'new'; toast('تم الحفظ ✓ — اختاري الشعبة والطالبات للنسخ'); refresh(); window.scrollTo(0, 0); return; }
     S.edit = null; toast('تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
     if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove(); } }
   };
+  if ($('#tsave')) $('#tsave').onclick = () => doSave(false);
+  if ($('#tsavec')) $('#tsavec').onclick = () => doSave(true);
 }
 const fileLink = f => f && f.fid ? `<button class="btn sm ghost" data-fid="${esc(f.fid)}">${esc(f.name || 'ملف')}</button>` : '';
 document.addEventListener('click', async e => { const b = e.target.closest && e.target.closest('[data-fid]'); if (!b) return; e.preventDefault(); const j = await call('file', { fid: b.dataset.fid }); const a = document.createElement('a'); a.href = j.data; a.download = j.name; a.click(); });
@@ -170,20 +175,31 @@ function T_pa(el) {
   T_page(el, {
     item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع أولياء الأمور', note: 'سجّلي كل تواصل: الطريقة والموضوع وعدد أولياء الأمور، ويُحسب لكِ في سنابلكِ.',
     form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('طريقة التواصل', fCombo('way', TPA_WAY, d.way)) + fld('الموضوع', fCombo('topic', TPA_TOPIC, d.topic)) +
-      fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبات', '<div id="stuBox" style="border:1px solid var(--line);border-radius:12px;padding:8px 10px;max-height:260px;overflow:auto"></div>', 1) + fld('النتيجة / ما تم الاتفاق عليه', `<input data-n="res" value="${esc(d.res || '')}">`, 1),
+      fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبات', '<div id="stuBox"></div>', 1) + fld('النتيجة / ما تم الاتفاق عليه مع ولي الأمر', `<select data-n="res"><option value="">اختاري…</option>${TPA_RES.map(o => `<option ${o === d.res ? 'selected' : ''}>${esc(o)}</option>`).join('')}<option value="__x" ${d.res && !TPA_RES.includes(d.res) ? 'selected' : ''}>أخرى (اكتبي)</option></select><input data-n="resx" value="${esc(d.res && !TPA_RES.includes(d.res) ? d.res : '')}" placeholder="اكتبي ما تم الاتفاق عليه" style="margin-top:6px">`, 1),
     check: r => !r.way ? 'اختاري طريقة التواصل' : '',
     sum: r => 'تواصل مع أولياء الأمور: ' + (r.way || ''),
-    pre: (r, f) => { r.stu = $$('[data-stu]', f).filter(c => c.checked).map(c => c.value); if (r.stu.length) r.n = r.stu.length; },
+    pre: (r, f) => { r.stu = $$('[data-stu]', f).filter(c => c.checked).map(c => c.value); if (r.stu.length) r.n = r.stu.length; if (r.res === '__x' || (!r.res && r.resx)) r.res = r.resx; delete r.resx; },
+    copyBtn: 'حفظ ثم نسخ لطالبات أخريات',
     head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الطريقة</th><th>الموضوع</th><th>العدد والطالبات</th><th>النتيجة</th><th></th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm ghost" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">نسخ لطالبات أخريات</button></td>`,
+    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm sec" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">⧉ نسخ لطالبات أخريات</button></td>`,
     bind: el => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); S.tDraft = Object.assign({}, r.d, { s: '', stu: [], n: '' }); delete S.tDraft._key; S.edit = 'new'; show(); window.scrollTo(0, 0); toast('اختاري الشعبة والطالبات، ثم احفظي'); });
       const f = $('#tf'); if (!f) return; const sel = $('[data-n="s"]', f), box = $('#stuBox', f);
-      const draw = () => { const sc = sel.value.trim(); const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar')); const cur = new Set(S.tStu || []);
-        box.innerHTML = !sc ? '<div style="color:var(--muted);font-size:12px">اختاري الشعبة فتظهر أسماء طالباتها</div>' : !L.length ? '<div style="color:var(--muted);font-size:12px">لا توجد أسماء لهذه الشعبة بعد</div>' :
-          `<label style="display:block;font-weight:700;font-size:12px;margin-bottom:4px"><input type="checkbox" id="stuAll"> تحديد الكل (${L.length})</label><div style="columns:3 180px;font-size:12px;line-height:1.9">${L.map(n => `<label style="display:block"><input type="checkbox" data-stu value="${esc(n)}" ${cur.has(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div>`;
-        const all = $('#stuAll', box); if (all) all.onchange = () => $$('[data-stu]', box).forEach(c => c.checked = all.checked);
-        $$('[data-stu]', box).forEach(c => c.onchange = () => { const n = $$('[data-stu]', box).filter(x => x.checked).length; if (n) $('[data-n="n"]', f).value = n; }); };
-      S.tStu = null; sel.onchange = draw; draw(); },
+      const keep = new Set(S.tStu || []); S.tStu = null;
+      const rs = $('[data-n="res"]', f), rx = $('[data-n="resx"]', f); const tgl = () => { rx.style.display = rs.value === '__x' ? '' : 'none'; }; rs.onchange = tgl; tgl();
+      const draw = () => { const sc = sel.value.trim(); const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar'));
+        if (!sc) { box.innerHTML = '<div style="color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px">▾ اختاري الشعبة أولاً</div>'; return; }
+        if (!L.length) { box.innerHTML = '<div style="color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px">لا توجد أسماء لهذه الشعبة بعد</div>'; return; }
+        box.innerHTML = `<button type="button" id="stuBtn" style="width:100%;text-align:right;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer">▾ <span id="stuLbl"></span></button>
+          <div id="stuPanel" style="display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;background:#fff">
+            <input id="stuQ" placeholder="ابحثي باسم الطالبة" style="width:100%;margin-bottom:6px;font-size:12px">
+            <label style="display:block;font-weight:700;font-size:12px"><input type="checkbox" id="stuAll"> تحديد الكل (${L.length})</label>
+            <div style="max-height:220px;overflow:auto;font-size:12px;line-height:1.9">${L.map(n => `<label style="display:block" data-nm="${esc(n)}"><input type="checkbox" data-stu value="${esc(n)}" ${keep.has(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div></div>`;
+        const upd = () => { const ch = $$('[data-stu]', box).filter(x => x.checked).map(x => x.value); $('#stuLbl').textContent = ch.length ? `${ch.length} طالبة: ${ch.slice(0, 3).join('، ')}${ch.length > 3 ? '…' : ''}` : 'اختاري الطالبات من القائمة'; if (ch.length) $('[data-n="n"]', f).value = ch.length; };
+        $('#stuBtn').onclick = () => { const pn = $('#stuPanel'); pn.style.display = pn.style.display === 'none' ? '' : 'none'; if (pn.style.display === '') $('#stuQ').focus(); };
+        $('#stuQ').oninput = e => { const q = nrm(e.target.value); $$('[data-nm]', box).forEach(l => l.style.display = !q || nrm(l.dataset.nm).includes(q) ? '' : 'none'); };
+        $('#stuAll').onchange = e => { $$('[data-stu]', box).forEach(c => { if (c.closest('label').style.display !== 'none') c.checked = e.target.checked; }); upd(); };
+        $$('[data-stu]', box).forEach(c => c.onchange = upd); upd(); };
+      sel.onchange = () => { keep.clear(); draw(); }; draw(); },
   });
 }
 
