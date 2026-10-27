@@ -106,7 +106,7 @@ function buildReport(ctx) {
     const Q = mm.length === 1 ? 'خلال شهر ' : mm.length === 2 ? 'خلال شهري ' : 'خلال أشهر ';
     const Tt = timesWord(c) + ' ' + Q + mm.map(x => x.name).join(' و') + (mm.length === 1 ? ` (${mm[0].dates})` : '، بمعدل ' + mm.map(x => (x.n === 1 ? 'مرة' : x.n === 2 ? 'مرتين' : x.n + ' مرات') + ` في ${x.name} (${x.dates})`).join(' و'));
     const U = REF.SECTIONS.filter(s => vs.some(v => v.s === s)).join('، ');
-    const AG = uniq(vs.map(v => v.subj).filter(Boolean)).sort((a, b) => subjAll.indexOf(a) - subjAll.indexOf(b)).join(' و');
+    const AGl = uniq(vs.map(v => v.subj).filter(Boolean)).sort((a, b) => subjAll.indexOf(a) - subjAll.indexOf(b)); const AG = AGl.join(' و');
     const Vs = uniq(vs.flatMap(v => [v.f1, v.f2]).filter(Boolean).map(coreOf)).join('، و');
     const W = uniq(vs.filter(v => !isFU(v)).flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)).join('، و');
     const X = REF.REC.map((rc, i) => {
@@ -119,7 +119,7 @@ function buildReport(ctx) {
       return '';
     }).filter(Boolean).join('، و');
     const Y = (x => x.length ? x.join('؛ ') + '.' : '')(uniq(vs.map(v => String(v.note || '').replace(/\s*\n\s*/g, ' ').trim().replace(/[.。]+$/, '')).filter(Boolean)));
-    const z = `• تم الحضور للأستاذة ${t} ${Tt}` + (U ? (U.includes('،') ? ' في الصفوف (' : ' في الصف (') + U + ')' : '') + (AG ? (AG.includes(' و') ? ' في مادتي ' : ' في مادة ') + AG : '') + '.'
+    const z = `• تم الحضور للأستاذة ${t} ${Tt}` + (U ? (U.includes('،') ? ' في الصفوف (' : ' في الصف (') + U + ')' : '') + (AG ? (AGl.length > 1 ? ' في مادتي ' : ' في مادة ') + AG : '') + '.'
       + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (Y ? ' ' + Y : '');
     return { t, c, kul: vs.filter(v => v.kj === 'كلية').length, juz: vs.filter(v => v.kj === 'جزئية').length, fu: vs.filter(isFU).length, z };
   });
@@ -127,7 +127,7 @@ function buildReport(ctx) {
   const vN = per.reduce((a, p) => a + p.c, 0), vK = per.filter(p => p.c).length, vMax = Math.max(0, ...per.map(p => p.c));
   T.v_n = vN; T.v_k = vK; T.nteach = NT;
   T.v_sum = !vN ? 'لم تُسجَّل زيارات صفية للمنسقة خلال الفترة.'
-    : `نفّذت المنسقة زيارات صفية بلغ عددها (${vN}) زيارة خلال الفترة، شملت ${vK} من أصل ${NT} معلمات بنسبة ${pct(vK, NT)}${kjTxt(per)}، وكانت أكثر المعلمات زيارةً: أ. ${per.filter(p => p.c === vMax).map(p => p.t).join('، ')} (${vMax}).`
+    : `نفّذت المنسقة زيارات صفية بلغ عددها (${vN}) ${vN >= 3 && vN <= 10 ? 'زيارات' : 'زيارة'} خلال الفترة، شملت ${vK} من أصل ${NT} معلمات بنسبة ${pct(vK, NT)}${kjTxt(per)}` + (vMax > 1 && per.some(p => p.c && p.c < vMax) ? `، وكانت أكثر المعلمات زيارةً: أ. ${per.filter(p => p.c === vMax).map(p => p.t).join('، ')} (${vMax}).` : (vMax === 1 ? '، بزيارة واحدة لكل معلمة.' : '.'))
       + (per.some(p => !p.c) ? ' ولم تتم زيارة: ' + per.filter(p => !p.c).map(p => p.t).join('، ') + '.' : '');
   T.v_ch = per.map(p => p.z);
   // التوصيات المشتركة (تكررت لدى معلمتين فأكثر)
@@ -160,7 +160,7 @@ function buildReport(ctx) {
   const LR = Rp('LR');
   T.lrc = sec(LR.filter(r => d(r).k === 'تفعيل مركز مصادر التعلم'), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
   const EL = LR.filter(r => d(r).k === 'توظيف أدوات التعليم الإلكتروني');
-  const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e + ((x => x ? ` (${x})` : '')([d(r).s ? 'الصف ' + d(r).s : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
+  const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e + ((x => x ? ` (${x})` : '')([d(r).s ? (/^الصف/.test(d(r).s) ? d(r).s : 'الصف ' + d(r).s) : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
   T.el_n = elBy.reduce((a, x) => a + x.tools.length, 0);
   T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => (x.t === REF.ALL_MEMBERS ? 'جميع معلمات القسم' : x.t === 'القسم' ? 'القسم' : `أ. ${x.t}`) + `: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
 
