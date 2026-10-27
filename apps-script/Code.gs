@@ -371,6 +371,19 @@ function getFile_(u, p) {
   const b = f.getBlob(); return { name: f.getName(), data: 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes()) };
 }
 
+
+/* أسماء الطالبات (الشعبة والاسم فقط) — يرسلها النائب الأكاديمي من «سبع سنابل» */
+function setStudents_(u, p) {
+  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  const L = (p.list || []).filter(x => x && x.n && /^1[0-2]-\d+$/.test(String(x.s))).map(x => [String(x.s), String(x.n).slice(0, 120)]);
+  if (!L.length) fail_('القائمة فارغة');
+  let sh = sheet_(SH.stu); if (!sh) sh = ss_().insertSheet(SH.stu);
+  sh.clearContents(); sh.getRange(1, 1, 1, 2).setValues([['الشعبة', 'اسم الطالبة']]);
+  sh.getRange(2, 1, L.length, 2).setValues(L);
+  log_(u, 'تحديث أسماء الطالبات', '', L.length + ' طالبة');
+  return { n: L.length };
+}
+
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -392,6 +405,7 @@ function route_(req) {
     case 'sendForm': return sendForm_(u, req);
     case 'sendVisitC': return sendVisitC_(u, req);
     case 'upload': return upload_(u, req);
+    case 'setStudents': return setStudents_(u, req);
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };

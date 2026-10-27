@@ -10,8 +10,8 @@ const TPV_HARD = ['لا يخدم طبيعة مادتي', 'لا يناسب مست
 const TWS_ROLE = ['حضرتُ ورشة داخلية', 'حضرتُ ورشة خارجية', 'قدّمتُ لتطوير الزملاء'];
 const TWS_TYPE = ['ورشة', 'جلسة نقاش', 'درس تطبيقي أو نموذجي', 'ورقة عمل', 'نموذج مميز', 'فكرة أو ممارسة', 'مجتمع تعلم مهني'];
 const TPA_WAY = ['اتصال هاتفي', 'رسالة نصية أو واتساب', 'حضور فعالية في المدرسة', 'حضور درس معايشة أو مشاهدة', 'مشاركة في جدارية أو نشاط', 'رسالة صوتية للطالبة', 'اجتماع فردي'];
-const TPA_TOPIC = ['متابعة المستوى الأكاديمي', 'السلوك والانضباط', 'الغياب والتأخر', 'التعزيز والتحفيز', 'دعوة لفعالية أو نشاط', 'تكريم الطالبة'];
-const TPA_RES = ['ولي الأمر متعاون، وتعهّد بمتابعة الطالبة', 'تم الاتفاق على خطة متابعة مشتركة بين المعلمة وولي الأمر', 'تعهّد ولي الأمر بمتابعة الواجبات والمذاكرة اليومية', 'تعهّد ولي الأمر بالتزام الطالبة بالحضور وعدم الغياب', 'تعهّد ولي الأمر بحضور الطالبة الحصص الإثرائية أو الساعات المكتبية', 'تعهّد ولي الأمر بمتابعة سلوك الطالبة والتزامها', 'طلب ولي الأمر تقريراً دورياً عن مستوى الطالبة', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'تمت إحالة الحالة إلى الأخصائية الاجتماعية أو النفسية', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة', 'أبدى ولي الأمر تجاوباً جزئياً', 'أبدى ولي الأمر شكره ورضاه عن متابعة المعلمة', 'تم إبلاغ ولي الأمر بتميّز الطالبة وتكريمها', 'لم يُبدِ ولي الأمر تعاوناً', 'لا يوجد رد من ولي الأمر', 'رقم التواصل غير صحيح أو مغلق'];
+const TPA_TOPIC = ['متابعة المستوى الأكاديمي', 'مخالفة سلوكية', 'السلوك والانضباط', 'الغياب والتأخر', 'عدم حل الواجبات', 'التعزيز والتحفيز', 'دعوة لفعالية أو نشاط', 'تكريم الطالبة'];
+const TPA_RES = ['ولي الأمر متعاون، وتعهّد بمتابعة الطالبة', 'تم إبلاغ ولي الأمر بمخالفة سلوكية', 'تم إبلاغ ولي الأمر بتكرار الغياب أو التأخر', 'تم إبلاغ ولي الأمر بعدم حل الواجبات', 'تعهّد ولي الأمر بإحضار الطالبة أدواتها وكتبها', 'تم الاتفاق على خطة متابعة مشتركة بين المعلمة وولي الأمر', 'تعهّد ولي الأمر بمتابعة الواجبات والمذاكرة اليومية', 'تعهّد ولي الأمر بالتزام الطالبة بالحضور وعدم الغياب', 'تعهّد ولي الأمر بحضور الطالبة الحصص الإثرائية أو الساعات المكتبية', 'تعهّد ولي الأمر بمتابعة سلوك الطالبة والتزامها', 'طلب ولي الأمر تقريراً دورياً عن مستوى الطالبة', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'تمت إحالة الحالة إلى الأخصائية الاجتماعية أو النفسية', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة', 'أبدى ولي الأمر تجاوباً جزئياً', 'أبدى ولي الأمر شكره ورضاه عن متابعة المعلمة', 'تم إبلاغ ولي الأمر بتميّز الطالبة وتكريمها', 'لم يُبدِ ولي الأمر تعاوناً', 'لا يوجد رد من ولي الأمر', 'رقم التواصل غير صحيح أو مغلق'];
 const TACH_KIND = ['مشاركة', 'إنجاز (مركز أو جائزة)'];
 const TACH_LVL = ['على مستوى المدرسة', 'على مستوى الدولة', 'دولي'];
 const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف الحادي عشر', 'طالبات الصف الثاني عشر', 'جميع الطالبات', 'طالبات شعبتي', 'الطالبات الواعدات', 'الموهوبات والمتفوقات', 'أولياء الأمور', 'المعلمات'];
@@ -88,7 +88,7 @@ function T_page(el, cfg) {
     if (!r.date || r.date < p.from || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن ' + p.name, 1);
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.user.dept[0], item: cfg.item, date: r.date, sum: cfg.sum(r), d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
-    if (copy) { S.tDraft = Object.assign({}, r, { s: '', stu: [], n: '' }); delete S.tDraft._key; S.edit = 'new'; toast('تم الحفظ ✓ — اختاري الشعبة والطالبات للنسخ'); refresh(); window.scrollTo(0, 0); return; }
+    if (copy) { S.edit = null; refresh(); paCopy(r); return; }
     S.edit = null; toast('تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
     if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove(); } }
   };
@@ -170,6 +170,38 @@ function T_ws(el) {
 }
 
 /* ================================================================== التواصل مع أولياء الأمور */
+/* نسخ الإجراء نفسه لطالبات أخريات: سجل مستقل لكل طالبة، ويمكن تعديل الموضوع والنتيجة لكل واحدة */
+function paCopy(src) {
+  const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
+  const done = new Set(src.stu || []); const chosen = new Map();
+  const m = document.createElement('div'); m.className = 'modal';
+  const opt = (L, v) => L.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('');
+  const draw = () => { const sc = ($('#cpSec', m) || {}).value || src.s || secs[0] || '';
+    const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar'));
+    m.innerHTML = `<div class="box" style="max-width:860px;width:96vw;max-height:92vh;overflow:auto"><h3>نسخ الإجراء لطالبات أخريات</h3>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">الطريقة: <b>${esc(src.way || '')}</b> · التاريخ: <b>${dmy(src.date)}</b> — يُنشأ سجل مستقل لكل طالبة، ويمكنكِ تغيير الموضوع والنتيجة لكل واحدة.</div>
+      <div class="row" style="gap:8px"><label style="font-size:13px">الشعبة <select id="cpSec">${secs.map(x => `<option ${x === sc ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><input id="cpQ" placeholder="ابحثي باسم الطالبة" style="flex:1;font-size:12px"></div>
+      <div class="multi" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-top:8px;max-height:200px;overflow:auto;font-size:12px">${!L.length ? '<div style="color:var(--muted)">لا توجد أسماء لهذه الشعبة بعد</div>' : `<label style="font-weight:700"><input type="checkbox" id="cpAll"> تحديد الكل (${L.length})</label>` + L.map(n => `<label data-nm="${esc(n)}"><input type="checkbox" data-cp value="${esc(n)}" ${chosen.has(sc + '|' + n) ? 'checked' : ''}> ${esc(n)}${done.has(n) ? ' <span class="chip">مسجّلة</span>' : ''}</label>`).join('')}</div>
+      <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>الطالبة</th><th>الشعبة</th><th>الموضوع</th><th>النتيجة / ما تم الاتفاق عليه</th><th></th></tr>
+      ${[...chosen.entries()].map(([k, o]) => `<tr><td style="font-size:12.5px"><b>${esc(o.n)}</b></td><td>${esc(o.s)}</td><td><select data-ct="${esc(k)}" style="font-size:12px">${opt(TPA_TOPIC, o.topic)}${o.topic && !TPA_TOPIC.includes(o.topic) ? `<option selected>${esc(o.topic)}</option>` : ''}</select></td><td><select data-cr="${esc(k)}" style="font-size:12px;max-width:330px">${opt(TPA_RES, o.res)}${o.res && !TPA_RES.includes(o.res) ? `<option selected>${esc(o.res)}</option>` : ''}</select></td><td><button class="btn sm ghost" data-cx="${esc(k)}">×</button></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">حدّدي الطالبات من القائمة فيظهرن هنا</div></td></tr>'}</table></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="cpOk">حفظ (${chosen.size})</button><button class="btn sec" id="cpNo">إلغاء</button></div></div>`;
+    $('#cpSec', m).onchange = () => draw();
+    $('#cpQ', m).oninput = e => { const q = nrm(e.target.value); $$('[data-nm]', m).forEach(l => l.style.display = !q || nrm(l.dataset.nm).includes(q) ? '' : 'none'); };
+    const pick = (n, on) => { const k = sc + '|' + n; if (on) chosen.set(k, { s: sc, n, topic: src.topic || '', res: src.res || '' }); else chosen.delete(k); };
+    $$('[data-cp]', m).forEach(c => c.onchange = () => { pick(c.value, c.checked); draw(); });
+    if ($('#cpAll', m)) $('#cpAll', m).onchange = e => { $$('[data-cp]', m).forEach(c => { if (c.closest('label').style.display !== 'none') pick(c.value, e.target.checked); }); draw(); };
+    $$('[data-ct]', m).forEach(x => x.onchange = () => chosen.get(x.dataset.ct).topic = x.value);
+    $$('[data-cr]', m).forEach(x => x.onchange = () => chosen.get(x.dataset.cr).res = x.value);
+    $$('[data-cx]', m).forEach(x => x.onclick = () => { chosen.delete(x.dataset.cx); draw(); });
+    $('#cpNo', m).onclick = () => m.remove();
+    $('#cpOk', m).onclick = async () => { if (!chosen.size) return toast('حدّدي طالبة واحدة على الأقل', 1);
+      const base = Object.assign({}, src); delete base._key; delete base.t;
+      const list = [...chosen.values()].map(o => { const d = Object.assign({}, base, { s: o.s, stu: [o.n], n: 1, topic: o.topic, res: o.res }); return { dept: S.user.dept[0], item: 'TPA', date: d.date, sum: 'تواصل مع ولي أمر: ' + o.n, d }; });
+      const j = await call('saveMany', { list }); (j.saved || []).forEach(x => S.records.push(x));
+      m.remove(); toast(`تم الحفظ ✓ — ${(j.saved || []).length} سجل` + ((j.skipped || []).length ? ` (تعذّر ${j.skipped.length})` : '')); refresh(); };
+  };
+  document.body.appendChild(m); draw();
+}
 function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
@@ -182,7 +214,7 @@ function T_pa(el) {
     copyBtn: 'حفظ ثم نسخ لطالبات أخريات',
     head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الطريقة</th><th>الموضوع</th><th>العدد والطالبات</th><th>النتيجة</th><th></th><th></th></tr>',
     row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm sec" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">⧉ نسخ لطالبات أخريات</button></td>`,
-    bind: el => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); S.tDraft = Object.assign({}, r.d, { s: '', stu: [], n: '' }); delete S.tDraft._key; S.edit = 'new'; show(); window.scrollTo(0, 0); toast('اختاري الشعبة والطالبات، ثم احفظي'); });
+    bind: el => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); paCopy(r.d); });
       const f = $('#tf'); if (!f) return; const sel = $('[data-n="s"]', f), box = $('#stuBox', f);
       const keep = new Set(S.tStu || []); S.tStu = null;
       const rs = $('[data-n="res"]', f), rx = $('[data-n="resx"]', f); const tgl = () => { rx.style.display = rs.value === '__x' ? '' : 'none'; }; rs.onchange = tgl; tgl();
