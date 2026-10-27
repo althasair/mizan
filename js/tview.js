@@ -66,7 +66,7 @@ function T_page(el, cfg) {
   const p = curPer(); setTitle(cfg.title);
   const L = mine(cfg.item); const cur = L.filter(inCur);
   const rec = S.edit && S.edit !== 'new' ? L.find(r => r.id === S.edit) : null;
-  const d = rec ? JSON.parse(JSON.stringify(rec.d)) : Object.assign({ date: today() }, cfg.blank || {});
+  const d = rec ? JSON.parse(JSON.stringify(rec.d)) : (S.tDraft ? S.tDraft : Object.assign({ date: today() }, cfg.blank || {})); S.tDraft = null;
   const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.form(d)}
      ${fld('التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
@@ -81,6 +81,7 @@ function T_page(el, cfg) {
   if ($('#tsave')) $('#tsave').onclick = async () => {
     const f = $('#tf'); const r = Object.assign({}, d, readT(f));
     if (cfg.files) for (const k of cfg.files) { const inp = $(`[data-file="${k}"]`, f); if (inp && inp.files[0]) { const fl = inp.files[0]; if (fl.size > 8e6) return toast('حجم الملف أكبر من 8 ميجابايت', 1); const j = await call('upload', { name: fl.name, data: await fileToData(fl) }); r[k] = { fid: j.fid, name: j.name }; } }
+    if (cfg.pre) cfg.pre(r, f);
     const err = cfg.check ? cfg.check(r) : ''; if (err) return toast(err, 1);
     if (!r.date || r.date < p.from || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن ' + p.name, 1);
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.user.dept[0], item: cfg.item, date: r.date, sum: cfg.sum(r), d: r } });
@@ -168,12 +169,21 @@ function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
     item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع أولياء الأمور', note: 'سجّلي كل تواصل: الطريقة والموضوع وعدد أولياء الأمور، ويُحسب لكِ في سنابلكِ.',
-    form: d => fld('الشعبة', fCombo('s', secs, d.s, 'شعبة الطالبات')) + fld('طريقة التواصل', fCombo('way', TPA_WAY, d.way)) + fld('الموضوع', fCombo('topic', TPA_TOPIC, d.topic)) +
-      fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + fld('أسماء الطالبات (اختياري)', `<input data-n="names" value="${esc(d.names || '')}">`, 1) + fld('النتيجة / ما تم الاتفاق عليه', `<input data-n="res" value="${esc(d.res || '')}">`, 1),
+    form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('طريقة التواصل', fCombo('way', TPA_WAY, d.way)) + fld('الموضوع', fCombo('topic', TPA_TOPIC, d.topic)) +
+      fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبات', '<div id="stuBox" style="border:1px solid var(--line);border-radius:12px;padding:8px 10px;max-height:260px;overflow:auto"></div>', 1) + fld('النتيجة / ما تم الاتفاق عليه', `<input data-n="res" value="${esc(d.res || '')}">`, 1),
     check: r => !r.way ? 'اختاري طريقة التواصل' : '',
     sum: r => 'تواصل مع أولياء الأمور: ' + (r.way || ''),
-    head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الطريقة</th><th>الموضوع</th><th>العدد</th><th>النتيجة</th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}</td><td style="font-size:12px">${esc(r.d.res || '')}</td>`,
+    pre: (r, f) => { r.stu = $$('[data-stu]', f).filter(c => c.checked).map(c => c.value); if (r.stu.length) r.n = r.stu.length; },
+    head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الطريقة</th><th>الموضوع</th><th>العدد والطالبات</th><th>النتيجة</th><th></th><th></th></tr>',
+    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm ghost" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">نسخ لطالبات أخريات</button></td>`,
+    bind: el => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); S.tDraft = Object.assign({}, r.d, { s: '', stu: [], n: '' }); delete S.tDraft._key; S.edit = 'new'; show(); window.scrollTo(0, 0); toast('اختاري الشعبة والطالبات، ثم احفظي'); });
+      const f = $('#tf'); if (!f) return; const sel = $('[data-n="s"]', f), box = $('#stuBox', f);
+      const draw = () => { const sc = sel.value.trim(); const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar')); const cur = new Set(S.tStu || []);
+        box.innerHTML = !sc ? '<div style="color:var(--muted);font-size:12px">اختاري الشعبة فتظهر أسماء طالباتها</div>' : !L.length ? '<div style="color:var(--muted);font-size:12px">لا توجد أسماء لهذه الشعبة بعد</div>' :
+          `<label style="display:block;font-weight:700;font-size:12px;margin-bottom:4px"><input type="checkbox" id="stuAll"> تحديد الكل (${L.length})</label><div style="columns:3 180px;font-size:12px;line-height:1.9">${L.map(n => `<label style="display:block"><input type="checkbox" data-stu value="${esc(n)}" ${cur.has(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div>`;
+        const all = $('#stuAll', box); if (all) all.onchange = () => $$('[data-stu]', box).forEach(c => c.checked = all.checked);
+        $$('[data-stu]', box).forEach(c => c.onchange = () => { const n = $$('[data-stu]', box).filter(x => x.checked).length; if (n) $('[data-n="n"]', f).value = n; }); };
+      S.tStu = null; sel.onchange = draw; draw(); },
   });
 }
 

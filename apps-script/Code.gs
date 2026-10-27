@@ -16,7 +16,7 @@ const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];                
 
 const SH = {
   users: 'المستخدمون', teachers: 'المعلمات', periods: 'الفترات', prio: 'الأولويات',
-  cal: 'التقويم', pd: 'خطة التطوير', rec: 'السجلات', rep: 'التقارير', log: 'سجل العمليات'
+  cal: 'التقويم', pd: 'خطة التطوير', rec: 'السجلات', rep: 'التقارير', log: 'سجل العمليات', stu: 'الطالبات'
 };
 
 /* ------------------------------------------------------------------ أدوات */
@@ -86,11 +86,19 @@ function bootTeacher_(u) {
   const me = rows_(SH.teachers).rows.filter(r => r[1] === u.name).map(r => ({ dept: r[0], name: r[1], role: r[3], subj: r[4], secs: String(r[5]), load: Number(r[6]) || 0 }));
   const all = rows_(SH.rec).rows.filter(r => r[0]);
   const recs = all.filter(r => TEACHER_ITEMS.indexOf(r[2]) >= 0).map(recObj_).filter(x => x.d && (x.d.t === u.name || (x.item === 'TPV' && x.d.v === u.name) || (x.item === 'TWS' && x.d.by === u.name)));
+  const secs = []; me.forEach(m => String(m.secs).split(/[،,]/).forEach(x => { x = x.trim(); if (x) secs.push(x); }));
+  const students = students_(secs);
   const staffAll = rows_(SH.teachers).rows.filter(r => r[1] && r[8] !== 'لا').map(r => ({ dept: r[0], name: r[1], role: r[3] }));
   // أسماء الأنشطة القائمة في المدرسة (للاختيار منها)
   const acts = {};
   all.forEach(r => { if (r[2] !== 'AC' && r[2] !== 'TA') return; let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {} if (r[2] === 'TA' && d.kind !== 'نشاط') return; const n = String(d.name || '').replace(/\s*—.*$/, '').trim(); if (n) acts[n] = 1; });
-  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: me, staffAll: staffAll, coords: [], records: recs, reports: [], acts: Object.keys(acts).sort(), server: now_() };
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: me, staffAll: staffAll, students: students, coords: [], records: recs, reports: [], acts: Object.keys(acts).sort(), server: now_() };
+}
+/* أسماء طالبات شُعب المعلمة فقط (الشعبة والاسم — بلا درجات) */
+function students_(secs) {
+  const sh = sheet_(SH.stu); if (!sh) return [];
+  const v = sh.getDataRange().getValues(); v.shift(); const S = {}; secs.forEach(x => S[x] = 1);
+  return v.filter(r => r[1] && S[String(r[0]).trim()]).map(r => ({ s: String(r[0]).trim(), n: String(r[1]).trim() }));
 }
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
