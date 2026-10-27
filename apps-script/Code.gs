@@ -401,12 +401,15 @@ function fbToken_(pin) {
   const r = login_(pin, 'sab3');
   const u = r.user;
   const sa = JSON.parse(raw);
+  // الاسم الكامل من جدول «المعلمات» (هو نفسه المستخدم في توزيع المعلمات بسبع سنابل)
+  let full = u.name;
+  try { const tr = rows_(SH.teachers).rows.find(x => String(x[1]).trim() === String(u.name).trim() && String(x[2]).trim()); if (tr) full = String(tr[2]); } catch (e) {}
   const now = Math.floor(Date.now() / 1000);
   const payload = {
     iss: sa.client_email, sub: sa.client_email,
     aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
     iat: now, exp: now + 3600, uid: 'mz_' + u.id,
-    claims: { role: u.role, nk: normAr_(u.name), nm: u.name, dept: u.dept.map(normAr_), mz: u.id }
+    claims: { role: u.role, nk: normAr_(full), nm: u.name, dept: u.dept.map(normAr_), mz: u.id }
   };
   const head = b64u_(Utilities.newBlob(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).getBytes());
   const body = b64u_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
