@@ -121,10 +121,19 @@ function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.
 function show() {
   const v = S.view, el = $('#view');
   const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach };
-  if (isTeacher() && !['t_pv', 't_ws', 't_pa', 't_ach', 't_act'].includes(v)) return T_home(el);
-  if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
-  (map[v] || map.home)(el);
+  try {
+    if (isTeacher() && !['t_pv', 't_ws', 't_pa', 't_ach', 't_act'].includes(v)) return T_home(el);
+    if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
+    (map[v] || map.home)(el);
+  } catch (e) { viewErr(el, e, v); }
 }
+function viewErr(el, e, v) {
+  console.error(e);
+  el.innerHTML = `<div class="card" style="border-inline-start:4px solid #A33"><h2 style="margin-top:0">تعذّر فتح هذه الصفحة</h2><p>صوّري هذه الرسالة وأرسليها للدعم الفني.</p><pre style="white-space:pre-wrap;direction:ltr;text-align:left;font-size:12px;background:#f6f1f1;padding:10px;border-radius:10px">${esc(v + ' · ' + MIZAN_V_SAFE() + '\n' + (e && (e.stack || e.message) || e)).slice(0, 900)}</pre><button class="btn" onclick="location.reload()">إعادة تحميل</button></div>`;
+}
+function MIZAN_V_SAFE() { try { return typeof MIZAN_V !== 'undefined' ? MIZAN_V : ''; } catch (x) { return ''; } }
+window.addEventListener('error', ev => { try { toast('خطأ: ' + (ev.message || ''), 1); } catch (x) {} });
+window.addEventListener('unhandledrejection', ev => { try { const m = ev.reason && ev.reason.message; if (m) console.error(m); } catch (x) {} });
 const setTitle = t => { $('#ttl').textContent = t; };
 const deptStaff = d => S.staff.filter(s => s.dept === d);
 const repFor = (dept, per) => S.reports.find(r => r.dept === dept && r.period === per);
