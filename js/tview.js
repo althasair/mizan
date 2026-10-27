@@ -74,10 +74,11 @@ function T_page(el, cfg) {
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
   el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
-  <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td><button class="btn sm sec" data-e="${r.id}">فتح</button></td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
+  <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
   if ($('#tnew')) $('#tnew').onclick = () => { S.edit = 'new'; show(); };
   $$('[data-e]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.e; show(); window.scrollTo(0, 0); });
   if (cfg.bind) cfg.bind(el, d);
+  $$('[data-del]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; b.disabled = true; try { await call('delete', { id: b.dataset.del }); S.records = S.records.filter(x => x.id !== b.dataset.del); toast('تم الحذف ✓'); } catch (e) { b.disabled = false; return; } if (S.edit === b.dataset.del) S.edit = null; show(); });
   if ($('#tcx')) $('#tcx').onclick = () => { S.edit = null; show(); };
   if ($('#tdel')) $('#tdel').onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); S.edit = null; refresh(); };
   const doSave = async (copy) => {
