@@ -387,11 +387,39 @@ function setStudents_(u, p) {
   return { n: L.length };
 }
 
+
+/* ------------------------------------------------------------------ دخول «سبع سنابل» بالرقم السري نفسه */
+// يتحقق من الرقم السري هنا، ثم يصدر مفتاح دخول مؤقتاً (ساعة) لقاعدة بيانات سبع سنابل (Firebase).
+// يحتاج خاصية سكربت باسم FB_SA فيها محتوى ملف مفتاح حساب الخدمة من Firebase.
+function normAr_(s) {
+  return String(s == null ? '' : s).replace(/[\u064B-\u0670\u065F\u0640]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim().toLowerCase();
+}
+function b64u_(x) { return Utilities.base64EncodeWebSafe(x).replace(/=+$/, ''); }
+function fbToken_(pin) {
+  const raw = PropertiesService.getScriptProperties().getProperty('FB_SA');
+  if (!raw) fail_('لم يُضبط مفتاح ربط سبع سنابل في الخادم بعد');
+  const r = login_(pin, 'sab3');
+  const u = r.user;
+  const sa = JSON.parse(raw);
+  const now = Math.floor(Date.now() / 1000);
+  const payload = {
+    iss: sa.client_email, sub: sa.client_email,
+    aud: 'https://identitytoolkit.googleapis.com/google.identity.identitytoolkit.v1.IdentityToolkit',
+    iat: now, exp: now + 3600, uid: 'mz_' + u.id,
+    claims: { role: u.role, nk: normAr_(u.name), nm: u.name, dept: u.dept.map(normAr_), mz: u.id }
+  };
+  const head = b64u_(Utilities.newBlob(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).getBytes());
+  const body = b64u_(Utilities.newBlob(JSON.stringify(payload)).getBytes());
+  const sig = b64u_(Utilities.computeRsaSha256Signature(head + '.' + body, sa.private_key));
+  return { fbToken: head + '.' + body + '.' + sig, token: r.token, user: { id: u.id, role: u.role, name: u.name, dept: u.dept } };
+}
+
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
   if (a === 'ping') return { ok: true, name: 'الميزان', at: now_() };
   if (a === 'login') return login_(req.pin, req.app);
+  if (a === 'fbToken') return fbToken_(req.pin);
   const u = auth_(req.token);
   switch (a) {
     case 'boot': return boot_(u);
