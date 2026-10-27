@@ -98,7 +98,9 @@ function bootTeacher_(u) {
 function students_(secs) {
   const sh = sheet_(SH.stu); if (!sh) return [];
   const v = sh.getDataRange().getValues(); v.shift(); const S = {}; secs.forEach(x => S[x] = 1);
-  return v.filter(r => r[1] && S[String(r[0]).trim()]).map(r => ({ s: String(r[0]).trim(), n: String(r[1]).trim() }));
+  // الشعبة قد يحوّلها الجدول إلى تاريخ (11-4 ← 4 نوفمبر)، فتُعاد إلى صيغتها
+  const sec = x => x instanceof Date ? (x.getMonth() + 1) + '-' + x.getDate() : String(x).trim();
+  return v.filter(r => r[1] && S[sec(r[0])]).map(r => ({ s: sec(r[0]), n: String(r[1]).trim() }));
 }
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
@@ -379,6 +381,7 @@ function setStudents_(u, p) {
   if (!L.length) fail_('القائمة فارغة');
   let sh = sheet_(SH.stu); if (!sh) sh = ss_().insertSheet(SH.stu);
   sh.clearContents(); sh.getRange(1, 1, 1, 2).setValues([['الشعبة', 'اسم الطالبة']]);
+  sh.getRange(2, 1, Math.max(L.length, 1), 1).setNumberFormat('@');
   sh.getRange(2, 1, L.length, 2).setValues(L);
   log_(u, 'تحديث أسماء الطالبات', '', L.length + ' طالبة');
   return { n: L.length };
