@@ -276,7 +276,7 @@ function vpPlanData() {
   const doneNames = new Set(visits.map(v => v.d.t));
   const san = sanabilMeans();
   // الثاني عشر: لا اختبارات بعد هذا العام، فيُعتمد مستوى طالبات المسار في الحادي عشر العام الماضي (أرقام إجمالية دون أسماء)
-  const G = (S.records.filter(r => r.item === 'G12').sort((x, y) => (y.date || '').localeCompare(x.date || ''))[0] || {}).d;
+  const G = g12Merge((S.records.filter(r => r.item === 'G12').sort((x, y) => (y.date || '').localeCompare(x.date || ''))[0] || {}).d);
   const g12Of = (t, secs) => {
     if (!G || !G.stats) return null;
     const subj = nrm(t.subj || t.dept || '');
@@ -323,6 +323,24 @@ function vpPlanData() {
   });
   return { cfg, pool, done: visits, remain, weeks, plan, san, G };
 }
+/* يُكمل المسار الناقص (مثل العلمي) من نتائج الحادي عشر للعام الماضي المحفوظة في سبع سنابل على هذا المتصفح — قراءة فقط، أرقام إجمالية */
+function g12Merge(G0) {
+  const G = G0 ? JSON.parse(JSON.stringify(G0)) : { src: 'نتائج الحادي عشر للعام الماضي', tracks: { '12-1': 'علمي', '12-2': 'علمي', '12-3': 'علمي', '12-4': 'علمي', '12-5': 'علمي', '12-6': 'أدبي', '12-7': 'أدبي', '12-8': 'تكنولوجي' }, stats: {} };
+  G.stats = G.stats || {}; G.from = G.from || {};
+  let X = null; try { X = JSON.parse(localStorage.getItem('sab3_sanabil_v1') || 'null'); } catch (e) {}
+  const H = X && X.hist; if (!H) return G0 ? G : null;
+  const Y = Object.keys(H).sort().pop(); const L = (H[Y] || []).filter(o => /^11-/.test(String(o.section || '')));
+  const trP = ((X.settings || {}).tracksPrev || {})[Y] || {};
+  const need = [...new Set(Object.values(G.tracks))].filter(tr => !G.stats[tr]);
+  need.forEach(tr => {
+    const R = L.filter(o => (trP[o.section] || o.track || '') === tr); if (!R.length) return;
+    const by = {};
+    R.forEach(o => { const sc = (o.scores || []).filter(v => typeof v === 'number'); if (!sc.length) return; const v = o.scores[3] != null ? o.scores[3] : sc[sc.length - 1]; (by[o.subject] = by[o.subject] || []).push(v); });
+    const T = {}; Object.keys(by).forEach(k => { const v = by[k]; if (v.length < 5) return; T[k] = { mean: Math.round(v.reduce((a, b) => a + b, 0) / v.length * 10) / 10, n: v.length, low: v.filter(x => x < 70).length, fail: v.filter(x => x < 50).length }; });
+    if (Object.keys(T).length) { G.stats[tr] = T; G.from[tr] = 'سبع سنابل (' + Y + ')'; }
+  });
+  return Object.keys(G.stats).length ? G : null;
+}
 /* أولويات الثاني عشر: مستوى طالبات كل مسار في الحادي عشر العام الماضي (أرقام إجمالية) */
 function g12Card(V) {
   const G = V.G; if (!G || !G.stats) return '';
@@ -340,6 +358,7 @@ function g12Card(V) {
   return `<div class="card"><h2>أولويات الثاني عشر <span class="sub">من نتائج الحادي عشر ${esc((G.src || '').replace(/^.*?(20\d\d.20\d\d).*$/, '$1'))} — أرقام المسار كاملاً دون أسماء</span></h2>
   <div class="tbl"><table class="t"><tr><th>م</th><th>المسار</th><th>المادة</th><th>المتوسط</th><th>دون 70</th><th>راسبات</th><th>المعلمة هذا العام</th></tr>
   ${L.map((x, i) => `<tr style="${bg(x.st.mean) ? 'background:' + bg(x.st.mean) : ''}"><td>${i + 1}</td><td>${esc(x.tr)} <span style="font-size:11px;color:var(--muted)">${esc(x.ss.join('، '))}</span></td><td>${esc(x.k)}</td><td><b>${x.st.mean.toFixed(1)}</b></td><td>${x.st.low} من ${x.st.n}</td><td>${x.st.fail}</td><td style="font-size:12.5px">${x.T.map(t => esc(t.name) + (done.has(t.name) ? ' <span class="chip" style="background:#E7F6EF">تمت</span>' : '')).join('، ') || '—'}</td></tr>`).join('')}</table></div>
+  ${Object.keys(G.from || {}).length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:6px">${Object.entries(G.from).map(([t, f]) => 'المسار ال' + esc(t) + ' من ' + esc(f)).join('، ')}، وبقية المسارات من ملف النتائج.</div>` : ''}
   ${miss.length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:6px">لم يُدرج المسار ${miss.map(x => 'ال' + esc(x)).join(' و')} بعد، لعدم توفر نتائجه للعام الماضي.</div>` : ''}</div>`;
 }
 function A_visits(el) {
