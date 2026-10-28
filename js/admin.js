@@ -321,7 +321,26 @@ function vpPlanData() {
     }
     plan[i].sort((a, b) => b.s - a.s);
   });
-  return { cfg, pool, done: visits, remain, weeks, plan, san };
+  return { cfg, pool, done: visits, remain, weeks, plan, san, G };
+}
+/* أولويات الثاني عشر: مستوى طالبات كل مسار في الحادي عشر العام الماضي (أرقام إجمالية) */
+function g12Card(V) {
+  const G = V.G; if (!G || !G.stats) return '';
+  const secsOf = tr => Object.keys(G.tracks || {}).filter(k => G.tracks[k] === tr);
+  const L = [];
+  Object.keys(G.stats).forEach(tr => Object.keys(G.stats[tr]).forEach(k => {
+    const st = G.stats[tr][k], ss = secsOf(tr);
+    const T = V.pool.filter(t => { const sub = nrm(t.subj || t.dept); return (nrm(k).includes(sub) || sub.includes(nrm(k))) && String(t.secs).split(/[،,]/).some(x => ss.includes(x.trim())); });
+    L.push({ tr, k, st, ss, T });
+  }));
+  L.sort((a, b) => a.st.mean - b.st.mean);
+  const done = new Set(V.done.map(v => v.d.t));
+  const bg = m => m < 75 ? '#FDE8EC' : m < 80 ? '#FFF4DC' : '';
+  const miss = Object.values(G.tracks || {}).filter((x, i, A) => A.indexOf(x) === i).filter(tr => !G.stats[tr]);
+  return `<div class="card"><h2>أولويات الثاني عشر <span class="sub">من نتائج الحادي عشر ${esc((G.src || '').replace(/^.*?(20\d\d.20\d\d).*$/, '$1'))} — أرقام المسار كاملاً دون أسماء</span></h2>
+  <div class="tbl"><table class="t"><tr><th>م</th><th>المسار</th><th>المادة</th><th>المتوسط</th><th>دون 70</th><th>راسبات</th><th>المعلمة هذا العام</th></tr>
+  ${L.map((x, i) => `<tr style="${bg(x.st.mean) ? 'background:' + bg(x.st.mean) : ''}"><td>${i + 1}</td><td>${esc(x.tr)} <span style="font-size:11px;color:var(--muted)">${esc(x.ss.join('، '))}</span></td><td>${esc(x.k)}</td><td><b>${x.st.mean.toFixed(1)}</b></td><td>${x.st.low} من ${x.st.n}</td><td>${x.st.fail}</td><td style="font-size:12.5px">${x.T.map(t => esc(t.name) + (done.has(t.name) ? ' <span class="chip" style="background:#E7F6EF">تمت</span>' : '')).join('، ') || '—'}</td></tr>`).join('')}</table></div>
+  ${miss.length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:6px">لم يُدرج المسار ${miss.map(x => 'ال' + esc(x)).join(' و')} بعد، لعدم توفر نتائجه للعام الماضي.</div>` : ''}</div>`;
 }
 function A_visits(el) {
   setTitle('خطة زيارات المعلمات — الفصل الأول');
@@ -337,7 +356,8 @@ function A_visits(el) {
     ${kpi('نتائج سنابل', sanN ? sanN + ' معلمة' : 'غير متاحة', sanN ? 'قراءة فقط من متصفحك' : 'افتحي سنابل في هذا المتصفح', 'var(--tiffany-d)')}
   </div>
   <div class="card noprint" style="margin-top:16px"><div class="row"><b>بداية الخطة</b><input type="date" id="vs" value="${V.cfg.start}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>نهاية الفصل</b><input type="date" id="ve" value="${V.cfg.end}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><span class="sp"></span><button class="btn" id="addv">تسجيل زيارة منفّذة</button><button class="btn sec" onclick="window.print()">طباعة الخطة</button></div>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:8px">الأولوية: للعاشر والحادي عشر من متوسط تحصيل طالبات المعلمة في سنابل (الأقل تحصيلاً أولاً)، وللثاني عشر حسب عدد الشعب ومواد الاختبارات الوطنية. التوزيع: معلمة من كل قسم أسبوعياً قدر الإمكان، وتتحدّث الخطة تلقائياً كلما سجّلتِ زيارة.</div></div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:8px">الأولوية: للعاشر والحادي عشر من متوسط تحصيل طالبات المعلمة في سنابل (الأقل تحصيلاً أولاً)، وللثاني عشر من مستوى طالبات المسار في الحادي عشر العام الماضي (لعدم وجود اختبارات لهن بعد) مع عدد الشعب ومواد الاختبارات الوطنية. التوزيع: معلمة من كل قسم أسبوعياً قدر الإمكان، وتتحدّث الخطة تلقائياً كلما سجّلتِ زيارة.</div></div>
+  ${g12Card(V)}
   ${V.plan.map((L, i) => { const w0 = V.weeks[i];
     return `<div class="card"><h2>الأسبوع ${i + 1} <span class="sub">${dmy(iso(w0))} – ${dmy(iso(new Date(w0.getTime() + 4 * 864e5)))} · ${L.length} زيارات</span></h2>
       ${L.length ? `<div class="tbl"><table class="t"><tr><th>اليوم المقترح</th><th>المعلمة</th><th>القسم</th><th>الشعب</th><th>سبب الأولوية</th><th>الدرجة</th><th class="noprint"></th></tr>
