@@ -292,14 +292,19 @@ function vpPlanData() {
     const secs = String(t.secs).split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const g12 = secs.filter(x => x.startsWith('12')).length;
     const core = CORE12.some(c => (t.dept + ' ' + t.subj).includes(c));
-    let s = 0, why = [];
+    const why = [];
     const a = san && (san[nameKey(t.full || t.name)] || san[nameKey(t.name)]);
-    if (a) { const pts = Math.max(0, Math.min(50, (85 - a.mean) * 2)); s += pts; why.push(`طالباتها في العاشر والحادي عشر هذا العام: متوسط ${a.mean.toFixed(1)} في سنابل` + (a.low ? ` (${a.low} دون 70)` : '')); }
+    const n1011 = secs.filter(x => /^1[01]/.test(x)).length;
     const b12 = g12 ? g12Of(t, secs) : null;
-    if (b12) { const pts = Math.max(0, Math.min(50, (85 - b12.mean) * 2)); s += a ? Math.max(0, pts - Math.max(0, Math.min(50, (85 - a.mean) * 2))) : pts; why.push(`ثاني عشر ${b12.tracks}: متوسط طالبات المسار ${b12.mean.toFixed(1)} في نتائج الحادي عشر العام الماضي` + (b12.low ? ` (${b12.low} دون 70 في المسار)` : '')); }
-    if (g12) { s += Math.min(g12, 4) * 6 + (core ? 10 : 0); why.push(`${g12} شعب ثاني عشر` + (core ? ' — مادة اختبار وطني' : '')); }
-    if (!a && !g12) why.push('لا تتوفر نتائج بعد');
-    return { s: Math.round(s), why: why.join(' · '), mean: a ? a.mean : null };
+    const parts = [];
+    if (a) { parts.push([a.mean, Math.max(1, n1011)]); why.push(`العاشر والحادي عشر ${a.mean.toFixed(1)}% (هذا العام)`); }
+    if (b12) { parts.push([b12.mean, g12]); why.push(`الثاني عشر ${b12.mean.toFixed(1)}% (${b12.tracks}، من نتائج الحادي عشر العام الماضي)`); }
+    const W = parts.reduce((x, p) => x + p[1], 0);
+    const mean = W ? parts.reduce((x, p) => x + p[0] * p[1], 0) / W : null;
+    if (mean == null) why.push('لا تتوفر نتائج بعد');
+    // الترتيب على متوسط التحصيل فقط (الأقل أولاً)، وعدد شعب الثاني عشر ومادة الاختبار الوطني للمفاضلة عند التساوي
+    const s = mean == null ? -1 : Math.round((100 - mean) * 100) + Math.min(g12, 4) + (g12 && core ? 1 : 0);
+    return { s, why: why.join(' · '), mean };
   };
   const remain = pool.filter(t => !doneNames.has(t.name)).map(t => Object.assign({}, t, score(t))).sort((a, b) => b.s - a.s);
   // أسابيع الخطة (الأحد إلى الخميس)
@@ -379,12 +384,12 @@ function A_visits(el) {
     ${kpi('نتائج سنابل', sanN ? sanN + ' معلمة' : 'غير متاحة', sanN ? 'قراءة فقط من متصفحك' : 'افتحي سنابل في هذا المتصفح', 'var(--tiffany-d)')}
   </div>
   <div class="card noprint" style="margin-top:16px"><div class="row"><b>بداية الخطة</b><input type="date" id="vs" value="${V.cfg.start}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>نهاية الفصل</b><input type="date" id="ve" value="${V.cfg.end}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><span class="sp"></span><button class="btn" id="addv">تسجيل زيارة منفّذة</button><button class="btn sec" onclick="window.print()">طباعة الخطة</button></div>
-  <div style="font-size:12.5px;color:var(--muted);margin-top:8px">الأولوية: للعاشر والحادي عشر من متوسط تحصيل طالبات المعلمة في سنابل (الأقل تحصيلاً أولاً)، وللثاني عشر من مستوى طالبات المسار في الحادي عشر العام الماضي (لعدم وجود اختبارات لهن بعد) مع عدد الشعب ومواد الاختبارات الوطنية. التوزيع: معلمة من كل قسم أسبوعياً قدر الإمكان، وتتحدّث الخطة تلقائياً كلما سجّلتِ زيارة.</div></div>
+  <div style="font-size:12.5px;color:var(--muted);margin-top:8px">الأولوية حسب متوسط تحصيل المعلمة في جميع شعبها (الأقل أولاً): العاشر والحادي عشر من نتائج هذا العام في سنابل، والثاني عشر من نتائج طالبات المسار في الحادي عشر العام الماضي لعدم وجود اختبارات لهن بعد. التوزيع: معلمة من كل قسم أسبوعياً قدر الإمكان، وتتحدّث الخطة تلقائياً كلما سجّلتِ زيارة.</div></div>
   ${g12Card(V)}
   ${V.plan.map((L, i) => { const w0 = V.weeks[i];
     return `<div class="card"><h2>الأسبوع ${i + 1} <span class="sub">${dmy(iso(w0))} – ${dmy(iso(new Date(w0.getTime() + 4 * 864e5)))} · ${L.length} زيارات</span></h2>
-      ${L.length ? `<div class="tbl"><table class="t"><tr><th>اليوم المقترح</th><th>المعلمة</th><th>القسم</th><th>الشعب</th><th>سبب الأولوية</th><th>الدرجة</th><th class="noprint"></th></tr>
-      ${L.map((t, j) => `<tr><td>${DAYS[Math.min(4, Math.floor(j / Math.max(1, Math.ceil(L.length / 5))))]}</td><td><b>${esc(t.name)}</b></td><td>${esc(t.dept)}</td><td style="font-size:12px">${esc(t.secs)}</td><td style="font-size:12px">${esc(t.why)}</td><td><span class="chip ${t.s >= 40 ? 'bad' : t.s >= 20 ? 'warn' : ''}">${t.s}</span></td><td class="noprint"><button class="btn sm" data-v="${esc(t.name)}">تمت</button></td></tr>`).join('')}</table></div>` : '<div class="empty">لا زيارات</div>'}</div>`; }).join('')}
+      ${L.length ? `<div class="tbl"><table class="t"><tr><th>اليوم المقترح</th><th>المعلمة</th><th>القسم</th><th>الشعب</th><th>سبب الأولوية</th><th>متوسط التحصيل</th><th class="noprint"></th></tr>
+      ${L.map((t, j) => `<tr><td>${DAYS[Math.min(4, Math.floor(j / Math.max(1, Math.ceil(L.length / 5))))]}</td><td><b>${esc(t.name)}</b></td><td>${esc(t.dept)}</td><td style="font-size:12px">${esc(t.secs)}</td><td style="font-size:12px">${esc(t.why)}</td><td>${t.mean == null ? '—' : `<span class="chip ${t.mean < 75 ? 'bad' : t.mean < 80 ? 'warn' : ''}">${t.mean.toFixed(1)}%</span>`}</td><td class="noprint"><button class="btn sm" data-v="${esc(t.name)}">تمت</button></td></tr>`).join('')}</table></div>` : '<div class="empty">لا زيارات</div>'}</div>`; }).join('')}
   <div class="grid g2">
     <div class="card"><h2>التغطية حسب القسم</h2>${depts.map(d => { const n = V.pool.filter(t => t.dept === d).length, k = V.pool.filter(t => t.dept === d && V.done.some(v => v.d.t === t.name)).length;
       return `<div class="row" style="margin:6px 0"><span style="width:190px">${esc(d)}</span><div class="bar sp"><i style="width:${n ? k / n * 100 : 0}%"></i></div><span class="chip">${k}/${n}</span></div>`; }).join('')}</div>
