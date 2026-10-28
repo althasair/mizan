@@ -344,22 +344,26 @@ function g12Merge(G0) {
 /* أولويات الثاني عشر: مستوى طالبات كل مسار في الحادي عشر العام الماضي (أرقام إجمالية) */
 function g12Card(V) {
   const G = V.G; if (!G || !G.stats) return '';
+  const LIM = 80; // تحصيل المادة في المسار دون 80 = أولوية
   const secsOf = tr => Object.keys(G.tracks || {}).filter(k => G.tracks[k] === tr);
-  const L = [];
+  const visit = {}; V.done.forEach(v => { if (!visit[v.d.t] || (v.date || '') > visit[v.d.t]) visit[v.d.t] = v.date || ''; });
+  const rows = [];
   Object.keys(G.stats).forEach(tr => Object.keys(G.stats[tr]).forEach(k => {
-    const st = G.stats[tr][k], ss = secsOf(tr);
-    const T = V.pool.filter(t => { const sub = nrm(t.subj || t.dept); return (nrm(k).includes(sub) || sub.includes(nrm(k))) && String(t.secs).split(/[،,]/).some(x => ss.includes(x.trim())); });
-    L.push({ tr, k, st, ss, T });
+    const st = G.stats[tr][k]; if (st.mean >= LIM) return; const ss = secsOf(tr);
+    V.pool.forEach(t => {
+      const sub = nrm(t.subj || t.dept); if (!(nrm(k).includes(sub) || sub.includes(nrm(k)))) return;
+      const mine = String(t.secs).split(/[،,]/).map(x => x.trim()).filter(x => ss.includes(x)); if (!mine.length) return;
+      rows.push({ t, k, tr, mine, mean: st.mean, done: visit[t.name] != null, date: visit[t.name] });
+    });
   }));
-  L.sort((a, b) => a.st.mean - b.st.mean);
-  const done = new Set(V.done.map(v => v.d.t));
-  const bg = m => m < 75 ? '#FDE8EC' : m < 80 ? '#FFF4DC' : '';
-  const miss = Object.values(G.tracks || {}).filter((x, i, A) => A.indexOf(x) === i).filter(tr => !G.stats[tr]);
-  return `<div class="card"><h2>أولويات الثاني عشر <span class="sub">من نتائج الحادي عشر ${esc((G.src || '').replace(/^.*?(20\d\d.20\d\d).*$/, '$1'))} — أرقام المسار كاملاً دون أسماء</span></h2>
-  <div class="tbl"><table class="t"><tr><th>م</th><th>المسار</th><th>المادة</th><th>المتوسط</th><th>دون 70</th><th>راسبات</th><th>المعلمة هذا العام</th></tr>
-  ${L.map((x, i) => `<tr style="${bg(x.st.mean) ? 'background:' + bg(x.st.mean) : ''}"><td>${i + 1}</td><td>${esc(x.tr)} <span style="font-size:11px;color:var(--muted)">${esc(x.ss.join('، '))}</span></td><td>${esc(x.k)}</td><td><b>${x.st.mean.toFixed(1)}</b></td><td>${x.st.low} من ${x.st.n}</td><td>${x.st.fail}</td><td style="font-size:12.5px">${x.T.map(t => esc(t.name) + (done.has(t.name) ? ' <span class="chip" style="background:#E7F6EF">تمت</span>' : '')).join('، ') || '—'}</td></tr>`).join('')}</table></div>
-  ${Object.keys(G.from || {}).length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:6px">${Object.entries(G.from).map(([t, f]) => 'المسار ال' + esc(t) + ' من ' + esc(f)).join('، ')}، وبقية المسارات من ملف النتائج.</div>` : ''}
-  ${miss.length ? `<div style="font-size:12.5px;color:var(--muted);margin-top:6px">لم يُدرج المسار ${miss.map(x => 'ال' + esc(x)).join(' و')} بعد، لعدم توفر نتائجه للعام الماضي.</div>` : ''}</div>`;
+  rows.sort((a, b) => (a.done - b.done) || (a.mean - b.mean));
+  const todo = rows.filter(r => !r.done).length;
+  const miss = [...new Set(Object.values(G.tracks || {}))].filter(tr => !G.stats[tr]);
+  let n = 0;
+  return `<div class="card"><h2>أولويات الحضور في الثاني عشر <span class="sub">المواد التي تحصيلها في المسار دون ${LIM}% في الحادي عشر العام الماضي · المتبقي ${todo} من ${rows.length}</span></h2>
+  ${rows.length ? `<div class="tbl"><table class="t"><tr><th>الأولوية</th><th>المعلمة</th><th>المادة</th><th>المسار والشعب</th><th>تحصيل المادة في المسار</th><th>الحالة</th></tr>
+  ${rows.map(r => `<tr style="${r.done ? 'background:#EEF8F3' : r.mean < 75 ? 'background:#FDE8EC' : 'background:#FFF4DC'}"><td>${r.done ? '—' : ++n}</td><td><b>${esc(r.t.name)}</b></td><td>${esc(r.k)}</td><td>${esc(r.tr)} <span style="font-size:11.5px;color:var(--muted)">${esc(r.mine.join('، '))}</span></td><td><b>${r.mean.toFixed(1)}%</b></td><td>${r.done ? 'تم الحضور ✓' + (r.date ? ' ' + dm(r.date) : '') : '<b style="color:var(--maroon)">أولوية</b>'}</td></tr>`).join('')}</table></div>` : '<div class="empty">لا توجد مواد دون ' + LIM + '% في الثاني عشر</div>'}
+  <div style="font-size:12.5px;color:var(--muted);margin-top:6px">${Object.keys(G.from || {}).length ? Object.entries(G.from).map(([t, f]) => 'المسار ال' + esc(t) + ' من ' + esc(f)).join('، ') + '، وبقية المسارات من ملف النتائج. ' : ''}${miss.length ? 'لم يُدرج المسار ' + miss.map(x => 'ال' + esc(x)).join(' و') + ' بعد لعدم توفر نتائجه للعام الماضي.' : ''}</div></div>`;
 }
 function A_visits(el) {
   setTitle('خطة زيارات المعلمات — الفصل الأول');
