@@ -275,6 +275,19 @@ function vpPlanData() {
   const pool = S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
   const doneNames = new Set(visits.map(v => v.d.t));
   const san = sanabilMeans();
+  // الثاني عشر: لا اختبارات بعد هذا العام، فيُعتمد مستوى طالبات المسار في الحادي عشر العام الماضي (أرقام إجمالية دون أسماء)
+  const G = (S.records.filter(r => r.item === 'G12').sort((x, y) => (y.date || '').localeCompare(x.date || ''))[0] || {}).d;
+  const g12Of = (t, secs) => {
+    if (!G || !G.stats) return null;
+    const subj = nrm(t.subj || t.dept || '');
+    const acc = { sum: 0, n: 0, low: 0, tr: new Set(), nm: [] };
+    secs.filter(x => x.startsWith('12')).forEach(sc => {
+      const tr = G.tracks && G.tracks[sc]; const T = tr && G.stats[tr]; if (!T) return;
+      const k = Object.keys(T).find(k => subj.includes(nrm(k)) || nrm(k).includes(subj)); if (!k || acc.tr.has(tr + k)) return;
+      acc.tr.add(tr + k); acc.nm.push(tr); acc.sum += T[k].mean * T[k].n; acc.n += T[k].n; acc.low += T[k].low;
+    });
+    return acc.n ? { mean: acc.sum / acc.n, low: acc.low, tracks: acc.nm.join(' و') } : null;
+  };
   const score = t => {
     const secs = String(t.secs).split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const g12 = secs.filter(x => x.startsWith('12')).length;
@@ -282,6 +295,8 @@ function vpPlanData() {
     let s = 0, why = [];
     const a = san && (san[nameKey(t.full || t.name)] || san[nameKey(t.name)]);
     if (a) { const pts = Math.max(0, Math.min(50, (85 - a.mean) * 2)); s += pts; why.push(`متوسط تحصيل طالباتها في سنابل ${a.mean.toFixed(1)}` + (a.low ? ` (${a.low} دون 70)` : '')); }
+    const b12 = g12 ? g12Of(t, secs) : null;
+    if (b12) { const pts = Math.max(0, Math.min(50, (85 - b12.mean) * 2)); s += a ? Math.max(0, pts - Math.max(0, Math.min(50, (85 - a.mean) * 2))) : pts; why.push(`ثاني عشر ${b12.tracks}: متوسط طالبات المسار ${b12.mean.toFixed(1)} في نتائج الحادي عشر العام الماضي` + (b12.low ? ` (${b12.low} دون 70 في المسار)` : '')); }
     if (g12) { s += Math.min(g12, 4) * 6 + (core ? 10 : 0); why.push(`${g12} شعب ثاني عشر` + (core ? ' — مادة اختبار وطني' : '')); }
     if (!a && !g12) why.push('لا تتوفر نتائج بعد');
     return { s: Math.round(s), why: why.join(' · '), mean: a ? a.mean : null };
