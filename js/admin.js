@@ -294,7 +294,7 @@ function vpPlanData() {
     const core = CORE12.some(c => (t.dept + ' ' + t.subj).includes(c));
     let s = 0, why = [];
     const a = san && (san[nameKey(t.full || t.name)] || san[nameKey(t.name)]);
-    if (a) { const pts = Math.max(0, Math.min(50, (85 - a.mean) * 2)); s += pts; why.push(`متوسط تحصيل طالباتها في سنابل ${a.mean.toFixed(1)}` + (a.low ? ` (${a.low} دون 70)` : '')); }
+    if (a) { const pts = Math.max(0, Math.min(50, (85 - a.mean) * 2)); s += pts; why.push(`طالباتها في العاشر والحادي عشر هذا العام: متوسط ${a.mean.toFixed(1)} في سنابل` + (a.low ? ` (${a.low} دون 70)` : '')); }
     const b12 = g12 ? g12Of(t, secs) : null;
     if (b12) { const pts = Math.max(0, Math.min(50, (85 - b12.mean) * 2)); s += a ? Math.max(0, pts - Math.max(0, Math.min(50, (85 - a.mean) * 2))) : pts; why.push(`ثاني عشر ${b12.tracks}: متوسط طالبات المسار ${b12.mean.toFixed(1)} في نتائج الحادي عشر العام الماضي` + (b12.low ? ` (${b12.low} دون 70 في المسار)` : '')); }
     if (g12) { s += Math.min(g12, 4) * 6 + (core ? 10 : 0); why.push(`${g12} شعب ثاني عشر` + (core ? ' — مادة اختبار وطني' : '')); }
