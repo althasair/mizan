@@ -38,7 +38,12 @@ function log_(user, op, dept, details) {
 function fail_(msg) { throw new Error(msg); }
 
 /* ------------------------------------------------------------------ الدخول */
-function roleOf_(r) { return r[0] === 'admin' ? 'admin' : String(r[1]).trim() === 'معلمة' ? 'teacher' : 'coord'; }
+function roleOf_(r) {
+  const k = String(r[1]).trim();
+  if (r[0] === 'admin' || k === 'المديرة') return 'admin';   // النائب الأكاديمي ومديرة المدرسة
+  if (k === 'توجيه') return 'viewer';                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
+  return k === 'معلمة' ? 'teacher' : 'coord';
+}
 const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
@@ -63,6 +68,7 @@ function login_(pin, app) {
   if (!u) { cache.put('fails', String(fails + 1), 600); Utilities.sleep(700); fail_('الرقم السري غير صحيح'); }
   // المنسقات من «الميزان» فقط؛ والمعلمات يدخلن «الميزان» بتبويبات محدودة، و«سبع سنابل» لمبادراتهن وأنشطتهن
   if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
+  if (u.role === 'viewer' && app !== 'sab3') fail_('هذا الرقم للاطلاع على منصة سبع سنابل فقط');
   const token = Utilities.getUuid();
   cache.put('tok_' + token, u.id, SESSION_SECONDS);
   log_(u, 'دخول', u.dept.join('، '));
