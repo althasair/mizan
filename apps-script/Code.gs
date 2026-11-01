@@ -308,7 +308,7 @@ function signature_(u, p) {
   // توقيع النائب لا يُعطى إلا للنائب نفسها، أو لتقرير معتمد يخص قسم المنسقة
   if (u.role !== 'admin') {
     const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
-    if (i < 0 || t.rows[i][5] !== 'معتمد' || !canDept_(u, p.dept)) fail_('التوقيع غير متاح');
+    if (i < 0 || (t.rows[i][5] !== 'معتمد' && !String(t.rows[i][10] || '').trim()) || !canDept_(u, p.dept)) fail_('التوقيع غير متاح');   // بعد الاعتماد أو بعد كتابة النائب تغذيتها الراجعة
   }
   const it = DriveApp.getFolderById(PRIVATE_FOLDER).getFilesByName(SIG_FILE);
   if (!it.hasNext()) fail_('ملف التوقيع غير موجود');

@@ -155,7 +155,7 @@ function C_home(el) {
     ${kpi('الالتزام بخطة التطوير', fmtPct(K.planPct), K.planPct == null ? 'لا توجد ورش مقررة في الفترة' : (K.att != null ? 'نسبة الحضور ' + fmtPct(K.att) : 'لم تُسجَّل ورش منفذة بعد'), 'var(--navy)')}
     ${kpi('حالة التقرير', rp ? rp.status : 'مسودة', rp && rp.feedback ? 'يوجد تغذية راجعة' : '', 'var(--gold)')}
   </div>
-  ${rp && rp.feedback ? `<div class="card"><h2>تغذية راجعة من النائب الأكاديمي</h2><div style="white-space:pre-wrap">${esc(rp.feedback)}</div></div>` : ''}
+  ${rp && rp.feedback ? `<div class="card"><h2>تغذية راجعة من النائب الأكاديمي</h2><div class="fbv">${fbFmt(rp.feedback)}</div></div>` : ''}
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>تقدّم التوثيق في الفترة</h2>${SECTIONS.map(s => { const n = S.records.filter(r => r.dept === S.dept && r.item === s.k && inP(r.date, p)).length; return `<div class="row" style="margin:6px 0"><a style="width:170px;cursor:pointer" data-go="sec:${s.k}">${s.t}</a><div class="bar sp"><i style="width:${Math.min(100, n * 20)}%"></i></div><span class="chip ${n ? 'ok' : ''}">${n}</span></div>`; }).join('')}</div>
     <div>
@@ -313,7 +313,7 @@ async function C_report(el, deptArg) {
   const frozen = rp && rp.snap && ['موقّع من المنسقة', 'معتمد'].includes(rp.status);
   const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
   let sig = '';
-  if (rp && rp.status === 'معتمد') { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
+  if (rp && (rp.status === 'معتمد' || rp.feedback)) { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
   let csig = '';
   { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
   const canSign = !isAdmin() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
@@ -349,8 +349,9 @@ function paperHTML(R, rp, sig, csig) {
     });
     return h;
   }).join('');
-  const coordSig = rp && rp.coordSig ? `${csig ? `<img src="${csig}" alt="">` : ''}<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : csig ? `<img src="${csig}" alt="">` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
-  const vpSig = rp && rp.status === 'معتمد' ? `${sig ? `<img src="${sig}" alt="">` : ''}<div class="stamp">اعتُمد إلكترونياً · ${esc(rp.vpAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
+  const sgImg = d => d ? `<img class="sg" src="${d}" alt="">` : '<span class="sgl">......................</span>';
+  const coordSig = { img: sgImg(csig), st: rp && rp.coordSig ? `<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : '' };
+  const vpSig = { img: sgImg(rp && (rp.status === 'معتمد' || rp.feedback) ? sig : ''), st: rp && rp.status === 'معتمد' ? `<div class="stamp">اعتُمد إلكترونياً · ${esc(rp.vpAt || '')}</div>` : '' };
   return `<div class="paper">
     <img class="lh-top" src="assets/lh-top.jpg" alt="">
     <div class="in">
@@ -360,11 +361,24 @@ function paperHTML(R, rp, sig, csig) {
         <tr><td class="k">عدد معلمات القسم</td><td style="text-align:center;font-weight:700">${R.NT}</td><td style="font-weight:700">تاريخ إعداد التقرير: ${dmy(today())}</td></tr>
         <tr><td class="k" style="font-size:10px">أبرز أحداث الفترة</td><td colspan="2" style="font-size:10.5px">${esc(R.T.calendar || '—')}</td></tr></table>
       <table class="rep" style="margin-top:3mm"><tr><th>المجالات الرئيسة</th><th>المجال الفرعي</th><th>أهم ما تم إنجازه</th></tr>${body}</table>
-      <div class="fb"><div class="h">التغذية الراجعة من نائب المدير للشؤون الأكاديمية:</div><div class="b">${esc(rp && rp.feedback || '')}</div></div>
-      <div class="sigs"><div class="s"><b>اسم المنسق: أ. ${esc(R.coord)}</b>${coordSig}</div><div class="s"><b>اسم نائب المدير للشؤون الأكاديمية: أ. آسيا الذبياني</b>${vpSig}</div></div>
+      <div class="fb"><div class="h">التغذية الراجعة من نائب المدير للشؤون الأكاديمية:</div><div class="b">${fbFmt(rp && rp.feedback || '')}</div></div>
+      <div class="sigs"><div class="s"><div class="sr"><span class="sn">اسم المنسق: أ. ${esc(R.coord)}</span>${coordSig.img}</div>${coordSig.st}</div><div class="s"><div class="sr"><span class="sn">اسم نائب المدير للشؤون الأكاديمية: أ. آسيا الذبياني</span>${vpSig.img}</div>${vpSig.st}</div></div>
     </div>
     <img class="lh-bot" src="assets/lh-bot.jpg" alt="">
   </div>`;
+}
+/* تنسيق التغذية الراجعة: العناوين بالعنابي، والدلالات والأسس بالأزرق، والنص بالأسود، بمحاذاة justify وخط لوسيل */
+function fbFmt(t) {
+  const ind = /([؛،]\s*)((?:وهذا|مما|وفي ذلك|وهو ما|وهذا ما|وتلك)\s[^؛]*?)(\.?)$/;
+  return String(t || '').split('\n').map(l => {
+    const x = l.trim(); if (!x) return '<div class="fsp"></div>';
+    if (/^(نقاط التميز|ملاحظات على الأداء|قراءة في أعباء المعلمات.*|وأوصي بـ)\s*:?\s*$/.test(x)) return `<div class="fh">${esc(x)}</div>`;
+    if (/^-?\s*الأساس\s*:/.test(x)) return `<div class="fbs"><b>الأساس:</b> ${esc(x.replace(/^-?\s*الأساس\s*:\s*/, ''))}</div>`;
+    let m = x.match(/^(\d+)\.\s*(.*)$/); if (m) return `<div class="fr"><b class="fn">${m[1]}.</b> ${esc(m[2])}</div>`;
+    if (/^[•\-]\s*/.test(x)) { const b = x.replace(/^[•\-]\s*/, ''); const k = b.match(ind);
+      return `<div class="fl">• ${k ? esc(b.slice(0, k.index) + k[1]) + `<span class="fi">${esc(k[2])}</span>` + esc(k[3]) : esc(b)}</div>`; }
+    return `<div class="fp">${esc(x)}</div>`;
+  }).join('');
 }
 function pinModal(title, msg, fn, extra) {
   const m = document.createElement('div'); m.className = 'modal';
