@@ -268,10 +268,10 @@ function sanabilClass(sec0, subj) {
 /* ------------------------------------------------------------------ خطة زيارات النائب */
 const CORE12 = ['التربية الإسلامية', 'اللغة العربية', 'اللغة الإنجليزية', 'الرياضيات', 'الكيمياء', 'الفيزياء', 'الأحياء'];
 function vpCfg() { let c = {}; try { c = JSON.parse(localStorage.getItem('mizan_vp_cfg') || '{}'); } catch (e) {} return Object.assign({ start: '2026-11-01', end: '2026-12-03' }, c); }
-function vpPlanData() {
-  const cfg = vpCfg();
+function vpPlanData(o) {
+  o = o || {}; const cfg = vpCfg();
   const sem1 = S.periods.filter(p => p.sem === 'الفصل الأول'); const s1 = { from: sem1[0] ? sem1[0].from : '2026-08-30', to: sem1.length ? sem1[sem1.length - 1].to : '2026-12-31' };
-  const visits = S.records.filter(r => r.item === 'VPV' && (!r.date || (r.date >= s1.from && r.date <= '2026-12-31')));
+  const visits = S.records.filter(r => r.item === (o.item || 'VPV') && (!r.date || (r.date >= (o.from || s1.from) && r.date <= (o.to || '2026-12-31'))));
   const pool = S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
   const doneNames = new Set(visits.map(v => v.d.t));
   const san = sanabilMeans();

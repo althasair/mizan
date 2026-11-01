@@ -12,7 +12,9 @@ const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزا�
 const SIG_FILE = 'signature-vp.png';
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
 const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
-const ADMIN_ITEMS = ['VPV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];                 // بنود خاصة بالنائب لا تراها المنسقات
+const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];
+const PRINCIPAL_MAIL = 's.al-rumaihi0105@education.qa';   // نسخة (CC) من رسائل النائب الأكاديمي للمعلمات
+function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }                 // بنود خاصة بالنائب لا تراها المنسقات
 
 const SH = {
   users: 'المستخدمون', teachers: 'المعلمات', periods: 'الفترات', prio: 'الأولويات',
@@ -146,6 +148,8 @@ function saveRecord_(u, rec) {
   if (!rec || !rec.item || !rec.dept) fail_('بيانات ناقصة');
   if (!canDept_(u, rec.dept)) fail_('لا تملكين صلاحية على هذا القسم');
   if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند خاص بالنائب الأكاديمي');
+  if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
+  if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
   if (u.role === 'teacher') {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
@@ -199,6 +203,7 @@ function deleteRecord_(u, id) {
     for (let i = 0; i < t.rows.length; i++) {
       if (String(t.rows[i][0]) === String(id)) {
         if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
+        if ((String(t.rows[i][2]) === 'VPV' && isPrincipal_(u)) || (String(t.rows[i][2]) === 'PRV' && !isPrincipal_(u))) fail_('هذا السجل للاطلاع فقط');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
         if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
         else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('هذا السجل تسجّله المعلمة بنفسها');
@@ -324,7 +329,10 @@ function sendForm_(u, p) {
     const root = DriveApp.getFolderById(PRIVATE_FOLDER); const f = root.getFoldersByName('الاستمارات المرسلة');
     (f.hasNext() ? f.next() : root.createFolder('الاستمارات المرسلة')).createFile(pdf.copyBlob().setName(name + '.pdf'));
   } catch (e) {}
-  MailApp.sendEmail({ to: String(p.to), subject: String(p.subject || name), htmlBody: String(p.body || ''), attachments: [pdf], name: u.name + ' — نائب المدير للشؤون الأكاديمية' });
+  const pr = isPrincipal_(u);
+  const opt = { to: String(p.to), subject: String(p.subject || name), htmlBody: String(p.body || ''), attachments: [pdf], name: pr ? u.name + ' — مديرة المدرسة' : u.name + ' — نائب المدير للشؤون الأكاديمية', cc: PRINCIPAL_MAIL };
+  if (pr) opt.replyTo = PRINCIPAL_MAIL;
+  MailApp.sendEmail(opt);
   log_(u, 'إرسال استمارة', '', name + ' ← ' + p.to);
   return { sent: true };
 }

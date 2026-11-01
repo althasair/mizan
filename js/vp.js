@@ -10,6 +10,7 @@ const SEMS = ['الفصل الأول', 'الفصل الثاني'];
 const semRange = sem => { const L = S.periods.filter(p => p.sem === sem); return L.length ? { from: L[0].from, to: L[L.length - 1].to } : { from: '2026-08-23', to: '2027-06-30' }; };
 const curSem = () => { const t = today(); const p = S.periods.find(x => t >= x.from && t <= x.to) || [...S.periods].reverse().find(x => x.from <= t); return (p && p.sem) || SEMS[0]; };
 const VP_NAME = 'آسيا الذبياني';
+const PR_NAME = 'شيخة الرميحي';
 const staffBy = n => S.staff.find(s => s.name === n) || {};
 const uniqA = a => [...new Set(a.filter(Boolean))];
 const SCHOOL = () => REF.SCHOOL || 'مدرسة الشيماء الثانوية للبنات';
@@ -59,7 +60,7 @@ const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM
   <p style="margin:0 0 10px">فخورة لكونكِ ضمن فريق الشيماء، وأقدّر ما تبذلينه من جهد مخلص في سبيل تعلّم طالباتنا.</p>
   <p style="margin:0 0 10px">أرفق لكِ غاليتي ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
   <p style="margin:0 0 10px">سائلةً المولى لكِ دوام التوفيق والسداد.</p>
-  <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>آسيا الذبياني</b><br>نائب المدير للشؤون الأكاديمية<br>${esc(SCHOOL())}</p></div>`;
+  <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>${typeof isPrincipal === 'function' && isPrincipal() ? PR_NAME : 'آسيا الذبياني'}</b><br>${typeof isPrincipal === 'function' && isPrincipal() ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}<br>${esc(SCHOOL())}</p></div>`;
 async function sendForm({ to, name, subject, what, inner, file }) {
   if (!to) { toast('لا يوجد بريد إلكتروني مسجّل لهذه الموظفة', 1); return false; }
   const imgs = await lhImgs(); const sig = await vpSig();
@@ -68,7 +69,7 @@ async function sendForm({ to, name, subject, what, inner, file }) {
   const ok = await new Promise(res => {
     const m = document.createElement('div'); m.className = 'modal';
     m.innerHTML = `<div class="box" style="max-width:900px;width:96vw;max-height:92vh;overflow:auto"><h3>معاينة قبل الإرسال</h3>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">إلى: <b dir="ltr">${esc(to)}</b> · الموضوع: <b>${esc(subject)}</b> · المرفق: <b>${esc(file)}.pdf</b></div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:6px">إلى: <b dir="ltr">${esc(to)}</b> · نسخة إلى: <b dir="ltr">s.al-rumaihi0105@education.qa</b> · الموضوع: <b>${esc(subject)}</b> · المرفق: <b>${esc(file)}.pdf</b></div>
       <div style="border:1px solid var(--line);border-radius:12px;padding:14px 18px;background:#fff">${body}</div>
       <details style="margin-top:10px" open><summary style="cursor:pointer;color:var(--tiffany-d)">الاستمارة المرفقة</summary><style>${FORM_CSS}</style><div style="border:1px solid var(--line);margin-top:6px;zoom:.8">${paperWrap(inner.replace(/\{\{SIG\}\}/g, sig ? `<img src="${sig}" alt="">` : ''), imgs)}</div></details>
       <div class="row" style="margin-top:12px"><button class="btn tf" id="sOk">إرسال الآن</button><button class="btn sec" id="sNo">إلغاء</button></div></div>`;
@@ -97,24 +98,26 @@ async function A_vpvisit(el) {
   const L = vpVisits(); const sem = S.vsem || curSem(); const R = semRange(sem);
   const inS = L.filter(r => r.date >= R.from && r.date <= R.to);
   const pool = S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
-  const seen = new Set(inS.map(r => r.d.t));
+  const seen = new Set(inS.map(r => r.d.t)); const RO = typeof isPrincipal === 'function' && isPrincipal(); const pct = pool.length ? Math.round([...seen].filter(n => pool.some(p => p.name === n)).length / pool.length * 100) : 0;
   const lv = r => { const rt = r.d.rt || {}; const v = Object.values(rt).filter(x => x < 5); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   el.innerHTML = `
   <div class="tabs">${SEMS.map(s => `<button class="${s === sem ? 'on' : ''}" data-s="${s}">${s}</button>`).join('')}</div>
   <div class="grid g4">
-    ${kpi('حضرتُ لهن', seen.size, 'من ' + pool.length + ' معلمة لها نصاب', 'var(--ok)')}
+    ${kpi(RO ? 'حضرت لهن النائب' : 'حضرتُ لهن', seen.size, 'من ' + pool.length + ' معلمة · ' + pct + '% تمت تغطيته · ' + (100 - pct) + '% متبقٍ', 'var(--ok)')}
     ${kpi('عدد الزيارات', inS.length, sem, 'var(--navy)')}
     ${kpi('أُرسلت للمعلمات', inS.filter(r => r.d.sent).length, 'من ' + inS.length, 'var(--tiffany-d)')}
     ${kpi('لم أحضر لهن بعد', pool.length - [...seen].filter(n => pool.some(p => p.name === n)).length, 'في ' + sem, 'var(--maroon)')}
   </div>
-  <div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">زياراتي الصفية — ${sem}</h2><span class="sp"></span><button class="btn" id="nv">+ حضور جديد (تعبئة الاستمارة)</button></div>
+  ${RO ? '<div class="note">حضور النائب الأكاديمي — للاطلاع فقط.</div>' : ''}<div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">${RO ? 'زيارات النائب الأكاديمي' : 'زياراتي الصفية'} — ${sem}</h2><span class="sp"></span>${RO ? '' : '<button class="btn" id="nv">+ حضور جديد (تعبئة الاستمارة)</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th><th>القسم</th><th>الصف</th><th>الموضوع</th><th>التحصيل الأكاديمي</th><th>المستوى العام</th><th>الإرسال</th><th></th></tr>
   ${inS.map(r => { const a = lv(r); const ok = a == null ? '' : a < 1.25 ? 'ok' : a < 2.2 ? 'tf' : a < 3.2 ? 'warn' : 'bad';
     const lbl = a == null ? '—' : FORMS.visit.scale[Math.round(a)];
     return `<tr><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.topic || '')}</td><td style="font-size:12px">${esc(r.d.ach || '')}</td><td>${a == null ? '<span class="chip">بلا استمارة</span>' : `<span class="chip ${ok}">${esc(lbl)}</span>`}</td><td>${r.d.sent ? `<span class="chip ok">${dm(r.d.sent)}</span>` : '<span class="chip">لم تُرسل</span>'}</td>
       <td><button class="btn sm sec" data-o="${r.id}">فتح</button></td></tr>`; }).join('') || '<tr><td colspan="9"><div class="empty">لا توجد زيارات في هذا الفصل بعد</div></td></tr>'}</table></div></div>
-  <div class="card"><h2>معلمات لم أحضر لهن في ${sem}</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${pool.filter(p => !seen.has(p.name)).map(p => `<button class="chip" data-nt="${esc(p.name)}" style="cursor:pointer">${esc(p.name)} · ${esc(p.dept)}</button>`).join('') || '<div class="empty">تم الحضور لجميع المعلمات ✓</div>'}</div></div>`;
+  <div class="card"><h2>${RO ? 'معلمات لم تحضر لهن النائب' : 'معلمات لم أحضر لهن'} في ${sem}</h2><div style="display:flex;flex-wrap:wrap;gap:6px">${pool.filter(p => !seen.has(p.name)).map(p => `<button class="chip" ${RO ? 'disabled' : ''} data-nt="${esc(p.name)}" style="cursor:pointer">${esc(p.name)} · ${esc(p.dept)}</button>`).join('') || '<div class="empty">تم الحضور لجميع المعلمات ✓</div>'}</div></div>`;
   $$('[data-s]', el).forEach(b => b.onclick = () => { S.vsem = b.dataset.s; show(); });
+  if (RO) { $$('[data-o]', el).forEach(b => b.onclick = async () => { const r = S.records.find(x => x.id === b.dataset.o); await showPaper(el, 'استمارة الإشراف — ' + r.d.t, visitInner(r)); $('#pBack').onclick = () => show(); }); return; }
+  S.vkind = 'VPV';
   $('#nv').onclick = () => { S.vpv = 'new'; S.vpvT = ''; show(); };
   $$('[data-nt]', el).forEach(b => b.onclick = () => { S.vpv = 'new'; S.vpvT = b.dataset.nt; show(); });
   $$('[data-o]', el).forEach(b => b.onclick = () => { S.vpv = b.dataset.o; show(); });
@@ -142,7 +145,7 @@ function vpVisitForm(el, rec) {
     let lastD = '';
     el.innerHTML = `
     <div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="vb">رجوع للقائمة</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="vdel">حذف</button>' : ''}<button class="btn sec" id="vauto">اقتراح نقاط القوة والتحسين من التقديرات</button><button class="btn" id="vsave">حفظ</button>${rec ? '<button class="btn sec" id="vprev">معاينة الاستمارة</button><button class="btn tf" id="vsend">إرسال للمعلمة</button>' : ''}</div>
-    <div class="card"><h2>${esc(F.title)} <span class="sub">نموذج (9) من الدليل الإرشادي — تُعبَّأ من قِبل نائب المدير للشؤون الأكاديمية</span></h2>
+    <div class="card"><h2>${esc(F.title)} <span class="sub">نموذج (9) من الدليل الإرشادي — تُعبَّأ من قِبل ${S.vkind === 'PRV' ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}</span></h2>
     <form class="form" id="vh" onsubmit="return false">
       <div class="fld"><label>المادّة <small style="color:var(--muted)">· اختاريها أولاً</small></label><select id="fSub"><option value="">اختاري المادة…</option>${allSubj.map(x => `<option ${nrm(x) === nrm(d.subj || '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
       <div class="fld"><label>المعلّمة ${d.subj ? `<small style="color:var(--muted)">· معلمات ${esc(d.subj)} (${tch.length})</small>` : ''}</label><select id="fT"><option value="">${d.subj ? 'اختاري المعلمة…' : 'اختاري المادة أولاً'}</option>${tch.map(x => `<option ${x.name === d.t ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
@@ -196,7 +199,8 @@ function vpVisitForm(el, rec) {
       grab(); if (!d.t || !d.date) { toast('اختاري المعلمة والتاريخ', 1); return null; }
       const st = staffBy(d.t); if (!st.dept) { toast('اسم المعلمة غير موجود في قائمة المعلمات', 1); return null; }
       d.st = d.st.filter(Boolean); d.im = d.im.filter(Boolean); d.note = d.topic || d.note || '';
-      const j = await call('save', { rec: { id: rec && rec.id, dept: st.dept, item: 'VPV', date: d.date, sum: 'زيارة النائب الأكاديمي: ' + d.t, d, key: d.t + '|' + d.date } });
+      const K = S.vkind === 'PRV' ? 'PRV' : 'VPV';
+      const j = await call('save', { rec: { id: rec && rec.id, dept: st.dept, item: K, date: d.date, sum: (K === 'PRV' ? 'زيارة مديرة المدرسة: ' : 'زيارة النائب الأكاديمي: ') + d.t, d, key: d.t + '|' + d.date } });
       const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
       S.vpv = j.record.id; return j.record;
     };
@@ -229,14 +233,14 @@ function visitInner(r) {
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     <tr><td class="k">المــدرسة</td><td>${esc(SCHOOL())}</td><td class="k">اليوم/التاريخ</td><td>${esc(dayOf(d.date))} ${dmy(d.date)}</td></tr>
     <tr><td class="k">المادّة</td><td>${esc(d.subj || '')}</td><td class="k">الصّف</td><td>${esc(d.s || '')}</td></tr>
-    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">نائب المدير للشؤون الأكاديمية</td><td>أ. ${VP_NAME}</td></tr>
+    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">${r.item === 'PRV' ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}</td><td>أ. ${r.item === 'PRV' ? PR_NAME : VP_NAME}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانيّة')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئيّة')} جزئيّة &nbsp; ${ys(d.kj, 'كليّة')} كليّة</td></tr>
     <tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
-  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع نائب المدير للشؤون الأكاديمية<br>أ. ${VP_NAME}{{SIG}}</td></tr></table>`;
+  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع مديرة المدرسة<br>أ. ' + PR_NAME : 'توقيع نائب المدير للشؤون الأكاديمية<br>أ. ' + VP_NAME + '{{SIG}}'}</td></tr></table>`;
 }
 async function previewVisit(el, r) {
   await showPaper(el, 'استمارة الإشراف — ' + r.d.t, visitInner(r), '<button class="btn tf" id="pSend">إرسال للمعلمة</button>');
