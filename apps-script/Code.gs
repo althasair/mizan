@@ -130,7 +130,7 @@ function recObj_(r) {
 }
 function listRecords_(u) {
   if (u.role === 'teacher') return bootTeacher_(u).records;
-  return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_)
+  return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).concat(sabPA_())
     .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
 }
 function repObj_(r) {
@@ -423,6 +423,42 @@ function fbToken_(pin) {
   return { fbToken: head + '.' + body + '.' + sig, token: r.token, user: { id: u.id, role: u.role, name: u.name, dept: u.dept } };
 }
 
+
+/* ------------------------------------------------------------------ التواصل مع أولياء الأمور من سبع سنابل */
+// تسجّل المعلمات التواصل مع أولياء الأمور في «سبع سنابل»، ويقرؤه الميزان هنا ليظهر في التقرير الشهري كما كان
+function sabAccess_() {
+  const c = CacheService.getScriptCache(); const k = c.get('sabTok'); if (k) return k;
+  const raw = PropertiesService.getScriptProperties().getProperty('FB_SA'); if (!raw) return null;
+  const sa = JSON.parse(raw); const now = Math.floor(Date.now() / 1000);
+  const head = b64u_(Utilities.newBlob(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).getBytes());
+  const body = b64u_(Utilities.newBlob(JSON.stringify({ iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600 })).getBytes());
+  const sig = b64u_(Utilities.computeRsaSha256Signature(head + '.' + body, sa.private_key));
+  const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'post', payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: head + '.' + body + '.' + sig }, muteHttpExceptions: true });
+  const tok = JSON.parse(r.getContentText()).access_token; if (tok) c.put('sabTok', tok, 3000); return tok || null;
+}
+function sabPA_() {
+  const c = CacheService.getScriptCache(); const hit = c.get('sabPA'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  let out = [];
+  try {
+    const tok = sabAccess_(); if (!tok) return [];
+    const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
+      method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'EQUAL', value: { integerValue: '5' } } } } }) });
+    const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
+    const T = rows_(SH.teachers).rows.filter(x => x[1]);
+    const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
+    const short = n => { const k = normAr_(n); const t = T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k); return t ? String(t[1]) : String(n); };
+    JSON.parse(r.getContentText()).forEach(x => {
+      if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
+      const det = String(g('detail')).split(' — '); const stu = g('students') || [];
+      const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
+      out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'TPA', date: String(g('date')), sum: 'من سبع سنابل',
+        d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
+    });
+  } catch (e) { return []; }
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA', txt, 600);
+  return out;
+}
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;

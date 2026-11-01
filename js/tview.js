@@ -27,7 +27,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والمبادرات', 'cal', n('TA'))}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}<a class="nav-it" href="https://althasair.github.io/sab3-sanabil/#entry" target="_blank" rel="noopener" style="display:flex;gap:8px;align-items:center;padding:9px 14px;opacity:.85;color:inherit;text-decoration:none">التواصل مع أولياء الأمور ↗ <small style="opacity:.75">في سبع سنابل</small></a>${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والمبادرات', 'cal', n('TA'))}`;
 }
 
 function T_home(el) {
@@ -42,7 +42,7 @@ function T_home(el) {
     ${kpi('التواصل مع أولياء الأمور', mine('TPA').filter(inCur).reduce((a, r) => a + (+r.d.n || 1), 0), 'ولي أمر في الفترة', 'var(--navy)')}
     ${kpi('أنشطتي ومبادراتي', mine('TA').filter(inCur).length, 'في الفترة', 'var(--gold)')}
   </div>
-  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_pa', 'التواصل مع أولياء الأمور', 'كل تواصل مع ولي أمر: الطريقة والموضوع والنتيجة.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والمبادرات', 'نشاط استحدثتِه، أو نشاط قائم شاركتِ فيه، أو مبادرة من فكرتكِ.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
+  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والمبادرات', 'نشاط استحدثتِه، أو نشاط قائم شاركتِ فيه، أو مبادرة من فكرتكِ.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}<a class="card" href="https://althasair.github.io/sab3-sanabil/#entry" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><h2>التواصل مع أولياء الأمور ↗</h2><p style="color:var(--muted);margin:0">يُسجَّل الآن في منصة سبع سنابل بالرقم السري نفسه، ويظهر في التقرير الشهري تلقائيًا.</p></a></div>`;
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
 }
 
