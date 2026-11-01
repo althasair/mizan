@@ -315,7 +315,7 @@ async function C_report(el, deptArg) {
   let sig = '';
   if (rp && rp.status === 'معتمد') { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
   let csig = '';
-  if (rp && rp.coordSig) { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
+  { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
   const canSign = !isAdmin() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
   el.innerHTML = `
     <div class="row noprint" style="margin-bottom:14px">
@@ -349,7 +349,7 @@ function paperHTML(R, rp, sig, csig) {
     });
     return h;
   }).join('');
-  const coordSig = rp && rp.coordSig ? `${csig ? `<img src="${csig}" alt="">` : ''}<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
+  const coordSig = rp && rp.coordSig ? `${csig ? `<img src="${csig}" alt="">` : ''}<div class="stamp">وُقّع إلكترونياً برقمها السري · ${esc(rp.coordAt || '')}</div>` : csig ? `<img src="${csig}" alt="">` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
   const vpSig = rp && rp.status === 'معتمد' ? `${sig ? `<img src="${sig}" alt="">` : ''}<div class="stamp">اعتُمد إلكترونياً · ${esc(rp.vpAt || '')}</div>` : '<div style="margin-top:10mm">التوقيع: ......................</div>';
   return `<div class="paper">
     <img class="lh-top" src="assets/lh-top.jpg" alt="">
