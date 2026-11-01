@@ -219,8 +219,8 @@ function buildReport(ctx) {
     if (exT.length) add('pd_ext', 'وسجّلت معلمات القسم مشاركتهن في: ' + exT.map(r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + (r.d.byx ? ` من تقديم ${r.d.byx}` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
     // التواصل مع أولياء الأمور
     const PAt = mineD('TPA');
-    if (PAt.length) { const by = {}; PAt.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ways: new Set() }; o.n += +r.d.n > 0 ? +r.d.n : 1; if (r.d.way) o.ways.add(r.d.way); });
-      add('pa_ind', 'وسجّلت المعلمات تواصلهن مع أولياء الأمور: ' + Object.entries(by).map(([t, o]) => `أ. ${t} (${o.n}) ${o.ways.size ? '— ' + [...o.ways].join('، ') : ''}`).join('؛ ') + '.'); }
+    if (PAt.length) { const by = {}; PAt.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ways: new Set(), cats: new Set() }; o.n += +r.d.n > 0 ? +r.d.n : 1; if (r.d.way) o.ways.add(r.d.way); if (r.d.cat) o.cats.add(r.d.cat); });
+      add('pa_ind', 'وسجّلت المعلمات تواصلهن مع أولياء الأمور: ' + Object.entries(by).map(([t, o]) => `أ. ${t} (${o.n})` + (o.cats.size ? ` لأغراض: ${[...o.cats].join('، ')}` : '') + (o.ways.size ? ` — ${[...o.ways].join('، ')}` : '')).join('؛ ') + '.'); }
     // الإنجازات والمشاركات
     const AH = mineD('TACH'); const AHw = AH.filter(r => /إنجاز/.test(r.d.kind)), AHp = AH.filter(r => !/إنجاز/.test(r.d.kind));
     const ahTx = r => `«${nz(r.d.name)}»` + (r.d.ent ? ` (${r.d.ent})` : '') + (r.d.res ? `، ${r.d.res}` : '') + ` بإشراف أ. ${r.d.t}` + dateTxt(r.date);

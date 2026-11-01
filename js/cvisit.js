@@ -201,20 +201,24 @@ function cvForm(el, rec) {
 /* ================================================================== الطباعة والإرسال */
 function cvInner(r) {
   const F = FORMS.visit, d = r.d; let lastD = '';
+  const cN = r.by || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
+  const achT = d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
   const ys = (v, x) => v === x ? '☑' : '☐';
   const fuTxt = (d.fu || []).length ? `\n\nمتابعة توصيات الزيارة السابقة (${dmy(d.prevDate)}):\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '';
   return `<h1>${esc(F.title)}</h1><div class="sub">${esc(SCHOOL())} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
+    <tr><td class="k">تحصيل الشعبة في المادة</td><td colspan="3"><b>${esc(achT)}</b></td></tr>
     <tr><td class="k">المــدرسة</td><td>${esc(SCHOOL())}</td><td class="k">اليوم/التاريخ</td><td>${esc(dayOf(d.date))} ${dmy(d.date)}</td></tr>
     <tr><td class="k">المادّة</td><td>${esc(d.subj || '')}</td><td class="k">الصّف</td><td>${esc(d.s || '')}</td></tr>
-    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">منسق المادة</td><td>أ. ${esc(S.user.name)}</td></tr>
+    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">منسق المادة</td><td>أ. ${esc(cN)}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانية')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئية')} جزئيّة &nbsp; ${ys(d.kj, 'كلية')} كليّة</td></tr>
-    <tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
+    <tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '') + fuTxt + ((d.str || []).length ? '\n\nنقاط القوة:\n' + d.str.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '') + ((d.imp || []).length ? '\n\nالنقاط التي تحتاج إلى تحسين:\n' + d.imp.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '')).trim()}</div></div>
-  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(S.user.name)}{{SIG}}</td></tr></table>`;
+  ${d.vpfb ? `<div class="gen"><div class="h">ملاحظات النائب الأكاديمي${d.vpfbAt ? ' (' + dmy(d.vpfbAt) + ')' : ''}</div><div class="b">${esc(d.vpfb)}</div></div>` : ''}
+  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(cN)}{{SIG}}</td>${d.vpfb ? `<td>توقيع النائب الأكاديمي<br>أ. ${esc(typeof VP_NAME !== 'undefined' ? VP_NAME : '')}{{VPSIG}}</td>` : ''}</tr></table>`;
 }
 let CSIG = null;
 async function cvSig() { if (CSIG !== null) return CSIG; try { CSIG = (await API.call('signature', { who: S.user.id })).data || ''; } catch (e) { CSIG = ''; } return CSIG; }
@@ -224,7 +228,10 @@ const cvBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM Pl
   <p style="margin:0 0 10px">أشكر لكِ جهودكِ المخلصة في سبيل تعلّم طالباتنا، وأرفق لكِ ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
   <p style="margin:0 0 10px">مع دعائي لكِ بدوام التوفيق والسداد.</p>
   <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>${esc(S.user.name)}</b><br>منسقة قسم ${esc(S.dept)}<br>${esc(SCHOOL())}</p></div>`;
-async function cvPaper(r) { const imgs = await lhImgs(); const sig = await cvSig(); return { imgs, sig, inner: cvInner(r) }; }
+/* توقيع النائب يظهر فقط بعد كتابتها ملاحظتها على الاستمارة */
+async function cvVpSig(r) { if (!r.d.vpfb) return ''; try { return (await API.call('signature', { visit: r.id })).data || ''; } catch (e) { return ''; } }
+const cvSigs = (html, sig, vps) => html.replace(/\{\{SIG\}\}/g, sig ? `<img src="${sig}" alt="">` : '').replace(/\{\{VPSIG\}\}/g, vps ? `<img src="${vps}" alt="">` : '');
+async function cvPaper(r) { const imgs = await lhImgs(); const sig = await cvSig(); const vps = await cvVpSig(r); return { imgs, sig, inner: cvSigs(cvInner(r), sig, vps).replace(/\{\{SIG\}\}/g, '') }; }
 async function cvPreview(el, r) {
   const { imgs, sig, inner } = await cvPaper(r);
   el.innerHTML = `<div class="row noprint" style="margin-bottom:12px"><button class="btn sec" id="pBack">رجوع</button><span class="sp"></span><button class="btn tf" id="pSend">إرسال للمعلمة</button><button class="btn sec" onclick="window.print()">طباعة / حفظ PDF</button></div>
@@ -249,4 +256,40 @@ async function cvSend(r) {
   const j = await call('sendVisitC', { id: r.id, subject, body, file, html: docHTML(inner, imgs, file) });
   toast('تم الإرسال إلى أ. ' + r.d.t + ' ✓');
   const i = S.records.findIndex(x => x.id === r.id); if (i >= 0 && j.record) S.records[i] = j.record; show();
+}
+
+/* ================================================================== النائب: زيارات المنسقات الصفية وملاحظاتها عليها
+   تكتب النائب ملاحظتها على استمارة المنسقة، فيظهر توقيعها على الاستمارة بعد ذلك فقط */
+async function A_cvisits(el) {
+  await loadForms(); setTitle('زيارات المنسقات الصفية');
+  if (S.acv) { const r = S.records.find(x => x.id === S.acv); if (r) return acvOpen(el, r); S.acv = null; }
+  const V = S.records.filter(r => r.item === 'V' && r.d && r.d.t).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const depts = [...new Set(V.map(r => r.dept))].sort((a, b) => a.localeCompare(b, 'ar'));
+  const f = S.acvF || { dept: '', st: '' };
+  const L = V.filter(r => (!f.dept || r.dept === f.dept) && (!f.st || (f.st === 'no' ? !r.d.vpfb : !!r.d.vpfb)));
+  el.innerHTML = `<div class="grid g4">${kpi('استمارات المنسقات', V.length, 'كل الأقسام', 'var(--navy)')}${kpi('بملاحظتي', V.filter(r => r.d.vpfb).length, 'يظهر عليها توقيعي', 'var(--ok)')}${kpi('بانتظار ملاحظتي', V.filter(r => !r.d.vpfb).length, '', 'var(--maroon)')}</div>
+  <div class="card"><div class="row"><select id="afD"><option value="">كل الأقسام</option>${depts.map(x => `<option ${x === f.dept ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
+    <select id="afS"><option value="">الكل</option><option value="no" ${f.st === 'no' ? 'selected' : ''}>بانتظار ملاحظتي</option><option value="yes" ${f.st === 'yes' ? 'selected' : ''}>بملاحظتي</option></select></div>
+  <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>التاريخ</th><th>القسم</th><th>المنسقة</th><th>المعلمة</th><th>النوع</th><th>الشعبة</th><th>ملاحظتي</th><th></th></tr>
+  ${L.map(r => `<tr><td>${dmy(r.date)}</td><td>${esc(r.dept)}</td><td>${esc(r.by || '')}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.d.kj || r.d.ty || '')}</td><td>${esc(r.d.s || '')}</td><td>${r.d.vpfb ? '<span class="chip ok">مكتوبة</span>' : '<span class="chip warn">لا توجد</span>'}</td><td><button class="btn sm sec" data-ao="${r.id}">فتح</button></td></tr>`).join('') || '<tr><td colspan="8"><div class="empty">لا توجد استمارات</div></td></tr>'}</table></div></div>`;
+  $('#afD').onchange = $('#afS').onchange = () => { S.acvF = { dept: $('#afD').value, st: $('#afS').value }; show(); };
+  $$('[data-ao]', el).forEach(b => b.onclick = () => { S.acv = b.dataset.ao; show(); window.scrollTo(0, 0); });
+}
+async function acvOpen(el, r) {
+  const imgs = await lhImgs();
+  const co = (S.coords || []).find(c => c.name === r.by) || (S.coords || []).find(c => (c.dept || []).includes(r.dept));
+  let sig = '', vps = '';
+  try { if (co) sig = (await API.call('signature', { who: co.id })).data || ''; } catch (e) {}
+  try { if (r.d.vpfb) vps = (await API.call('signature', {})).data || ''; } catch (e) {}
+  const paper = cvSigs(cvInner(r), sig, vps);
+  setTitle('استمارة الإشراف — ' + r.d.t);
+  el.innerHTML = `<div class="row noprint" style="margin-bottom:12px"><button class="btn sec" id="aBack">رجوع</button><span class="sp"></span><button class="btn sec" onclick="window.print()">طباعة / حفظ PDF</button></div>
+    <div class="card noprint"><h2>ملاحظتي على الزيارة</h2><p style="margin:0 0 6px;color:var(--muted);font-size:12.5px">تظهر في الاستمارة تحت «ملاحظات النائب الأكاديمي»، ويظهر توقيعكِ عليها بعد الحفظ. وتراها المنسقة عند فتح الاستمارة.</p>
+      <textarea id="aFb" rows="4" style="width:100%;text-align:justify">${esc(r.d.vpfb || '')}</textarea>
+      <div class="row" style="margin-top:8px"><button class="btn" id="aSave">حفظ الملاحظة</button>${r.d.vpfb ? '<button class="btn ghost" id="aDel">حذف الملاحظة</button>' : ''}</div></div>
+    <style>${FORM_CSS}</style><div class="paper" style="padding:0">${paperWrap(paper, imgs)}</div>`;
+  $('#aBack').onclick = () => { S.acv = null; show(); };
+  const put = async fb => { const j = await call('vpFeedback', { id: r.id, fb }); const i = S.records.findIndex(x => x.id === r.id); if (i >= 0 && j.record) S.records[i] = j.record; toast(fb ? 'حُفظت الملاحظة ✓' : 'حُذفت الملاحظة'); show(); };
+  $('#aSave').onclick = () => { const v = $('#aFb').value.trim(); if (!v) return toast('اكتبي الملاحظة أولاً', 1); put(v); };
+  if ($('#aDel')) $('#aDel').onclick = () => { if (confirm('حذف ملاحظتكِ؟ يختفي توقيعكِ من الاستمارة.')) put(''); };
 }

@@ -46,7 +46,7 @@ function roleOf_(r) {
   if (k === 'توجيه') return 'viewer';                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
   return k === 'معلمة' ? 'teacher' : 'coord';
 }
-const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
+const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
   const t = rows_(SH.users);
@@ -108,7 +108,12 @@ function students_(secs) {
   const v = sh.getDataRange().getValues(); v.shift(); const S = {}; secs.forEach(x => S[x] = 1);
   // الشعبة قد يحوّلها الجدول إلى تاريخ (11-4 ← 4 نوفمبر)، فتُعاد إلى صيغتها
   const sec = x => x instanceof Date ? (x.getMonth() + 1) + '-' + x.getDate() : String(x).trim();
-  return v.filter(r => r[1] && S[sec(r[0])]).map(r => ({ s: sec(r[0]), n: String(r[1]).trim() }));
+  const base = v.filter(r => r[1] && S[sec(r[0])]).map(r => ({ s: sec(r[0]), n: String(r[1]).trim() }));
+  // سجل القيد الرسمي (الشعبة، الاسم، هاتف ولي الأمر، الصلة) — ورقة خاصة لا يكتب عليها سبع سنابل
+  const ph = SpreadsheetApp.getActive().getSheetByName('أرقام أولياء الأمور'); if (!ph) return base;
+  const pv = ph.getDataRange().getValues(); pv.shift();
+  const L = pv.filter(r => r[1] && S[sec(r[0])]).map(r => ({ s: sec(r[0]), n: String(r[1]).trim(), ph: String(r[2] || '').trim(), rel: String(r[3] || '').trim() }));
+  return L.length ? L : base;
 }
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
@@ -133,7 +138,7 @@ function recObj_(r) {
 function listRecords_(u) {
   if (u.role === 'teacher') return bootTeacher_(u).records;
   return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).concat(sabPA_())
-    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
+    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
 }
 function repObj_(r) {
   let snap = null; try { snap = r[11] ? JSON.parse(r[11]) : null; } catch (e) {}
@@ -293,6 +298,13 @@ function setSig_(u, p) {
 }
 function signature_(u, p) {
   if (p.who) return coordSig_(u, p);
+  // توقيع النائب على استمارة حضور المنسقة: يُعطى فقط بعد كتابة النائب ملاحظتها عليها
+  if (p.visit) {
+    const r = rows_(SH.rec).rows.find(x => String(x[0]) === String(p.visit));
+    let d = {}; try { d = JSON.parse((r && r[5]) || '{}'); } catch (e) {}
+    if (!r || r[2] !== 'V' || !d.vpfb || !canDept_(u, r[1])) fail_('التوقيع غير متاح');
+    return { data: sigData_(SIG_FILE) };
+  }
   // توقيع النائب لا يُعطى إلا للنائب نفسها، أو لتقرير معتمد يخص قسم المنسقة
   if (u.role !== 'admin') {
     const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
@@ -302,6 +314,28 @@ function signature_(u, p) {
   if (!it.hasNext()) fail_('ملف التوقيع غير موجود');
   const b = it.next().getBlob();
   return { data: 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes()) };
+}
+
+/* ملاحظة النائب على استمارة حضور المنسقة: تُحفظ دون تغيير كاتب الاستمارة */
+function vpFeedback_(u, p) {
+  if (u.role !== 'admin' || isPrincipal_(u)) fail_('للنائب الأكاديمي فقط');
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  try {
+    const t = rows_(SH.rec);
+    for (let i = 0; i < t.rows.length; i++) {
+      if (String(t.rows[i][0]) !== String(p.id)) continue;
+      if (t.rows[i][2] !== 'V') fail_('هذا السجل ليس استمارة حضور');
+      let d = {}; try { d = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {}
+      const fb = String(p.fb || '').trim();
+      if (fb) { d.vpfb = fb; d.vpfbAt = Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd'); } else { delete d.vpfb; delete d.vpfbAt; }
+      const payload = JSON.stringify(d);
+      t.sh.getRange(i + 2, 6).setValue(payload); t.sh.getRange(i + 2, 9).setValue(now_());
+      log_(u, 'ملاحظة النائب على زيارة', t.rows[i][1], String(d.t || ''));
+      const row = t.rows[i].slice(); row[5] = payload; row[8] = now_();
+      return { record: recObj_(row) };
+    }
+    fail_('السجل غير موجود');
+  } finally { lock.releaseLock(); }
 }
 
 /* ------------------------------------------------------------------ إدارة (النائب) */
@@ -488,6 +522,7 @@ function route_(req) {
     case 'setPin': return setPin_(u, req);
     case 'sendForm': return sendForm_(u, req);
     case 'sendVisitC': return sendVisitC_(u, req);
+    case 'vpFeedback': return vpFeedback_(u, req);
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'file': return getFile_(u, req);

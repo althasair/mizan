@@ -9,9 +9,26 @@ const TPV_HOW = ['مباشرة', 'بعد تكييفه', 'يصعب تطبيقه']
 const TPV_HARD = ['لا يخدم طبيعة مادتي', 'لا يناسب مستوى طالباتي أو أعدادهن', 'يحتاج أدوات أو تقنيات غير متوفرة', 'يحتاج زمناً أطول من زمن الحصة'];
 const TWS_ROLE = ['حضرتُ ورشة داخلية', 'حضرتُ ورشة خارجية', 'قدّمتُ لتطوير الزملاء'];
 const TWS_TYPE = ['ورشة', 'جلسة نقاش', 'درس تطبيقي أو نموذجي', 'ورقة عمل', 'نموذج مميز', 'فكرة أو ممارسة', 'مجتمع تعلم مهني'];
-const TPA_WAY = ['اتصال هاتفي', 'رسالة نصية أو واتساب', 'حضور فعالية في المدرسة', 'حضور درس معايشة أو مشاهدة', 'مشاركة في جدارية أو نشاط', 'رسالة صوتية للطالبة', 'اجتماع فردي'];
-const TPA_TOPIC = ['متابعة المستوى الأكاديمي', 'مخالفة سلوكية', 'السلوك والانضباط', 'الغياب والتأخر', 'عدم حل الواجبات', 'التعزيز والتحفيز', 'دعوة لفعالية أو نشاط', 'تكريم الطالبة'];
-const TPA_RES = ['ولي الأمر متعاون، وتعهّد بمتابعة الطالبة', 'تم إبلاغ ولي الأمر بمخالفة سلوكية', 'تم إبلاغ ولي الأمر بتكرار الغياب أو التأخر', 'تم إبلاغ ولي الأمر بعدم حل الواجبات', 'تعهّد ولي الأمر بإحضار الطالبة أدواتها وكتبها', 'تم الاتفاق على خطة متابعة مشتركة بين المعلمة وولي الأمر', 'تعهّد ولي الأمر بمتابعة الواجبات والمذاكرة اليومية', 'تعهّد ولي الأمر بالتزام الطالبة بالحضور وعدم الغياب', 'تعهّد ولي الأمر بحضور الطالبة الحصص الإثرائية أو الساعات المكتبية', 'تعهّد ولي الأمر بمتابعة سلوك الطالبة والتزامها', 'طلب ولي الأمر تقريراً دورياً عن مستوى الطالبة', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'تمت إحالة الحالة إلى الأخصائية الاجتماعية أو النفسية', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة', 'أبدى ولي الأمر تجاوباً جزئياً', 'أبدى ولي الأمر شكره ورضاه عن متابعة المعلمة', 'تم إبلاغ ولي الأمر بتميّز الطالبة وتكريمها', 'لم يُبدِ ولي الأمر تعاوناً', 'لا يوجد رد من ولي الأمر', 'رقم التواصل غير صحيح أو مغلق'];
+const TPA_WAY = ['اتصال هاتفي', 'رسالة نصية أو واتساب', 'رسالة صوتية بالأهداف التعليمية', 'رسالة شكر', 'دعوة لحضور درس معايشة', 'مشاركة ولي الأمر في حصة', 'دعوة ولي الأمر لتقديم ورشة', 'حضور فعالية أو اجتماع في المدرسة', 'اجتماع فردي في المدرسة', 'عبر نظام قطر للتعليم'];
+const TPA_CAT = ['أكاديمي', 'سلوكي', 'المشاركة في الأنشطة', 'مشاركة ولي الأمر', 'الشكر والتعزيز'];
+const TPA_TOP = {
+  'أكاديمي': ['متابعة المستوى الأكاديمي', 'تدنٍّ في نتيجة تقييم أو اختبار', 'خطة دعم قبل الاختبار', 'عدم حل الواجبات', 'عدم إحضار الكتب والأدوات', 'الدعوة للحصص الإثرائية أو الساعات المكتبية', 'تحسّن ملحوظ في المستوى'],
+  'سلوكي': ['مخالفة سلوكية', 'الغياب والتأخر', 'عدم الالتزام بالزي المدرسي', 'استخدام الهاتف في الحصة', 'تحسّن في السلوك'],
+  'المشاركة في الأنشطة': ['دعوة الطالبة لمسابقة أو نشاط', 'متابعة مشاركة الطالبة في نشاط', 'إبلاغ بنتيجة مشاركة الطالبة'],
+  'مشاركة ولي الأمر': ['دعوة لحضور درس معايشة', 'دعوة للمشاركة في حصة', 'دعوة لتقديم ورشة', 'دعوة لفعالية أو اجتماع', 'رسالة صوتية بالأهداف التعليمية للوحدة'],
+  'الشكر والتعزيز': ['شكر على تميّز الطالبة', 'شكر على تعاون ولي الأمر', 'تكريم الطالبة', 'تحسّن ملحوظ في مستوى الطالبة أو سلوكها'],
+};
+const TPA_RCOM = ['أبدى ولي الأمر تجاوباً جزئياً', 'لم يُبدِ ولي الأمر تعاوناً', 'لا يوجد رد من ولي الأمر', 'رقم التواصل غير صحيح أو مغلق'];
+const TPA_RESC = {
+  'أكاديمي': ['ولي الأمر متعاون، وتعهّد بمتابعة الطالبة', 'تم الاتفاق على خطة متابعة مشتركة بين المعلمة وولي الأمر', 'تعهّد ولي الأمر بمتابعة الواجبات والمذاكرة اليومية', 'تعهّد ولي الأمر بإحضار الطالبة أدواتها وكتبها', 'تعهّد ولي الأمر بحضور الطالبة الحصص الإثرائية أو الساعات المكتبية', 'طلب ولي الأمر تقريراً دورياً عن مستوى الطالبة', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة'],
+  'سلوكي': ['تم إبلاغ ولي الأمر بمخالفة سلوكية', 'تم إبلاغ ولي الأمر بتكرار الغياب أو التأخر', 'تعهّد ولي الأمر بمتابعة سلوك الطالبة والتزامها', 'تعهّد ولي الأمر بالتزام الطالبة بالحضور وعدم الغياب', 'تمت إحالة الحالة إلى الأخصائية الاجتماعية أو النفسية', 'تم تحديد موعد لمقابلة ولي الأمر في المدرسة', 'أبدى ولي الأمر تجاوباً، وظهر تحسّن على الطالبة'],
+  'المشاركة في الأنشطة': ['وافق ولي الأمر على مشاركة الطالبة ودعمها', 'اعتذر ولي الأمر عن مشاركة الطالبة', 'أبدى ولي الأمر شكره ورضاه'],
+  'مشاركة ولي الأمر': ['حضر ولي الأمر وشارك', 'قبل ولي الأمر الدعوة وحُدّد موعد', 'قدّم ولي الأمر ورشة أو مشاركة للطالبات', 'اعتذر ولي الأمر عن الحضور'],
+  'الشكر والتعزيز': ['أبدى ولي الأمر شكره ورضاه عن متابعة المعلمة', 'تم إبلاغ ولي الأمر بتميّز الطالبة وتكريمها'],
+};
+const paTopOf = c => TPA_TOP[c] || [].concat(...Object.values(TPA_TOP));
+const paResOf = c => (TPA_RESC[c] || [].concat(...Object.values(TPA_RESC))).concat(TPA_RCOM);
+const TPA_TOPIC = paTopOf(''), TPA_RES = paResOf('');
 const TACH_KIND = ['مشاركة', 'إنجاز (مركز أو جائزة)'];
 const TACH_LVL = ['على مستوى المدرسة', 'على مستوى الدولة', 'دولي'];
 const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف الحادي عشر', 'طالبات الصف الثاني عشر', 'جميع الطالبات', 'طالبات شعبتي', 'الطالبات الواعدات', 'الموهوبات والمتفوقات', 'أولياء الأمور', 'المعلمات'];
@@ -27,7 +44,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}<a class="nav-it" href="https://althasair.github.io/sab3-sanabil/#entry" target="_blank" rel="noopener" style="display:flex;gap:8px;align-items:center;padding:9px 14px;opacity:.85;color:inherit;text-decoration:none">التواصل مع أولياء الأمور ↗ <small style="opacity:.75">في سبع سنابل</small></a>${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والمبادرات', 'cal', n('TA'))}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}`;
 }
 
 function T_home(el) {
@@ -42,7 +59,7 @@ function T_home(el) {
     ${kpi('التواصل مع أولياء الأمور', mine('TPA').filter(inCur).reduce((a, r) => a + (+r.d.n || 1), 0), 'ولي أمر في الفترة', 'var(--navy)')}
     ${kpi('أنشطتي ومبادراتي', mine('TA').filter(inCur).length, 'في الفترة', 'var(--gold)')}
   </div>
-  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والمبادرات', 'نشاط استحدثتِه، أو نشاط قائم شاركتِ فيه، أو مبادرة من فكرتكِ.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}<a class="card" href="https://althasair.github.io/sab3-sanabil/#entry" target="_blank" rel="noopener" style="text-decoration:none;color:inherit"><h2>التواصل مع أولياء الأمور ↗</h2><p style="color:var(--muted);margin:0">يُسجَّل الآن في منصة سبع سنابل بالرقم السري نفسه، ويظهر في التقرير الشهري تلقائيًا.</p></a></div>`;
+  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_pa', 'التواصل مع أولياء الأمور', 'اختاري الطالبة فيظهر رقم ولي أمرها، ثم الغرض ووسيلة التواصل والنتيجة.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
 }
 
@@ -70,7 +87,7 @@ function T_page(el, cfg) {
   const rec = S.edit && S.edit !== 'new' ? L.find(r => r.id === S.edit) : null;
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : (S.tDraft ? S.tDraft : Object.assign({ date: today() }, cfg.blank || {})); S.tDraft = null;
   const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.form(d)}
-     ${fld('التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
+     ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
   el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
@@ -171,20 +188,25 @@ function T_ws(el) {
 }
 
 /* ================================================================== التواصل مع أولياء الأمور */
+/* أرقام أولياء الأمور من سجل القيد (لطالبات شُعب المعلمة فقط) */
+const stuOf = (sc, n) => (S.students || []).find(x => x.s === sc && x.n === n) || {};
+const telLinks = ph => String(ph || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).map(x => `<a href="tel:${esc(x)}" dir="ltr" style="text-decoration:none;color:var(--tiffany-d);font-weight:600">${esc(x)}</a>`).join(' · ');
+const selX = (n, opts, v, ph, other) => `<select data-n="${n}"><option value="">${esc(ph || 'اختاري…')}</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}${v && !opts.includes(v) ? `<option selected>${esc(v)}</option>` : ''}${other ? '<option value="__x">أخرى (اكتبي)</option>' : ''}</select>`;
 /* نسخ الإجراء نفسه لطالبات أخريات: سجل مستقل لكل طالبة، ويمكن تعديل الموضوع والنتيجة لكل واحدة */
 function paCopy(src) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   const done = new Set(src.stu || []); const chosen = new Map();
+  const TOP = paTopOf(src.cat), RES = paResOf(src.cat);
   const m = document.createElement('div'); m.className = 'modal';
   const opt = (L, v) => L.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('');
   const draw = () => { const sc = ($('#cpSec', m) || {}).value || src.s || secs[0] || '';
-    const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar'));
+    const L = (S.students || []).filter(x => x.s === sc).sort((a, b) => a.n.localeCompare(b.n, 'ar'));
     m.innerHTML = `<div class="box" style="max-width:860px;width:96vw;max-height:92vh;overflow:auto"><h3>نسخ الإجراء لطالبات أخريات</h3>
-      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">الطريقة: <b>${esc(src.way || '')}</b> · التاريخ: <b>${dmy(src.date)}</b> — يُنشأ سجل مستقل لكل طالبة، ويمكنكِ تغيير الموضوع والنتيجة لكل واحدة.</div>
+      <div style="font-size:12.5px;color:var(--muted);margin-bottom:8px">${src.cat ? `الغرض: <b>${esc(src.cat)}</b> · ` : ''}الوسيلة: <b>${esc(src.way || '')}</b> · التاريخ: <b>${dmy(src.date)}</b> — يُنشأ سجل مستقل لكل طالبة، ويمكنكِ تغيير الموضوع والنتيجة لكل واحدة.</div>
       <div class="row" style="gap:8px"><label style="font-size:13px">الشعبة <select id="cpSec">${secs.map(x => `<option ${x === sc ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label><input id="cpQ" placeholder="ابحثي باسم الطالبة" style="flex:1;font-size:12px"></div>
-      <div class="multi" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-top:8px;max-height:200px;overflow:auto;font-size:12px">${!L.length ? '<div style="color:var(--muted)">لا توجد أسماء لهذه الشعبة بعد</div>' : `<label style="font-weight:700"><input type="checkbox" id="cpAll"> تحديد الكل (${L.length})</label>` + L.map(n => `<label data-nm="${esc(n)}"><input type="checkbox" data-cp value="${esc(n)}" ${chosen.has(sc + '|' + n) ? 'checked' : ''}> ${esc(n)}${done.has(n) ? ' <span class="chip">مسجّلة</span>' : ''}</label>`).join('')}</div>
-      <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>الطالبة</th><th>الشعبة</th><th>الموضوع</th><th>النتيجة / ما تم الاتفاق عليه</th><th></th></tr>
-      ${[...chosen.entries()].map(([k, o]) => `<tr><td style="font-size:12.5px"><b>${esc(o.n)}</b></td><td>${esc(o.s)}</td><td><select data-ct="${esc(k)}" style="font-size:12px">${opt(TPA_TOPIC, o.topic)}${o.topic && !TPA_TOPIC.includes(o.topic) ? `<option selected>${esc(o.topic)}</option>` : ''}</select></td><td><select data-cr="${esc(k)}" style="font-size:12px;max-width:330px">${opt(TPA_RES, o.res)}${o.res && !TPA_RES.includes(o.res) ? `<option selected>${esc(o.res)}</option>` : ''}</select></td><td><button class="btn sm ghost" data-cx="${esc(k)}">×</button></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">حدّدي الطالبات من القائمة فيظهرن هنا</div></td></tr>'}</table></div>
+      <div class="multi" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;margin-top:8px;max-height:200px;overflow:auto;font-size:12px">${!L.length ? '<div style="color:var(--muted)">لا توجد أسماء لهذه الشعبة بعد</div>' : `<label style="font-weight:700"><input type="checkbox" id="cpAll"> تحديد الكل (${L.length})</label>` + L.map(x => `<label data-nm="${esc(x.n)}"><input type="checkbox" data-cp value="${esc(x.n)}" ${chosen.has(sc + '|' + x.n) ? 'checked' : ''}> ${esc(x.n)}${done.has(x.n) ? ' <span class="chip">مسجّلة</span>' : ''}${x.ph ? ` <small style="margin-inline-start:auto">${telLinks(x.ph)}</small>` : ''}</label>`).join('')}</div>
+      <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>الطالبة</th><th>هاتف ولي الأمر</th><th>الموضوع</th><th>النتيجة / ما تم الاتفاق عليه</th><th></th></tr>
+      ${[...chosen.entries()].map(([k, o]) => `<tr><td style="font-size:12.5px"><b>${esc(o.n)}</b> <small>${esc(o.s)}</small></td><td style="font-size:12px">${telLinks(stuOf(o.s, o.n).ph)}</td><td><select data-ct="${esc(k)}" style="font-size:12px">${opt(TOP, o.topic)}${o.topic && !TOP.includes(o.topic) ? `<option selected>${esc(o.topic)}</option>` : ''}</select></td><td><select data-cr="${esc(k)}" style="font-size:12px;max-width:330px">${opt(RES, o.res)}${o.res && !RES.includes(o.res) ? `<option selected>${esc(o.res)}</option>` : ''}</select></td><td><button class="btn sm ghost" data-cx="${esc(k)}">×</button></td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">حدّدي الطالبات من القائمة فيظهرن هنا</div></td></tr>'}</table></div>
       <div class="row" style="margin-top:12px"><button class="btn" id="cpOk">حفظ (${chosen.size})</button><button class="btn sec" id="cpNo">إلغاء</button></div></div>`;
     $('#cpSec', m).onchange = () => draw();
     $('#cpQ', m).oninput = e => { const q = nrm(e.target.value); $$('[data-nm]', m).forEach(l => l.style.display = !q || nrm(l.dataset.nm).includes(q) ? '' : 'none'); };
@@ -206,28 +228,38 @@ function paCopy(src) {
 function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
-    item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع أولياء الأمور', note: 'سجّلي كل تواصل: الطريقة والموضوع وعدد أولياء الأمور، ويُحسب لكِ في سنابلكِ.',
-    form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('طريقة التواصل', fCombo('way', TPA_WAY, d.way)) + fld('الموضوع', fCombo('topic', TPA_TOPIC, d.topic)) +
-      fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبات', '<div id="stuBox"></div>', 1) + fld('النتيجة / ما تم الاتفاق عليه مع ولي الأمر', `<select data-n="res"><option value="">اختاري…</option>${TPA_RES.map(o => `<option ${o === d.res ? 'selected' : ''}>${esc(o)}</option>`).join('')}<option value="__x" ${d.res && !TPA_RES.includes(d.res) ? 'selected' : ''}>أخرى (اكتبي)</option></select><input data-n="resx" value="${esc(d.res && !TPA_RES.includes(d.res) ? d.res : '')}" placeholder="اكتبي ما تم الاتفاق عليه" style="margin-top:6px">`, 1),
-    check: r => !r.way ? 'اختاري طريقة التواصل' : '',
-    sum: r => 'تواصل مع أولياء الأمور: ' + (r.way || ''),
-    pre: (r, f) => { r.stu = $$('[data-stu]', f).filter(c => c.checked).map(c => c.value); if (r.stu.length) r.n = r.stu.length; if (r.res === '__x' || (!r.res && r.resx)) r.res = r.resx; delete r.resx; },
+    item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'اختاري الشعبة ثم الطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. التاريخ يُسجَّل تلقائياً بتاريخ اليوم ويمكنكِ تعديله.',
+    form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبة ورقم ولي أمرها', '<div id="stuBox"></div><div id="phBox" style="margin-top:6px"></div>', 1) +
+      fld('الغرض من التواصل', fRadio('cat', TPA_CAT, d.cat), 1) +
+      fld('الموضوع', `<select data-n="topic" id="paTop"></select><input data-n="topicx" placeholder="اكتبي الموضوع" style="margin-top:6px;display:none">`) + fld('وسيلة التواصل', selX('way', TPA_WAY, d.way)) +
+      fld('النتيجة / ما تم الاتفاق عليه مع ولي الأمر', `<select data-n="res" id="paRes"></select><input data-n="resx" placeholder="اكتبي ما تم الاتفاق عليه" style="margin-top:6px;display:none">`, 1),
+    check: r => !r.cat ? 'اختاري الغرض من التواصل' : !r.way ? 'اختاري وسيلة التواصل' : '',
+    sum: r => 'تواصل مع أولياء الأمور: ' + [r.cat, r.way].filter(Boolean).join(' — '),
+    pre: (r, f) => { r.stu = $$('[data-stu]', f).filter(c => c.checked).map(c => c.value); if (r.stu.length) r.n = r.stu.length;
+      if (r.topic === '__x' || (!r.topic && r.topicx)) r.topic = r.topicx; if (r.res === '__x' || (!r.res && r.resx)) r.res = r.resx; delete r.topicx; delete r.resx; },
     copyBtn: 'حفظ ثم نسخ لطالبات أخريات',
-    head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الطريقة</th><th>الموضوع</th><th>العدد والطالبات</th><th>النتيجة</th><th></th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.topic || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm sec" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">⧉ نسخ لطالبات أخريات</button></td>`,
-    bind: el => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); paCopy(r.d); });
-      const f = $('#tf'); if (!f) return; const sel = $('[data-n="s"]', f), box = $('#stuBox', f);
+    head: '<tr><th>التاريخ</th><th>الشعبة</th><th>الغرض والموضوع</th><th>الوسيلة</th><th>العدد والطالبات</th><th>النتيجة</th><th></th><th></th></tr>',
+    row: r => `<td>${dmy(r.date)}</td><td>${esc(r.d.s || '')}</td><td>${r.d.cat ? `<span class="chip">${esc(r.d.cat)}</span> ` : ''}${esc(r.d.topic || '')}</td><td>${esc(r.d.way || '')}</td><td>${esc(r.d.n || 1)}${(r.d.stu || []).length ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.stu.join('، '))}</div>` : ''}</td><td style="font-size:12px">${esc(r.d.res || '')}</td><td><button class="btn sm sec" data-copy="${r.id}" title="نسخ الإجراء نفسه لطالبات أخريات">⧉ نسخ لطالبات أخريات</button></td>`,
+    bind: (el, d) => { $$('[data-copy]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.copy); paCopy(r.d); });
+      const f = $('#tf'); if (!f) return; const sel = $('[data-n="s"]', f), box = $('#stuBox', f), phB = $('#phBox', f);
       const keep = new Set(S.tStu || []); S.tStu = null;
-      const rs = $('[data-n="res"]', f), rx = $('[data-n="resx"]', f); const tgl = () => { rx.style.display = rs.value === '__x' ? '' : 'none'; }; rs.onchange = tgl; tgl();
-      const draw = () => { const sc = sel.value.trim(); const L = (S.students || []).filter(x => x.s === sc).map(x => x.n).sort((a, b) => a.localeCompare(b, 'ar'));
+      // الموضوع والنتيجة يتبعان الغرض
+      const tp = $('#paTop', f), tx = $('[data-n="topicx"]', f), rs = $('#paRes', f), rx = $('[data-n="resx"]', f);
+      const fill = (s0, L, v, ph) => { s0.innerHTML = `<option value="">${ph}</option>` + L.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('') + (v && !L.includes(v) ? `<option selected>${esc(v)}</option>` : '') + '<option value="__x">أخرى (اكتبي)</option>'; };
+      const tgl = () => { tx.style.display = tp.value === '__x' ? '' : 'none'; rx.style.display = rs.value === '__x' ? '' : 'none'; };
+      const byCat = (keepV) => { const c = ($('input[name="r_cat"]:checked', f) || {}).value || ''; fill(tp, paTopOf(c), keepV ? d.topic : tp.value, c ? 'اختاري الموضوع…' : 'اختاري الغرض أولاً…'); fill(rs, paResOf(c), keepV ? d.res : rs.value, 'اختاري…'); tgl(); };
+      $$('input[name="r_cat"]', f).forEach(i => i.onchange = () => byCat(false)); tp.onchange = rs.onchange = tgl; byCat(true);
+      const draw = () => { const sc = sel.value.trim(); const L = (S.students || []).filter(x => x.s === sc).sort((a, b) => a.n.localeCompare(b.n, 'ar'));
+        phB.innerHTML = '';
         if (!sc) { box.innerHTML = '<div style="color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px">▾ اختاري الشعبة أولاً</div>'; return; }
         if (!L.length) { box.innerHTML = '<div style="color:var(--muted);border:1px solid var(--line);border-radius:10px;padding:8px 10px">لا توجد أسماء لهذه الشعبة بعد</div>'; return; }
         box.innerHTML = `<button type="button" id="stuBtn" style="width:100%;text-align:right;background:#fff;border:1px solid var(--line);border-radius:10px;padding:8px 10px;cursor:pointer">▾ <span id="stuLbl"></span></button>
           <div id="stuPanel" style="display:none;border:1px solid var(--line);border-top:0;border-radius:0 0 10px 10px;padding:6px 10px;background:#fff">
             <input id="stuQ" placeholder="ابحثي باسم الطالبة" style="width:100%;margin-bottom:6px;font-size:12px">
             <label style="display:block;font-weight:700;font-size:12px"><input type="checkbox" id="stuAll"> تحديد الكل (${L.length})</label>
-            <div style="max-height:220px;overflow:auto;font-size:12px;line-height:1.9">${L.map(n => `<label style="display:block" data-nm="${esc(n)}"><input type="checkbox" data-stu value="${esc(n)}" ${keep.has(n) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}</div></div>`;
-        const upd = () => { const ch = $$('[data-stu]', box).filter(x => x.checked).map(x => x.value); $('#stuLbl').textContent = ch.length ? `${ch.length} طالبة: ${ch.slice(0, 3).join('، ')}${ch.length > 3 ? '…' : ''}` : 'اختاري الطالبات من القائمة'; if (ch.length) $('[data-n="n"]', f).value = ch.length; };
+            <div style="max-height:240px;overflow:auto;font-size:12px;line-height:1.9">${L.map(x => `<label style="display:block" data-nm="${esc(x.n)}"><input type="checkbox" data-stu value="${esc(x.n)}" ${keep.has(x.n) ? 'checked' : ''}> ${esc(x.n)}</label>`).join('')}</div></div>`;
+        const upd = () => { const ch = $$('[data-stu]', box).filter(x => x.checked).map(x => x.value); $('#stuLbl').textContent = ch.length ? `${ch.length} طالبة: ${ch.slice(0, 3).join('، ')}${ch.length > 3 ? '…' : ''}` : 'اختاري الطالبة من القائمة'; if (ch.length) $('[data-n="n"]', f).value = ch.length;
+          phB.innerHTML = ch.length ? `<div style="border:1px solid var(--line);border-radius:10px;padding:6px 10px;background:#F7FBFB;font-size:12.5px;line-height:2">${ch.map(n => { const o = stuOf(sc, n); return `<div><b>${esc(n)}</b> — ${o.ph ? `ولي الأمر${o.rel ? ' (' + esc(o.rel) + ')' : ''}: ${telLinks(o.ph)}` : '<span style="color:var(--muted)">لا يوجد رقم مسجّل</span>'}</div>`; }).join('')}</div>` : ''; };
         $('#stuBtn').onclick = () => { const pn = $('#stuPanel'); pn.style.display = pn.style.display === 'none' ? '' : 'none'; if (pn.style.display === '') $('#stuQ').focus(); };
         $('#stuQ').oninput = e => { const q = nrm(e.target.value); $$('[data-nm]', box).forEach(l => l.style.display = !q || nrm(l.dataset.nm).includes(q) ? '' : 'none'); };
         $('#stuAll').onchange = e => { $$('[data-stu]', box).forEach(c => { if (c.closest('label').style.display !== 'none') c.checked = e.target.checked; }); upd(); };
@@ -249,15 +281,71 @@ function T_ach(el) {
   });
 }
 
-/* ================================================================== الأنشطة والمبادرات (نفس سجل سبع سنابل) */
+/* ================================================================== الأنشطة والبرامج والمبادرات (نفس سجل سبع سنابل)
+   البرنامج مظلة تنبثق منه المشاريع، وتنبثق من المشروع الأنشطة */
+const TA_KINDS = ['برنامج', 'مشروع', 'نشاط', 'مبادرة'];
+const TA_PARENT = { 'مشروع': 'برنامج', 'نشاط': 'مشروع' };
 function T_act(el) {
+  const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
-    item: 'TA', title: 'الأنشطة والمبادرات', one: 'نشاط أو مبادرة', note: 'نشاط استحدثتِه مع طالباتكِ، أو نشاط قائم في المدرسة شاركتِ فيه، أو مبادرة من فكرتكِ. (الحذف للنائب الأكاديمي فقط)', blank: { kind: 'نشاط', src: TA_SRC[0] },
-    form: d => fld('النوع', fRadio('kind', ['نشاط', 'مبادرة'], d.kind), 1) + fld('نوع النشاط', fRadio('src', TA_SRC, d.src), 1) + fld('الاسم', fCombo('name', S.acts || [], d.name, 'اكتبي الاسم أو اختاري من أنشطة المدرسة'), 1) +
-      fld('الفئة المستهدفة', fSel('tg', TA_TG, d.tg)) + fld('الأولوية التي يخدمها', fSel('p', REF.PRIO || [], d.p)) + fld('عدد الطالبات', `<input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) + fld('وصف مختصر وأثره', `<input data-n="desc" value="${esc(d.desc || '')}">`, 1),
-    check: r => !r.name ? 'اكتبي اسم النشاط أو المبادرة' : '',
+    item: 'TA', title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: { kind: 'نشاط', dur: 'منتهي' }, dateLbl: 'التاريخ (للممتد: تاريخ البداية)',
+    form: d => fld('النوع', fRadio('kind', TA_KINDS, d.kind), 1) +
+      `<div class="fld" style="grid-column:1/-1" id="taPar"><label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}</div>` +
+      fld('الاسم', `<input data-n="name" value="${esc(d.name || '')}" placeholder="اكتبي الاسم" required>`, 1) +
+      fld('المدة', fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')) + `<div class="fld" id="taTo"><label>إلى تاريخ</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
+      fld('عدد الطالبات المشاركات', `<input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) + fld('الأولوية التي يخدمها <span style="color:#A33">*</span>', fSel('p', REF.PRIO || [], d.p, 'اختاري الأولوية')) +
+      fld('الأثر', `<textarea data-n="impact" rows="2" style="text-align:justify" placeholder="ما الأثر الذي تحقق في الطالبات؟">${esc(d.impact || d.desc || '')}</textarea>`, 1),
+    bind: (el, d) => { const f = $('#tf'); if (!f) return;
+      const upd = () => { const k = ($('input[name="r_kind"]:checked', f) || {}).value || d.kind; const pk = TA_PARENT[k]; const pw = $('#taPar', f);
+        pw.style.display = pk ? '' : 'none'; if (pk) { $('label', pw).firstChild.textContent = 'ينبثق من ' + pk + ' '; $('datalist', pw).innerHTML = parents(pk).map(o => `<option value="${esc(o)}">`).join(''); }
+        $('#taTo', f).style.display = (($('input[name="r_dur"]:checked', f) || {}).value || d.dur) === 'ممتد' ? '' : 'none'; };
+      $$('input[name="r_kind"],input[name="r_dur"]', f).forEach(i => i.onchange = upd); upd(); },
+    pre: r => { if (!TA_PARENT[r.kind]) delete r.par; if (r.dur !== 'ممتد') delete r.to; r.desc = r.impact || ''; },
+    check: r => !r.name ? 'اكتبي الاسم' : !r.p ? 'اختاري الأولوية التي يخدمها' : r.dur === 'ممتد' && !r.to ? 'حدّدي تاريخ النهاية' : r.dur === 'ممتد' && r.to < r.date ? 'تاريخ النهاية قبل البداية' : '',
     sum: r => r.kind + ': ' + r.name,
-    head: '<tr><th>التاريخ</th><th>النوع</th><th>الاسم</th><th>الفئة</th><th>الأولوية</th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : ''}">${esc(r.d.kind)}</span></td><td><b>${esc(r.d.name)}</b></td><td style="font-size:12px">${esc(r.d.tg || '')}</td><td style="font-size:12px">${esc(r.d.p || '')}</td>`,
+    head: '<tr><th>التاريخ</th><th>النوع</th><th>الاسم</th><th>الطالبات</th><th>الأولوية</th><th>الأثر</th><th></th></tr>',
+    row: r => `<td style="white-space:nowrap">${dmy(r.date)}${r.d.to ? '<br><small>إلى ' + dmy(r.d.to) + '</small>' : ''}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : r.d.kind === 'برنامج' ? 'ok' : ''}">${esc(r.d.kind)}</span></td><td><b>${esc(r.d.name)}</b>${r.d.par ? `<div style="font-size:11px;color:var(--muted)">من: ${esc(r.d.par)}</div>` : ''}</td><td>${esc(r.d.n || '')}</td><td style="font-size:12px">${esc(r.d.p || '')}</td><td style="font-size:12px">${esc(r.d.impact || r.d.desc || '')}</td>`,
+  });
+}
+
+/* ================================================================== الانضباط الوظيفي
+   الغياب: عارضة، مرضي، بلا راتب · الاستئذان: شخصي (يُحسب من الساعات العشر شهرياً) أو إذن عمل (لا يُحسب) */
+const TDS_ABS = ['عارضة', 'مرضي', 'بلا راتب'];
+const TDS_PERM = ['شخصي', 'إذن عمل'];
+const TDS_H = ['0.5', '1', '1.5', '2', '2.5', '3', '3.5', '4', '5', '6'];
+function tdsMsg(h) {
+  if (h > 10) return { c: 'bad', t: 'تجاوز الحد المطلوب' };
+  if (h >= 8) return { c: 'warn', t: 'أكيد ما طلبتِها إلا لأمر طارئ وهو حق مشروع، مع الحرص على استثمار الزمن' };
+  if (h >= 6) return { c: 'warn', t: 'ما طلبتِها إلا لشيء مهم' };
+  if (h > 2) return { c: 'ok', t: 'نشكركِ على استثمار زمن العمل' };
+  return { c: 'ok', t: 'موظفة متميزة تحرصين على إنهاء المهام خلال الدوام، وهذا من إدارة الوقت ونشكركِ عليه' };
+}
+function tdsMonths() {
+  const M = {};
+  mine('TDS').forEach(r => { (r.d.abs || []).forEach(a => { const k = monthOf(a.date); const o = M[k] = M[k] || { h: 0, w: 0, a: {} }; o.a[a.type] = (o.a[a.type] || 0) + 1; });
+    (r.d.perm || []).forEach(x => { const k = monthOf(x.date); const o = M[k] = M[k] || { h: 0, w: 0, a: {} }; if (x.type === 'إذن عمل') o.w += +x.h || 0; else o.h += +x.h || 0; }); });
+  return M;
+}
+function T_ds(el) {
+  const p = curPer();
+  const rowsA = (n, L) => Array.from({ length: n }, (_, i) => { const a = L[i] || {}; return `<div class="row" style="gap:8px;margin:4px 0"><b style="width:22px">${i + 1}</b><input type="date" data-ad="${i}" value="${esc(a.date || '')}" min="${p.from}" max="${p.to}"><select data-at="${i}">${TDS_ABS.map(o => `<option ${o === a.type ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`; }).join('');
+  const rowsP = (n, L) => Array.from({ length: n }, (_, i) => { const a = L[i] || {}; return `<div class="row" style="gap:8px;margin:4px 0"><b style="width:22px">${i + 1}</b><input type="date" data-pd="${i}" value="${esc(a.date || '')}" min="${p.from}" max="${p.to}"><select data-ph="${i}">${TDS_H.map(o => `<option value="${o}" ${o === String(a.h || '1') ? 'selected' : ''}>${o} ${+o <= 2 && +o !== 1 ? 'ساعة' : +o === 1 ? 'ساعة' : 'ساعات'}</option>`).join('')}</select><select data-pt="${i}">${TDS_PERM.map(o => `<option ${o === a.type ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`; }).join('');
+  const grab = f => ({ abs: $$('[data-ad]', f).map((x, i) => ({ date: x.value, type: $(`[data-at="${i}"]`, f).value })), perm: $$('[data-pd]', f).map((x, i) => ({ date: x.value, h: +$(`[data-ph="${i}"]`, f).value, type: $(`[data-pt="${i}"]`, f).value })) });
+  T_page(el, {
+    item: 'TDS', title: 'الانضباط الوظيفي', one: 'غياب أو استئذان', noDate: 1, note: 'اكتبي عدد أيام الغياب أو عدد الاستئذانات، فتظهر لكِ الخانات لتعبئتها. إذن العمل لا يُحسب من الساعات العشر الشهرية.',
+    top: () => { const M = tdsMonths(); const ks = Object.keys(M).sort().reverse();
+      return ks.length ? `<div class="card"><h2>ساعات الاستئذان الشخصي شهرياً</h2>${ks.map(k => { const o = M[k], g = tdsMsg(o.h);
+        return `<div style="border-inline-start:4px solid ${g.c === 'bad' ? '#A33' : g.c === 'warn' ? 'var(--gold)' : 'var(--tiffany-d)'};padding:6px 12px;margin:8px 0;background:#FAFBFC;border-radius:8px"><b>${MONTHS[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}</b> — شخصي: <b>${o.h}</b> من 10 ساعات${o.w ? ` · إذن عمل: ${o.w} (لا يُحسب)` : ''}${Object.keys(o.a).length ? ' · غياب: ' + Object.entries(o.a).map(([t, n]) => `${t} ${n}`).join('، ') : ''}<div style="margin-top:4px;font-weight:600;text-align:justify">${esc(g.t)}</div></div>`; }).join('')}</div>` : ''; },
+    form: d => fld('عدد أيام الغياب', `<input type="number" min="0" max="20" id="dsNA" value="${(d.abs || []).length}">`) + fld('عدد الاستئذانات', `<input type="number" min="0" max="20" id="dsNP" value="${(d.perm || []).length}">`) +
+      `<div class="fld" style="grid-column:1/-1"><label>الغياب: التاريخ والنوع</label><div id="dsA">${rowsA((d.abs || []).length, d.abs || [])}</div></div>` +
+      `<div class="fld" style="grid-column:1/-1"><label>الاستئذان: التاريخ وعدد الساعات والنوع</label><div id="dsP">${rowsP((d.perm || []).length, d.perm || [])}</div></div>`,
+    bind: (el, d) => { const f = $('#tf'); if (!f) return;
+      const re = () => { const g = grab(f); $('#dsA', f).innerHTML = rowsA(Math.max(0, Math.min(20, +$('#dsNA', f).value || 0)), g.abs); $('#dsP', f).innerHTML = rowsP(Math.max(0, Math.min(20, +$('#dsNP', f).value || 0)), g.perm); };
+      $('#dsNA', f).oninput = $('#dsNP', f).oninput = re; },
+    pre: (r, f) => { const g = grab(f); r.abs = g.abs; r.perm = g.perm; const ds = [...g.abs, ...g.perm].map(x => x.date).filter(Boolean).sort(); r.date = ds[0] || today(); },
+    check: r => !(r.abs.length + r.perm.length) ? 'اكتبي عدد أيام الغياب أو الاستئذانات' : [...r.abs, ...r.perm].some(x => !x.date) ? 'حدّدي التاريخ في كل خانة' : '',
+    sum: r => [r.abs.length ? `غياب ${r.abs.length}` : '', r.perm.length ? `استئذان ${r.perm.length}` : ''].filter(Boolean).join(' · '),
+    head: '<tr><th>التاريخ</th><th>الغياب</th><th>الاستئذان</th><th></th></tr>',
+    row: r => `<td>${dmy(r.date)}</td><td style="font-size:12px">${(r.d.abs || []).map(a => `${dmy(a.date)} (${esc(a.type)})`).join('<br>') || '—'}</td><td style="font-size:12px">${(r.d.perm || []).map(x => `${dmy(x.date)}: ${x.h} س (${esc(x.type)})`).join('<br>') || '—'}</td>`,
   });
 }

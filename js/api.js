@@ -68,8 +68,8 @@ const DEMO = {
     if (a === 'login') { const u = d.users.find(x => x.pin === String(p.pin)); if (!u) throw new Error('الرقم السري غير صحيح'); sessionStorage.setItem('mizan_demo_u', u.id); return { ok: 1, token: 'demo', user: strip(u) }; }
     if (!me) throw new Error('انتهت الجلسة، الرجاء الدخول مرة أخرى');
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
-    const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE'].includes(r.item));
-    if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
+    const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE', 'TDS'].includes(r.item));
+    if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')', ph: '5500000' + i, rel: 'أب' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
     if (a === 'boot') return { ok: 1, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (a === 'save') {
@@ -94,6 +94,7 @@ const DEMO = {
     if (a === 'setPin') { const u = d.users.find(x => x.id === p.id); u.pin = String(p.newPin); this.save(d); return { ok: 1 }; }
     if (a === 'upload') return { ok: 1, fid: 'demo' + Date.now(), name: p.name };
     if (a === 'file') return { ok: 1, name: 'ملف.txt', data: 'data:text/plain;base64,' + btoa('demo') };
+    if (a === 'vpFeedback') { const r = d.recs.find(x => x.id === p.id); if (!r) throw new Error('السجل غير موجود'); if (p.fb) { r.d.vpfb = p.fb; r.d.vpfbAt = new Date().toISOString().slice(0, 10); } else { delete r.d.vpfb; delete r.d.vpfbAt; } this.save(d); return { ok: 1, record: r }; }
     if (a === 'sendForm') { console.log('معاينة: لا يُرسل بريد فعلي', p.to, p.subject); return { ok: 1, sent: true }; }
     if (a === 'logout') { sessionStorage.removeItem('mizan_demo_u'); return { ok: 1 }; }
     throw new Error('عملية غير معروفة');
