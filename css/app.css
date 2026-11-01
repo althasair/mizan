@@ -170,7 +170,7 @@ table.t tr:hover td{background:#FCFBFA}
 .rep .meta td.k{background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center;width:15%}
 .sigs{display:grid;grid-template-columns:1fr 1fr;gap:10mm;margin-top:6mm;font-size:12px;text-align:center}
 .sigs .s{min-height:18mm;position:relative}
-.sigs .sr{display:flex;align-items:center;justify-content:center;gap:3mm;flex-wrap:nowrap}
+.sigs .sr{display:flex;align-items:center;justify-content:center;gap:3mm;flex-wrap:nowrap;min-height:15mm}
 .sigs .sn{font-weight:400;white-space:nowrap}
 .sigs img.sg{max-height:14mm;max-width:26mm;width:auto;height:auto;object-fit:contain;mix-blend-mode:multiply}
 .sigs .sgl{color:#888}
