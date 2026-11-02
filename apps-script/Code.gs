@@ -10,6 +10,7 @@
 const SS_ID = '1H49-iBPf3wM87IRhxOkUuZO89vDetj_Rv714knzSt-g';
 const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزان — ملفات خاصة» في Drive
 const SIG_FILE = 'signature-vp.png';
+const INDIBAT_ID = '1VwCK6BZ5eCEFEpQbKTowzgn-dNyHCrhFLoDQLM7Juw0';   // منصة «انضباط»: الاحتياط والتبديل (قراءة فقط)
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
 const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
 const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];
@@ -129,7 +130,7 @@ function boot_(u) {
   });
   const recs = listRecords_(u);
   const reps = listReports_(u);
-  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, server: now_() };
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, server: now_(), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
 }
 function recObj_(r) {
   let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {}
@@ -137,7 +138,7 @@ function recObj_(r) {
 }
 function listRecords_(u) {
   if (u.role === 'teacher') return bootTeacher_(u).records;
-  return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).concat(sabPA_())
+  return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).concat(sabPA_()).concat(indibat_())
     .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
 }
 function repObj_(r) {
@@ -501,6 +502,42 @@ function sabPA_() {
   const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA', txt, 600);
   return out;
 }
+
+/* ------------------------------------------------------------------ الاحتياط والتبديل من «انضباط» */
+// يقرأ ورقة «الاحتياط» من منصة انضباط (قراءة فقط) ويحوّلها إلى سجلات تظهر في تقرير كل قسم:
+// SBC = حصة غطّتها معلمة من القسم (احتياط أو تبديل)، SBA = حصة غابت فيها معلمة من القسم ومن غطّاها
+function indibatDate_(s) {
+  s = String(s || '').trim();
+  let m = s.match(/^(\d{4})[-\/](\d{1,2})[-\/](\d{1,2})/); if (m) return m[1] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[3]).slice(-2);
+  m = s.match(/^(\d{1,2})[-\/](\d{1,2})[-\/](\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2);
+  return '';
+}
+function indibat_(force) {
+  const c = CacheService.getScriptCache();
+  if (!force) { const hit = c.get('indibat'); if (hit) { try { return JSON.parse(hit); } catch (e) {} } }
+  const out = [];
+  try {
+    const sh = SpreadsheetApp.openById(INDIBAT_ID).getSheetByName('الاحتياط'); if (!sh) return [];
+    const v = sh.getDataRange().getDisplayValues(); v.shift();
+    const T = rows_(SH.teachers).rows.filter(x => x[1]);
+    const who = n => { const k = normAr_(n); const t = T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k); return t ? { name: String(t[1]), dept: String(t[0]) } : null; };
+    v.forEach((r, i) => {
+      const date = indibatDate_(r[0]); if (!date) return;
+      const p = Number(String(r[1]).replace(/[^0-9]/g, '')) || 0, cls = String(r[2]).trim(), type = String(r[8] || '').trim() || 'احتياط';
+      const A = r[4] ? who(r[4]) : null, B = r[6] ? who(r[6]) : null;
+      if (A) out.push({ id: 'ind_a' + i, dept: A.dept, item: 'SBA', date: date, sum: 'من انضباط', d: { t: A.name, cls: cls, p: p, sub: B ? B.name : '', subDept: B ? B.dept : '', type: B ? type : '' }, by: 'انضباط', at: '', up: '' });
+      if (B) out.push({ id: 'ind_c' + i, dept: B.dept, item: 'SBC', date: date, sum: 'من انضباط', d: { t: B.name, cls: cls, p: p, abs: A ? A.name : '', absDept: A ? A.dept : '', type: type }, by: 'انضباط', at: '', up: '' });
+    });
+  } catch (e) { return []; }
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('indibat', txt, 600);
+  const at = now_(); PropertiesService.getScriptProperties().setProperty('indibatAt', at);
+  try {   // تسجيل وقت المزامنة في انضباط ليظهر في «فحص المزامنة»
+    const st = SpreadsheetApp.openById(INDIBAT_ID).getSheetByName('الإعدادات'); const sv = st.getDataRange().getDisplayValues();
+    let row = 0; for (let i = 1; i < sv.length; i++) if (String(sv[i][0]).trim() === 'آخر مزامنة مع الميزان') row = i + 1;
+    if (row) st.getRange(row, 2).setValue(at); else st.appendRow(['آخر مزامنة مع الميزان', at, 'يُحدَّث تلقائياً من منصة الميزان']);
+  } catch (e) {}
+  return out;
+}
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -527,6 +564,7 @@ function route_(req) {
     case 'setStudents': return setStudents_(u, req);
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
+    case 'syncIndibat': if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');

@@ -174,6 +174,22 @@ function buildReport(ctx) {
   T.part = sec(A2, r => SEC.ACH.tx(d(r)), 'لا توجد مشاركات مسجلة خلال الفترة.', 'مشاركات القسم خلال الفترة: ');
   T.ach_n = A1.length; T.part_n = A2.length;
 
+  /* الاحتياط والتبديل (من منصة انضباط) */
+  const nP = n => n === 1 ? 'حصة واحدة' : n === 2 ? 'حصتان' : n <= 10 ? `${n} حصص` : `${n} حصة`;
+  const SBC = Rp('SBC').map(r => Object.assign({}, r.d, { date: r.date })), SBA = Rp('SBA').map(r => Object.assign({}, r.d, { date: r.date }));
+  const byT = L => { const o = {}; L.forEach(x => (o[x.t] = o[x.t] || []).push(x)); return Object.entries(o).sort((a, b) => b[1].length - a[1].length); };
+  const cIht = SBC.filter(x => x.type !== 'تبديل').length, cTb = SBC.filter(x => x.type === 'تبديل').length;
+  T.sb_cov = !SBC.length ? 'لم تُسجَّل حصص احتياط أو تبديل لمعلمات القسم خلال الفترة.'
+    : `غطّت معلمات القسم (${SBC.length}) من الحصص: احتياطاً (${cIht}) وتبديلاً (${cTb})، كالآتي: ` + byT(SBC).map(([t, L]) => {
+        const a = L.filter(x => x.type !== 'تبديل').length, b = L.length - a;
+        return `أ. ${t} ${nP(L.length)}` + ' (' + [a ? `احتياط ${a}` : '', b ? `تبديل ${b}` : ''].filter(Boolean).join('، ') + ' — ' + L.map(x => `${dm(x.date)} ${x.cls}`).join('، ') + ')';
+      }).join('؛ ') + '.';
+  const aCov = SBA.filter(x => x.sub).length, aNo = SBA.length - aCov;
+  T.sb_abs = !SBA.length ? 'لم تُسجَّل حصص غابت فيها معلمات القسم خلال الفترة.'
+    : `غابت معلمات القسم عن (${SBA.length}) من الحصص، غُطّي منها (${aCov})` + (aNo ? ` ولم يُغطَّ (${aNo})` : '') + ': ' + byT(SBA).map(([t, L]) =>
+        `أ. ${t} ${nP(L.length)} (` + L.map(x => `${dm(x.date)} ${x.cls}: ` + (x.sub ? `${x.type === 'تبديل' ? 'تبديل مع' : 'احتياط'} أ. ${x.sub}` : 'لم تُغطَّ')).join('، ') + ')').join('؛ ') + '.';
+  T.sb_n = SBC.length; T.sb_abs_n = SBA.length;
+
   /* التحديات */
   const CH = Rp('CH');
   T.chal = CH.length ? CH.map(r => SEC.CH.tx(d(r))).join('؛ ') + '.' : 'لا توجد تحديات مسجلة خلال الفترة.';
@@ -270,6 +286,7 @@ function buildReport(ctx) {
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],
     ['الإنجازات والمشاركات', [['الإنجازات (مراكز وجوائز)', [T.ach]], ['المشاركات', [T.part]]]],
     ['تحقيق أولويات المدرسة', REF.PRIO_FULL.map((p, i) => [p, [T.prio[i].txt], 1])],
+    ['الاحتياط والتبديل', [['تغطية معلمات القسم للحصص', [T.sb_cov]], ['غياب معلمات القسم وتغطيته', [T.sb_abs]]]],
     ['التحديات والحلول المقترحة', [[null, [T.chal]]]],
   ];
 
@@ -278,8 +295,8 @@ function buildReport(ctx) {
     visits: vN, visitedPct: NT ? vK / NT : 0, perTeacher: NT ? vN / NT : 0,
     planPct: planN ? planDone / planN : null, att: att, extPct: NM ? exK / NM : 0,
     meetings: nMT(MT), activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
-    peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && inP(r.date || SEC.WS.when(r.d), P)).length,
-    commonRecs: T.common.length, cpActions: CP.length,
+    peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && !/^SB[AC]$/.test(r.item) && inP(r.date || SEC.WS.when(r.d), P)).length,
+    commonRecs: T.common.length, cpActions: CP.length, subCover: SBC.length, subAbs: SBA.length,
   };
   return { dept, P, coord, NT, teachers, T, rows, K };
 }

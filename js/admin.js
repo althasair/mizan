@@ -413,3 +413,47 @@ function A_visits(el) {
   $$('[data-v]', el).forEach(b => b.onclick = () => visitModal(b.dataset.v));
   $$('[data-delv]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذه الزيارة؟')) return; await call('delete', { id: b.dataset.delv }); S.records = S.records.filter(x => x.id !== b.dataset.delv); show(); });
 }
+
+
+/* ------------------------------------------------------------------ الاحتياط والتبديل (من منصة انضباط) */
+function A_subs(el) {
+  setTitle('الاحتياط والتبديل');
+  const p = P(); const inPer = r => inP(r.date, p);
+  const C = S.records.filter(r => r.item === 'SBC' && inPer(r)), A = S.records.filter(r => r.item === 'SBA' && inPer(r));
+  const tb = C.filter(r => r.d.type === 'تبديل').length, ih = C.length - tb, unc = A.filter(r => !r.d.sub).length;
+  const depts = uniq([...adminDepts(), ...C.map(r => r.dept), ...A.map(r => r.dept)]);
+  const byD = depts.map(d => {
+    const c = C.filter(r => r.dept === d), a = A.filter(r => r.dept === d);
+    return { d, ih: c.filter(r => r.d.type !== 'تبديل').length, tb: c.filter(r => r.d.type === 'تبديل').length, ab: a.length, cov: a.filter(r => r.d.sub).length };
+  }).filter(x => x.ih + x.tb + x.ab).sort((a, b) => (b.ih + b.tb) - (a.ih + a.tb));
+  const tch = {}; C.forEach(r => { const o = tch[r.d.t] = tch[r.d.t] || { t: r.d.t, d: r.dept, ih: 0, tb: 0 }; r.d.type === 'تبديل' ? o.tb++ : o.ih++; });
+  const tl = Object.values(tch).sort((a, b) => (b.ih + b.tb) - (a.ih + a.tb));
+  const ab = {}; A.forEach(r => { const o = ab[r.d.t] = ab[r.d.t] || { t: r.d.t, d: r.dept, n: 0, cov: 0 }; o.n++; if (r.d.sub) o.cov++; });
+  const al = Object.values(ab).sort((a, b) => b.n - a.n);
+  el.innerHTML = `
+  <div class="card"><h2>المزامنة مع منصة انضباط <span class="sub">${esc(p.name)} · من ${dmy(p.from)} إلى ${dmy(p.to)}</span></h2>
+    <div class="row" style="gap:12px;flex-wrap:wrap"><span>آخر مزامنة: <b>${esc(S.indibatAt || 'لم تتم بعد')}</b></span>
+    <button class="btn" id="syncInd">مزامنة الآن</button>
+    <small style="color:var(--muted)">تُقرأ حصص الاحتياط والتبديل من انضباط تلقائياً كل 10 دقائق، وتظهر في تقرير كل منسقة في بند «الاحتياط والتبديل».</small></div></div>
+  <div class="grid g4" style="margin-top:14px">
+    ${kpi('حصص غُطّيت', C.length, 'خلال الفترة')}
+    ${kpi('احتياط', ih, 'من خارج جدول المعلمة', 'var(--tiffany-d)')}
+    ${kpi('تبديل', tb, 'تعوّضها المعلمة لاحقاً', 'var(--navy)')}
+    ${kpi('حصص لم تُغطَّ', unc, `من أصل ${A.length} حصة غياب`, unc ? '#A33' : 'var(--gold)')}
+  </div>
+  <div class="card" style="margin-top:16px"><h2>حسب القسم</h2><div class="tbl"><table class="t">
+    <tr><th>القسم</th><th>احتياط غطّته معلماته</th><th>تبديل</th><th>حصص غياب معلماته</th><th>غُطّي منها</th><th>لم يُغطَّ</th></tr>
+    ${byD.length ? byD.map(x => `<tr><td><b>${esc(x.d)}</b></td><td>${x.ih}</td><td>${x.tb}</td><td>${x.ab}</td><td>${x.cov}</td><td>${x.ab - x.cov ? `<span class="chip bad">${x.ab - x.cov}</span>` : '0'}</td></tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد بيانات في هذه الفترة.</td></tr>'}
+  </table></div></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>المعلمات الأكثر تغطية</h2><div class="tbl"><table class="t"><tr><th>المعلمة</th><th>القسم</th><th>احتياط</th><th>تبديل</th><th>المجموع</th></tr>
+      ${tl.length ? tl.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td><td>${x.ih}</td><td>${x.tb}</td><td><b>${x.ih + x.tb}</b></td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted)">—</td></tr>'}</table></div></div>
+    <div class="card"><h2>حصص غياب المعلمات</h2><div class="tbl"><table class="t"><tr><th>المعلمة</th><th>القسم</th><th>الحصص</th><th>غُطّيت</th></tr>
+      ${al.length ? al.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td><td>${x.n}</td><td>${x.cov === x.n ? x.cov : `<span class="chip bad">${x.cov}</span>`}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">—</td></tr>'}</table></div></div>
+  </div>`;
+  $('#syncInd', el).onclick = async e => {
+    const b = e.target; b.disabled = true; b.textContent = 'جارٍ المزامنة…';
+    try { const j = await API.call('syncIndibat', {}); S.records = j.records; S.indibatAt = j.indibatAt; toast('تمت المزامنة مع انضباط'); show(); }
+    catch (err) { toast(err.message || 'تعذّرت المزامنة', 1); b.disabled = false; b.textContent = 'مزامنة الآن'; }
+  };
+}
