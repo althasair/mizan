@@ -249,13 +249,25 @@ function buildReport(ctx) {
     const TAt = mineD('TA').filter(r => !r.d.q1);
     if (TAt.length) add('ac_int', 'وسجّلت المعلمات: ' + TAt.map(r => `${r.d.kind} «${nz(r.d.name)}» — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
   }
+  /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
+  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
+  const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA');
+  const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {
     const parts = [];
+    const ta = tTA.filter(r => r.d.p && REF.PRIO.indexOf(r.d.p) + 1 === p);
     const ra = RAf.filter(r => (d(r).p ? REF.PRIO.indexOf(d(r).p) + 1 : 1) === p).map(r => d(r).item);
     const ac = ACf.filter(r => SEC.AC.prioFlag(d(r), p)).map(r => `«${d(r).name}»`);
     const ach = ACH.filter(r => d(r).p && REF.PRIO.indexOf(d(r).p) + 1 === p).length;
     if (ra.length) parts.push(ra.join('، ')); if (ac.length) parts.push(ac.join('، ')); if (ach) parts.push(`(${ach}) من الإنجازات والمشاركات`);
-    let n = ra.length + ac.length + ach;
+    if (ta.length) parts.push('وما نفّذته المعلمات من ' + ta.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}»`).join('، و'));
+    let n = ra.length + ac.length + ach + ta.length;
+    if (p === 2) {
+      if (tPV.length) parts.push(`(${tPV.length}) من الزيارات التبادلية التي نفّذتها المعلمات`);
+      if (tWS.length) parts.push(`(${tWS.length}) من الورش والممارسات المتميزة في تطوير الزملاء`);
+      n += tPV.length + tWS.length;
+    }
+    if (p === 4 && tPA.length) { parts.push(`تواصل المعلمات مع أولياء أمور (${tStu.size}) من الطالبات`); n += tPA.length; }
     if (p === 2) {
       if (done.length) parts.push(`تنفيذ (${done.length}) من برامج التطوير المهني الداخلية`);
       if (EX.length) parts.push(`مشاركة (${exK}) من المعلمات في برامج تطوير مهني خارجية`);
