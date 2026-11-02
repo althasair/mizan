@@ -348,7 +348,7 @@ function T_ds(el) {
   const rowsP = (n, L) => Array.from({ length: n }, (_, i) => { const a = L[i] || {}; return `<div class="row" style="gap:8px;margin:4px 0"><b style="width:22px">${i + 1}</b><input type="date" data-pd="${i}" value="${esc(a.date || '')}" min="${p.from}" max="${p.to}"><select data-ph="${i}">${TDS_H.map(o => `<option value="${o}" ${o === String(a.h || '1') ? 'selected' : ''}>${o} ${+o <= 2 && +o !== 1 ? 'ساعة' : +o === 1 ? 'ساعة' : 'ساعات'}</option>`).join('')}</select><select data-pt="${i}">${TDS_PERM.map(o => `<option ${o === a.type ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`; }).join('');
   const grab = f => ({ abs: $$('[data-ad]', f).map((x, i) => ({ date: x.value, type: $(`[data-at="${i}"]`, f).value })), perm: $$('[data-pd]', f).map((x, i) => ({ date: x.value, h: +$(`[data-ph="${i}"]`, f).value, type: $(`[data-pt="${i}"]`, f).value })) });
   T_page(el, {
-    item: 'TDS', title: 'الانضباط الوظيفي', one: 'غياب أو استئذان', noDate: 1, note: 'اكتبي عدد أيام الغياب أو عدد الاستئذانات، فتظهر لكِ الخانات لتعبئتها. إذن العمل لا يُحسب من الساعات العشر الشهرية.',
+    item: 'TDS', title: 'الانضباط الوظيفي', one: 'غياب أو استئذان', noDate: 1, note: 'اكتبي عدد أيام الغياب أو عدد الاستئذانات، فتظهر لكِ الخانات لتعبئتها. وإن لم يكن لديكِ غياب ولا استئذان فاتركي الرقمين صفراً واضغطي «حفظ». إذن العمل لا يُحسب من الساعات العشر الشهرية.',
     top: () => { const M = tdsMonths(); const ks = Object.keys(M).sort().reverse();
       return ks.length ? `<div class="card"><h2>ساعات الاستئذان الشخصي شهرياً</h2>${ks.map(k => { const o = M[k], g = tdsMsg(o.h);
         return `<div style="border-inline-start:4px solid ${g.c === 'bad' ? '#A33' : g.c === 'warn' ? 'var(--gold)' : 'var(--tiffany-d)'};padding:6px 12px;margin:8px 0;background:#FAFBFC;border-radius:8px"><b>${MONTHS[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}</b> — شخصي: <b>${o.h}</b> من 10 ساعات${o.w ? ` · إذن عمل: ${o.w} (لا يُحسب)` : ''}${Object.keys(o.a).length ? ' · غياب: ' + Object.entries(o.a).map(([t, n]) => `${t} ${n}`).join('، ') : ''}<div style="margin-top:4px;font-weight:600;text-align:justify">${esc(g.t)}</div></div>`; }).join('')}</div>` : ''; },
@@ -359,9 +359,9 @@ function T_ds(el) {
       const re = () => { const g = grab(f); $('#dsA', f).innerHTML = rowsA(Math.max(0, Math.min(20, +$('#dsNA', f).value || 0)), g.abs); $('#dsP', f).innerHTML = rowsP(Math.max(0, Math.min(20, +$('#dsNP', f).value || 0)), g.perm); };
       $('#dsNA', f).oninput = $('#dsNP', f).oninput = re; },
     pre: (r, f) => { const g = grab(f); r.abs = g.abs; r.perm = g.perm; const ds = [...g.abs, ...g.perm].map(x => x.date).filter(Boolean).sort(); r.date = ds[0] || today(); },
-    check: r => !(r.abs.length + r.perm.length) ? 'اكتبي عدد أيام الغياب أو الاستئذانات' : [...r.abs, ...r.perm].some(x => !x.date) ? 'حدّدي التاريخ في كل خانة' : '',
-    sum: r => [r.abs.length ? `غياب ${r.abs.length}` : '', r.perm.length ? `استئذان ${r.perm.length}` : ''].filter(Boolean).join(' · '),
+    check: r => [...r.abs, ...r.perm].some(x => !x.date) ? 'حدّدي التاريخ في كل خانة' : '',
+    sum: r => [r.abs.length ? `غياب ${r.abs.length}` : '', r.perm.length ? `استئذان ${r.perm.length}` : ''].filter(Boolean).join(' · ') || 'لا غياب ولا استئذان',
     head: '<tr><th>التاريخ</th><th>الغياب</th><th>الاستئذان</th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td style="font-size:12px">${(r.d.abs || []).map(a => `${dmy(a.date)} (${esc(a.type)})`).join('<br>') || '—'}</td><td style="font-size:12px">${(r.d.perm || []).map(x => `${dmy(x.date)}: ${x.h} س (${esc(x.type)})`).join('<br>') || '—'}</td>`,
+    row: r => `<td>${dmy(r.date)}</td><td style="font-size:12px">${(r.d.abs || []).map(a => `${dmy(a.date)} (${esc(a.type)})`).join('<br>') || ((r.d.perm || []).length ? '—' : 'لا غياب ولا استئذان')}</td><td style="font-size:12px">${(r.d.perm || []).map(x => `${dmy(x.date)}: ${x.h} س (${esc(x.type)})`).join('<br>') || '—'}</td>`,
   });
 }
