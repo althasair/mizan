@@ -92,6 +92,7 @@ const DEMO = {
     if (a === 'setSig') return { ok: 1 };
     if (a === 'signature') return { ok: 1, data: 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="300" height="120"><path d="M20 90 C80 10,140 10,160 60 S260 100,280 30" stroke="#1B2A6E" stroke-width="4" fill="none"/><text x="150" y="112" font-size="12" text-anchor="middle" fill="#999">توقيع تجريبي</text></svg>') };
     if (a === 'setPin') { const u = d.users.find(x => x.id === p.id); u.pin = String(p.newPin); this.save(d); return { ok: 1 }; }
+    if (a === 'pinList') { if (me.role !== 'admin') throw new Error('للإدارة فقط'); const rl = { coord: 'منسقة', teacher: 'معلمة', viewer: 'موجهة' }; return { ok: 1, list: d.users.filter(x => rl[x.role]).map(x => ({ id: x.id, role: rl[x.role], dept: (x.dept || []).join(' / '), name: x.name, pin: x.pin, on: true })) }; }
     if (a === 'upload') return { ok: 1, fid: 'demo' + Date.now(), name: p.name };
     if (a === 'file') return { ok: 1, name: 'ملف.txt', data: 'data:text/plain;base64,' + btoa('demo') };
     if (a === 'vpFeedback') { const r = d.recs.find(x => x.id === p.id); if (!r) throw new Error('السجل غير موجود'); if (p.fb) { r.d.vpfb = p.fb; r.d.vpfbAt = new Date().toISOString().slice(0, 10); } else { delete r.d.vpfb; delete r.d.vpfbAt; } this.save(d); return { ok: 1, record: r }; }

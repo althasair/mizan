@@ -200,11 +200,24 @@ function bindAdminRep(rp, dept, p) {
 
 /* ------------------------------------------------------------------ حسابات المنسقات */
 function A_accounts(el) {
-  setTitle('حسابات المنسقات');
-  el.innerHTML = `<div class="note">الأرقام السرية محفوظة في قاعدة البيانات الخاصة بكِ على Google ولا تظهر هنا. يمكنكِ تعيين رقم جديد لأي منسقة عند الحاجة.</div>
+  setTitle('الحسابات والأرقام السرية');
+  el.innerHTML = `<div class="card"><div class="row"><h2 style="margin:0">الأرقام السرية</h2><span class="sp"></span><button class="btn" id="pinShow">عرض الأرقام السرية</button></div>
+  <div class="note" style="margin-top:8px">للمنسقات والمعلمات والموجهات. لا تظهر إلا بعد إدخال رقمكِ السري، وتختفي عند مغادرة الصفحة.</div><div id="pinBox"></div></div>
+  <div class="note">يمكنكِ تعيين رقم جديد لأي منسقة عند الحاجة.</div>
   <div class="card"><table class="t"><tr><th>المنسقة</th><th>القسم</th><th>التوقيع</th><th></th></tr>${S.coords.map(c => `<tr><td>${esc(c.name)}</td><td>${esc(c.dept.join(' و'))}</td><td><span class="sigbox" data-sv="${esc(c.id)}" style="display:inline-block;min-width:90px;height:34px;vertical-align:middle"></span> <button class="btn sm ghost" data-sg="${esc(c.id)}">رفع التوقيع</button></td><td><button class="btn sm sec" data-pin="${esc(c.id)}">تعيين رقم سري جديد</button></td></tr>`).join('')}</table></div>
   <input type="file" id="sigF" accept="image/png,image/jpeg" style="display:none">`;
   $$('[data-sv]', el).forEach(async b => { try { const d = (await API.call('signature', { who: b.dataset.sv })).data; b.innerHTML = d ? `<img src="${d}" style="max-height:34px;max-width:140px">` : '<small style="color:var(--bad)">لا يوجد</small>'; } catch (e) {} });
+  $('#pinShow').onclick = () => pinModal('عرض الأرقام السرية', 'أدخلي رقمكِ السري لعرض الأرقام:', async pin => {
+    const j = await call('pinList', { pin }); const L = j.list || []; let tab = 'منسقة', q = '';
+    const draw = () => { const R = L.filter(x => x.role === tab && (!q || (x.name + x.dept).includes(q)));
+      $('#pinBox').innerHTML = `<div class="tabs" style="margin-top:10px">${['منسقة', 'معلمة', 'موجهة'].map(k => `<button class="${k === tab ? 'on' : ''}" data-pt="${k}">${k === 'منسقة' ? 'المنسقات' : k === 'معلمة' ? 'المعلمات' : 'الموجهات'} (${L.filter(x => x.role === k).length})</button>`).join('')}</div>
+      <input id="pinQ" placeholder="ابحثي بالاسم أو القسم" value="${esc(q)}" style="margin:8px 0;max-width:280px">
+      <table class="t"><tr><th>م</th><th>الاسم</th><th>القسم</th><th>الرقم السري</th><th>الحالة</th><th></th></tr>${R.map((x, i) => `<tr><td>${i + 1}</td><td>${esc(x.name)}</td><td style="font-size:12px">${esc(x.dept)}</td><td><b style="font-size:15px;letter-spacing:2px;direction:ltr;display:inline-block">${esc(x.pin)}</b></td><td>${x.on ? '<span class="chip ok">فعّال</span>' : '<span class="chip">غير مفعّل</span>'}</td><td><button class="btn sm ghost" data-cp="${esc(x.name)} — الرقم السري لمنصة الميزان: ${esc(x.pin)}">نسخ</button></td></tr>`).join('') || '<tr><td colspan="6">لا توجد نتائج</td></tr>'}</table>`;
+      $$('[data-pt]', el).forEach(b => b.onclick = () => { tab = b.dataset.pt; draw(); });
+      const qi = $('#pinQ'); qi.oninput = () => { q = qi.value.trim(); draw(); const n = $('#pinQ'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); };
+      $$('[data-cp]', el).forEach(b => b.onclick = async () => { try { await navigator.clipboard.writeText(b.dataset.cp); toast('تم النسخ ✓'); } catch (e) { prompt('انسخي:', b.dataset.cp); } }); };
+    draw();
+  });
   let sgFor = null;
   $$('[data-sg]', el).forEach(b => b.onclick = () => { sgFor = b.dataset.sg; $('#sigF').value = ''; $('#sigF').click(); });
   $('#sigF').onchange = e => { const f = e.target.files[0]; if (!f || !sgFor) return; const r = new FileReader(); r.onload = async () => { await call('setSig', { id: sgFor, data: r.result }); toast('تم حفظ التوقيع ✓'); show(); }; r.readAsDataURL(f); };

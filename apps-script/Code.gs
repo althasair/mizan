@@ -349,6 +349,16 @@ function setPin_(u, p) {
   fail_('الحساب غير موجود');
 }
 
+/* قائمة الأرقام السرية: للإدارة فقط، وبعد إعادة إدخال رقمها السري. لا تُعرض أرقام الإدارة والمديرة */
+function pinList_(u, p) {
+  if (u.role !== 'admin') fail_('للإدارة فقط');
+  checkPin_(u, p.pin);
+  const t = rows_(SH.users); const role = { 'منسقة': 'منسقة', 'معلمة': 'معلمة', 'توجيه': 'موجهة' };
+  const list = t.rows.filter(r => role[String(r[1]).trim()]).map(r => ({ id: String(r[0]), role: role[String(r[1]).trim()], dept: String(r[2]).split('|').join(' / '), name: String(r[3]), pin: String(r[4]), on: String(r[5]).trim() !== 'لا' }));
+  log_(u, 'عرض الأرقام السرية', '', '');
+  return { list: list };
+}
+
 /* ------------------------------------------------------------------ إرسال الاستمارات بالبريد (PDF موقّع) */
 function sendForm_(u, p) {
   if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
@@ -557,6 +567,7 @@ function route_(req) {
     case 'feedback': return { report: feedback_(u, req) };
     case 'signature': return signature_(u, req);
     case 'setPin': return setPin_(u, req);
+    case 'pinList': return pinList_(u, req);
     case 'sendForm': return sendForm_(u, req);
     case 'sendVisitC': return sendVisitC_(u, req);
     case 'vpFeedback': return vpFeedback_(u, req);
