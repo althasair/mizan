@@ -1,14 +1,18 @@
-/* الميزان — الحضور الصفي للمنسقة: خطة الزيارات الشهرية + استمارة الإشراف + متابعة توصيات الزيارة السابقة (ثابتة)
+/* الميزان — الحضور الصفي للمنسقة: خطة الزيارات في كل ربع + استمارة الإشراف + متابعة توصيات الزيارة السابقة (ثابتة)
    كل زيارة تُحفظ بند «V» فتنعكس تلقائياً على تقرير أعمال القسم */
 'use strict';
 
-/* خطة الزيارات الشهرية لكل معلمة (ثابتة بقرار النائب الأكاديمي) */
+/* خطة الزيارات لكل معلمة في الربع (ثابتة بقرار النائب الأكاديمي): زيارتان، كلية ثم جزئية
+   perMonth: خطة خاصة تُحسب شهرياً، فيكون المطلوب في الربع = العدد × أشهر الربع */
 const VDEF = { n: 2, seq: ['كلية', 'جزئية'], min: 10, max: 15, lbl: 'كلية ثم جزئية' };
 const VPLAN = {
-  'هبه الإبراهيم': { n: 4, seq: ['كلية', 'جزئية', 'كلية', 'جزئية'], min: 6, max: 9, lbl: 'أسبوعياً بالتناوب (معلمة مستجدة)' },
-  'إسراء عزت': { n: 3, seq: ['كلية', 'جزئية', 'جزئية'], min: 7, max: 12, lbl: 'كلية ثم جزئية ثم جزئية' },
+  'هبه الإبراهيم': { perMonth: true, n: 4, seq: ['كلية', 'جزئية', 'كلية', 'جزئية'], min: 6, max: 9, lbl: 'أسبوعياً بالتناوب (معلمة مستجدة)' },
+  'إسراء عزت': { perMonth: true, n: 3, seq: ['كلية', 'جزئية', 'جزئية'], min: 7, max: 12, lbl: 'كلية ثم جزئية ثم جزئية' },
 };
-const planOf = t => Object.assign({}, VDEF, VPLAN[t] || {});
+const perOfDate = d => S.periods.find(p => d >= p.from && d <= p.to) || null;
+const perKey = d => { const p = perOfDate(d); return p ? p.name : ''; };
+const perMonths = per => per ? Math.max(1, Math.round(daysBtw(per.from, per.to) / 30)) : 1;
+const planOf = (t, per) => { const P = Object.assign({}, VDEF, VPLAN[t] || {}); P.m = P.n; if (P.perMonth) P.n = P.n * perMonths(per); return P; };
 const FU_ST = ['تم التنفيذ', 'تم التنفيذ جزئياً', 'لم تُنفذ بعد'];
 const ORD = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة', 'الثالثة عشرة', 'الرابعة عشرة', 'الخامسة عشرة', 'السادسة عشرة', 'السابعة عشرة', 'الثامنة عشرة', 'التاسعة عشرة', 'العشرون'];
 const daysBtw = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
@@ -23,17 +27,18 @@ function carryOf(prev) {
   const pend = (prev.d.fu || []).filter(x => x.st && x.st !== 'تم التنفيذ').map(x => x.r);
   return uniqA([...recsOf(prev), ...pend]);
 }
-/* حالة المعلمة في الشهر */
+/* حالة المعلمة في الربع */
 function cvStatus(t, mk) {
-  const P = planOf(t); const all = cvVisits(t); const inM = all.filter(r => monthKey(r.date) === mk);
+  const per = S.periods.find(p => p.name === mk);
+  const P = planOf(t, per); const all = cvVisits(t); const inM = all.filter(r => perKey(r.date) === mk);
   const last = all.filter(r => r.date <= today()).slice(-1)[0];
   const next = P.seq[inM.length % P.seq.length];
-  const isCur = mk === monthKey(today());
+  const isCur = mk === perKey(today());
   const gap = last ? daysBtw(last.date, today()) : null;
   let st, cls;
   if (inM.length >= P.n) { st = 'مكتملة' + (inM.length > P.n ? ` (+${inM.length - P.n} إضافية)` : ''); cls = 'ok'; }
   else if (!isCur) { st = `ناقصة (${P.n - inM.length})`; cls = 'bad'; }
-  else if (!last) { st = 'لم تُزَر بعد'; cls = 'bad'; }
+  else if (!inM.length) { st = 'لم تُزَر بعد في هذا الربع'; cls = 'warn'; }
   else if (gap > P.max) { st = `تأخر موعد الحضور (${gap} يوماً)`; cls = 'bad'; }
   else if (gap >= P.min) { st = 'مستحقة الآن'; cls = 'warn'; }
   else { st = `التالية بعد ${P.min - gap} يوم`; cls = 'tf'; }
@@ -43,28 +48,28 @@ function cvStatus(t, mk) {
   return { P, inM, last, next, st, cls, close, order, gap };
 }
 
-/* ================================================================== القائمة الشهرية */
+/* ================================================================== قائمة الربع */
 async function C_visit(el) {
   await loadForms(); setTitle('الحضور الصفي');
   if (S.cvv) return cvForm(el, S.cvv === 'new' ? null : S.records.find(r => r.id === S.cvv));
-  const mk = S.cvm || monthKey(today());
-  const months = (() => { const L = []; const t = today(); let [y, m] = [2026, 9]; for (let k = 0; k < 12; k++) { const key = `${y}-${String(m).padStart(2, '0')}`; if (key > monthKey(t)) break; L.push(key); m++; if (m > 12) { m = 1; y++; } } return L.slice(-6); })();
+  const t0 = today(); const months = S.periods.filter(p => p.from <= t0).map(p => p.name);
+  const mk = S.cvm && months.includes(S.cvm) ? S.cvm : (perKey(t0) || months[months.length - 1] || '');
   const T = cvTeachers(); const X = T.map(t => ({ t, ...cvStatus(t, mk) }));
   const req = X.reduce((a, x) => a + x.P.n, 0), done = X.reduce((a, x) => a + Math.min(x.inM.length, x.P.n), 0);
   const late = X.filter(x => x.cls === 'bad'), close = X.flatMap(x => x.close.map(c => ({ t: x.t, ...c }))), order = X.flatMap(x => x.order.map(r => ({ t: x.t, r, exp: x.P.seq[x.inM.indexOf(r) % x.P.seq.length] })));
-  const mName = k => MONTHS[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4);
+  const mName = k => k;
   el.innerHTML = `
   <div class="tabs">${months.map(k => `<button class="${k === mk ? 'on' : ''}" data-m="${k}">${mName(k)}</button>`).join('')}</div>
   <div class="grid g4">
     ${kpi('الزيارات المطلوبة', req, mName(mk), 'var(--navy)')}
     ${kpi('المنفذة', done, req ? Math.round(done / req * 100) + '% من المطلوب' : '', 'var(--ok)')}
-    ${kpi('معلمات يحتجن زيارة', late.length, mk === monthKey(today()) ? 'متأخرة أو لم تُزر' : 'لم تكتمل خطتهن', 'var(--maroon)')}
+    ${kpi('معلمات يحتجن زيارة', late.length, mk === perKey(today()) ? 'متأخرة أو لم تُزر' : 'لم تكتمل خطتهن', 'var(--maroon)')}
     ${kpi('زيارات متقاربة', close.length, 'فاصل أقل من المطلوب', 'var(--gold)')}
   </div>
-  <div class="note">الخطة الشهرية لكل معلمة: زيارتان (كلية ثم جزئية) بفاصل 10–15 يوماً، ما عدا: ${Object.entries(VPLAN).map(([n, p]) => `أ. ${esc(n)} (${p.n} زيارات: ${esc(p.lbl)})`).join('، ')}. ويمكنكِ إضافة زيارات إضافية. <b>كل زيارة تبدأ بمتابعة توصيات الزيارة السابقة</b>، كلية كانت أو جزئية، وتنعكس الزيارة تلقائياً على تقرير القسم.</div>
+  <div class="note">خطة الربع لكل معلمة: زيارتان (كلية ثم جزئية) بفاصل 10–15 يوماً، ما عدا: ${Object.entries(VPLAN).map(([n, p]) => `أ. ${esc(n)} (${p.n} زيارات شهرياً: ${esc(p.lbl)})`).join('، ')}. ويمكنكِ إضافة زيارات إضافية. <b>كل زيارة تبدأ بمتابعة توصيات الزيارة السابقة</b>، كلية كانت أو جزئية، وتنعكس الزيارة تلقائياً على تقرير القسم.</div>
   ${(late.length || close.length || order.length) ? `<div class="card" style="border-inline-start:4px solid var(--gold)"><h2>تنبيهات لتنظيم وقتكِ <span class="sub">خاصة بكِ وحدكِ — لا تظهر في التقرير الشهري ولا لأي جهة أخرى</span></h2>
   <div style="font-size:13px;color:var(--muted);margin-bottom:6px">الغاية أن تتاح للمعلمة فرصة (10–15) يوماً بعد كل زيارة لتطبيق التوصيات قبل الزيارة التالية. وإن كنتِ ترغبين بالحضور لمعلمة أكثر من المطلوب، فلا حرج في تجاهل هذه التنبيهات.</div><ul style="margin:0;padding-inline-start:18px;line-height:2">
-    ${late.map(x => `<li><b>أ. ${esc(x.t)}</b>: ${x.last ? 'تأخر موعد الحضور' + (x.gap != null ? ` (مضى ${x.gap} يوماً على آخر زيارة)` : '') : 'لم تُزر بعد'} — المخطط ${x.P.n} في الشهر، والمنفذ ${x.inM.length}.</li>`).join('')}
+    ${late.map(x => `<li><b>أ. ${esc(x.t)}</b>: ${x.last ? 'تأخر موعد الحضور' + (x.gap != null ? ` (مضى ${x.gap} يوماً على آخر زيارة)` : '') : 'لم تُزر بعد'} — المخطط ${x.P.n} في الربع، والمنفذ ${x.inM.length}.</li>`).join('')}
     ${close.map(c => `<li><b>أ. ${esc(c.t)}</b>: زيارة ${dm(c.r.date)} بعد ${c.g} ${c.g === 1 ? 'يوم' : 'أيام'} فقط من سابقتها — قد لا يتيح هذا الفاصل للمعلمة تطبيق التوصيات.</li>`).join('')}
     ${order.map(o => `<li><b>أ. ${esc(o.t)}</b>: زيارة ${dm(o.r.date)} سُجّلت ${esc(o.r.d.kj)} والمتوقع وفق الخطة ${esc(o.exp)}.</li>`).join('')}</ul></div>` : ''}
   <div class="card"><div class="row"><h2 style="margin:0">خطة ${mName(mk)}</h2><span class="sp"></span><button class="btn" id="cvNew">+ حضور صفي جديد</button></div>
@@ -74,7 +79,7 @@ async function C_visit(el) {
     <td>${x.last ? dmy(x.last.date) : '—'}</td><td>${x.inM.length >= x.P.n ? '<span class="chip">إضافية (اختياري)</span>' : `<span class="chip">${esc(x.next)}</span>`}</td>
     <td><span class="chip ${x.cls}">${esc(x.st)}</span></td><td><button class="btn sm" data-nt="${esc(x.t)}" data-kj="${esc(x.next)}">+ حضور</button></td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">لا توجد معلمات مسجلات في القسم</div></td></tr>'}</table></div></div>
   <div class="card"><h2>سجل الزيارات</h2><div class="tbl"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th><th>النوع</th><th>الصف</th><th>متابعة السابقة</th><th>الإرسال</th><th></th></tr>
-  ${cvVisits().filter(r => monthKey(r.date) === mk).reverse().map(r => { const f = r.d.fu || []; const ok = f.filter(x => x.st === 'تم التنفيذ').length;
+  ${cvVisits().filter(r => perKey(r.date) === mk).reverse().map(r => { const f = r.d.fu || []; const ok = f.filter(x => x.st === 'تم التنفيذ').length;
     return `<tr><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.d.kj || '')}${r.d.ty ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.ty)}</div>` : ''}</td><td>${esc(r.d.s || '')}</td>
     <td>${f.length ? `<span class="chip ${ok === f.length ? 'ok' : 'warn'}">${ok} من ${f.length} منفذة</span>` : (r.d.form ? '<span class="chip">أول زيارة</span>' : '<span class="chip">إدخال يدوي</span>')}</td>
     <td>${r.d.sent ? `<span class="chip ok">${dm(r.d.sent)}</span>` : '<span class="chip">لم تُرسل</span>'}</td><td><button class="btn sm sec" data-o="${r.id}">فتح</button></td></tr>`; }).join('') || '<tr><td colspan="7"><div class="empty">لا توجد زيارات في هذا الشهر</div></td></tr>'}</table></div></div>`;
@@ -104,8 +109,8 @@ function cvForm(el, rec) {
     if (!d.subj && subs.length === 1) d.subj = subs[0];
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
-    const P = planOf(d.t); const prev = prevOf(); const gap = prev ? daysBtw(prev.date, d.date) : null;
-    const inM = cvVisits(d.t).filter(r => monthKey(r.date) === monthKey(d.date) && (!rec || r.id !== rec.id) && r.date <= d.date);
+    const P = planOf(d.t, perOfDate(d.date)); const prev = prevOf(); const gap = prev ? daysBtw(prev.date, d.date) : null;
+    const inM = cvVisits(d.t).filter(r => perKey(r.date) === perKey(d.date) && (!rec || r.id !== rec.id) && r.date <= d.date);
     const expK = P.seq[inM.length % P.seq.length];
     lastD = '';
     el.innerHTML = `
@@ -123,7 +128,7 @@ function cvForm(el, rec) {
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="cLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld" style="grid-column:1/-1"><label>تحصيل الصف في المادة ${cls ? '<small style="color:var(--tiffany-d)">· محسوب تلقائياً من سنابل</small>' : ''}</label><textarea id="cAch" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px;line-height:1.8">${esc(d.ach || '')}</textarea></div>
     </form>
-    ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات شهرياً (${esc(P.lbl)})</span><span class="chip">زيارات الشهر قبل هذه: ${inM.length}</span>
+    ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات في الربع (${esc(P.lbl)})</span><span class="chip">زيارات الربع قبل هذه: ${inM.length}</span>
       ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المقترح (تنبيه لكِ فقط)' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
     ${achMini(d.t, d.subj)}</div>

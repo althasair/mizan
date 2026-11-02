@@ -88,7 +88,7 @@ function navHTML() {
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       <div class="grp">الإعدادات</div>${it('a_accounts', 'حسابات المنسقات', 'user')}`;
   }
-  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a><div class="grp">الحضور الصفي</div><a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطته الشهرية</span></a>`;
+  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a><div class="grp">الحضور الصفي</div><a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطة الربع</span></a>`;
   GROUPS.forEach(g => {
     h += `<div class="grp">${g.t}</div>`;
     SECTIONS.filter(s => s.g === g.id).forEach(s => { const n = cnt(s.k); h += `<a class="it ${S.view === 'sec:' + s.k ? 'on' : ''}" data-v="sec:${s.k}">${ICON.dot}<span>${s.t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; });
