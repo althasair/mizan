@@ -285,6 +285,14 @@ function T_ach(el) {
    البرنامج مظلة تنبثق منه المشاريع، وتنبثق من المشروع الأنشطة */
 const TA_KINDS = ['برنامج', 'مشروع', 'نشاط', 'مبادرة'];
 const TA_PARENT = { 'مشروع': 'برنامج', 'نشاط': 'مشروع' };
+/* الأثر: قائمة منسدلة حسب الأولوية المختارة */
+const TA_IMPACT = [
+  ['تحسّن التحصيل الدراسي لدى الطالبات المستهدفات', 'رفع دافعية الطالبات نحو التعلم', 'معالجة الفاقد التعليمي لدى الطالبات المتعثرات', 'تحسّن استعداد الطالبات للاختبارات', 'تنمية مهارات التفكير والإبداع', 'تحسّن مهارات القراءة والكتابة', 'اكتشاف الموهوبات ورعايتهن'],
+  ['توظيف الطالبات للتقنيات الحديثة في التعلم', 'تنمية مهارات البحث والتعلم الذاتي', 'تنمية المهارات الرقمية لدى الطالبات', 'انتقال أثر التدريب المهني إلى ممارسات المعلمات في الصف'],
+  ['تعزيز القيم والسلوك الإيجابي لدى الطالبات', 'تعزيز الانتماء والهوية الوطنية', 'تنمية مهارات التواصل والعرض', 'تعزيز الثقة بالنفس', 'تعزيز روح التعاون والعمل الجماعي', 'زيادة الوعي بالقضية المطروحة', 'تحسّن الانضباط والالتزام المدرسي'],
+  ['تعزيز الشراكة مع أولياء الأمور', 'زيادة مشاركة أولياء الأمور في تعلم بناتهن', 'تحسّن التواصل بين المدرسة والأسرة', 'متابعة أولياء الأمور لمستوى بناتهن'],
+];
+const TA_OTHER = 'أخرى (اكتبي الأثر)';
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
@@ -294,13 +302,21 @@ function T_act(el) {
       fld('الاسم', `<input data-n="name" value="${esc(d.name || '')}" placeholder="اكتبي الاسم" required>`, 1) +
       fld('المدة', fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')) + `<div class="fld" id="taTo"><label>إلى تاريخ</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
       fld('عدد الطالبات المشاركات', `<input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) + fld('الأولوية التي يخدمها <span style="color:#A33">*</span>', fSel('p', REF.PRIO || [], d.p, 'اختاري الأولوية')) +
-      fld('الأثر', `<textarea data-n="impact" rows="2" style="text-align:justify" placeholder="ما الأثر الذي تحقق في الطالبات؟">${esc(d.impact || d.desc || '')}</textarea>`, 1),
+      fld('الأثر', `<select data-n="impact" id="taImp" class="smsel"></select><input id="taImpO" class="smsel" placeholder="اكتبي الأثر الذي تحقق في الطالبات" style="display:none;margin-top:6px">`, 1),
     bind: (el, d) => { const f = $('#tf'); if (!f) return;
       const upd = () => { const k = ($('input[name="r_kind"]:checked', f) || {}).value || d.kind; const pk = TA_PARENT[k]; const pw = $('#taPar', f);
         pw.style.display = pk ? '' : 'none'; if (pk) { $('label', pw).firstChild.textContent = 'ينبثق من ' + pk + ' '; $('datalist', pw).innerHTML = parents(pk).map(o => `<option value="${esc(o)}">`).join(''); }
         $('#taTo', f).style.display = (($('input[name="r_dur"]:checked', f) || {}).value || d.dur) === 'ممتد' ? '' : 'none'; };
-      $$('input[name="r_kind"],input[name="r_dur"]', f).forEach(i => i.onchange = upd); upd(); },
-    pre: r => { if (!TA_PARENT[r.kind]) delete r.par; if (r.dur !== 'ممتد') delete r.to; r.desc = r.impact || ''; },
+      $$('input[name="r_kind"],input[name="r_dur"]', f).forEach(i => i.onchange = upd); upd();
+      const imp = $('#taImp', f), oth = $('#taImpO', f), pSel = $('select[data-n="p"]', f); let cur = d.impact || d.desc || '';
+      const all = TA_IMPACT.flat();
+      if (cur && !all.includes(cur)) { oth.value = cur; cur = TA_OTHER; }
+      const fill = () => { const pi = (REF.PRIO || []).indexOf(pSel.value); const v = imp.value || cur;
+        const grp = (i) => `<optgroup label="${esc((REF.PRIO[i] || '').replace(/^الأولوية \d: /, ''))}">${TA_IMPACT[i].map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</optgroup>`;
+        imp.innerHTML = `<option value="">اختاري الأثر…</option>` + (pi >= 0 ? grp(pi) + TA_IMPACT.map((_, i) => i === pi ? '' : grp(i)).join('') : TA_IMPACT.map((_, i) => grp(i)).join('')) + `<option ${v === TA_OTHER ? 'selected' : ''}>${TA_OTHER}</option>`;
+        oth.style.display = imp.value === TA_OTHER ? '' : 'none'; };
+      pSel.addEventListener('change', fill); imp.onchange = () => { oth.style.display = imp.value === TA_OTHER ? '' : 'none'; if (imp.value === TA_OTHER) oth.focus(); }; fill(); },
+    pre: r => { if (!TA_PARENT[r.kind]) delete r.par; if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
     check: r => !r.name ? 'اكتبي الاسم' : !r.p ? 'اختاري الأولوية التي يخدمها' : r.dur === 'ممتد' && !r.to ? 'حدّدي تاريخ النهاية' : r.dur === 'ممتد' && r.to < r.date ? 'تاريخ النهاية قبل البداية' : '',
     sum: r => r.kind + ': ' + r.name,
     head: '<tr><th>التاريخ</th><th>النوع</th><th>الاسم</th><th>الطالبات</th><th>الأولوية</th><th>الأثر</th><th></th></tr>',

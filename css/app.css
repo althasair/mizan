@@ -206,3 +206,8 @@ table.t tr:hover td{background:#FCFBFA}
 .fbv .fn,.fb .fn{color:#1F4E9A}
 .fbv .fbs,.fb .fbs{color:#1F4E9A;margin:1px 18px 5px 0;font-size:.95em;text-align:justify}
 .fsp{height:5px}
+
+select.smsel,input.smsel{font-size:12px}
+select.smsel optgroup{font-size:11px;color:var(--maroon)}
+select.smsel option{font-size:12px;color:#222}
+#tf select{font-size:12px}
