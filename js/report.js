@@ -208,7 +208,10 @@ function buildReport(ctx) {
     const dateTxt = d0 => d0 ? ` (${dm(d0)})` : '';
     // الزيارات التبادلية التي سجّلتها معلمات القسم
     const PVt = mineD('TPV');
-    if (PVt.length) add('ov_peer', `وسجّلت معلمات القسم (${PVt.length}) ${PVt.length >= 3 && PVt.length <= 10 ? 'زيارات تبادلية' : 'زيارة تبادلية'}: ` + PVt.map(r => `حضرت أ. ${r.d.t} حصة أ. ${r.d.v}` + (r.d.vdept && r.d.vdept !== dept ? ` (${r.d.vdept})` : '') + dateTxt(r.date) + (lst(r.d.pick).length ? ' لتميّزها في ' + lst(r.d.pick).join('، و') : '') + (lst(r.d.saw).length ? '، واستفادت: ' + lst(r.d.saw).join('، و') : '') + (lst(r.d.apply).length ? '، وستطبّق' + (r.d.how === 'بعد تكييفه' ? ' بعد التكييف' : '') + ': ' + lst(r.d.apply).join('، و') : '')).join('؛ ') + '.');
+    // تُعرض في جدول داخل خانة «الزملاء (الزيارات التبادلية)»
+    T.ov_peer_tbl = PVt.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).map(r => ({
+      t: r.d.t || '', v: r.d.v || '', vd: r.d.vdept && r.d.vdept !== dept ? r.d.vdept : '', date: r.date || '',
+      pick: lst(r.d.pick).join('، '), saw: lst(r.d.saw).join('، '), apply: lst(r.d.apply).join('، ') + (lst(r.d.apply).length && r.d.how === 'بعد تكييفه' ? ' (بعد التكييف)' : '') }));
     // الحرص على التطوير الذاتي: ثلاث زيارات فأكثر في شهر واحد
     const byM = {}; PVt.forEach(r => { const k = r.d.t + '|' + String(r.date).slice(0, 7); byM[k] = (byM[k] || 0) + 1; });
     const keen = uniq(Object.entries(byM).filter(([, n]) => n >= 3).map(([k]) => k.split('|')[0]));
@@ -279,7 +282,7 @@ function buildReport(ctx) {
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
-      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', [T.ov_peer]]]],
+      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_tbl && T.ov_peer_tbl.length) ? [{ peer: T.ov_peer_tbl }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
     ['الأنشطة المدرسية', [['داخلية', [T.ac_int]], ['خارجية', [T.ac_ext]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],

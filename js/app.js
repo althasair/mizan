@@ -334,6 +334,10 @@ async function C_report(el, deptArg) {
   if (isAdmin()) bindAdminRep(rp, dept, p);
 }
 function upsertRep(r) { const i = S.reports.findIndex(x => x.dept === r.dept && x.period === r.period); if (i >= 0) S.reports[i] = r; else S.reports.push(r); }
+/* جدول الزيارات التبادلية داخل خانة التقرير */
+function peerTbl(L) {
+  return `<table class="ptb"><thead><tr><th>م</th><th>المعلمة الزائرة</th><th>المعلمة المُزارة</th><th>التاريخ</th><th>سبب الاختيار (تميّزها في)</th><th>ما استفادته</th><th>ما ستطبّقه</th></tr></thead><tbody>${L.map((r, i) => `<tr><td>${i + 1}</td><td>أ. ${esc(r.t)}</td><td>أ. ${esc(r.v)}${r.vd ? `<br><small>(${esc(r.vd)})</small>` : ''}</td><td style="white-space:nowrap">${r.date ? dm(r.date) : ''}</td><td>${esc(r.pick) || '—'}</td><td>${esc(r.saw) || '—'}</td><td>${esc(r.apply) || '—'}</td></tr>`).join('')}</tbody></table>`;
+}
 function paperHTML(R, rp, sig, csig) {
   const P_ = R.P;
   const body = R.rows.map(([main, subs]) => {
@@ -344,7 +348,7 @@ function paperHTML(R, rp, sig, csig) {
         h += '<tr>';
         if (first) { h += `<td class="m" rowspan="${total}"${sub === null ? ' colspan="2"' : ''}>${esc(main)}</td>`; first = false; }
         if (i === 0 && sub !== null) h += `<td class="s${small ? ' small' : ''}" rowspan="${texts.length}">${esc(sub)}</td>`;
-        h += `<td class="x">${esc(t)}</td></tr>`;
+        h += `<td class="x">${t && t.peer ? peerTbl(t.peer) : esc(t)}</td></tr>`;
       });
     });
     return h;

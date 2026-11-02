@@ -211,3 +211,8 @@ select.smsel,input.smsel{font-size:12px}
 select.smsel optgroup{font-size:11px;color:var(--maroon)}
 select.smsel option{font-size:12px;color:#222}
 #tf select{font-size:12px}
+
+.ptb{width:100%;border-collapse:collapse;font-size:10px;margin:2px 0;text-align:right}
+.ptb th{background:#F3E9EC;color:var(--maroon);font-weight:700;border:1px solid #CBB;padding:3px 4px;text-align:center}
+.ptb td{border:1px solid #CCC;padding:3px 4px;vertical-align:top;line-height:1.5;text-align:justify}
+.ptb td:first-child,.ptb th:first-child{width:4%;text-align:center}
