@@ -88,10 +88,11 @@ function navHTML() {
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       <div class="grp">الإعدادات</div>${it('a_accounts', 'الحسابات والأرقام السرية', 'user')}`;
   }
-  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a><div class="grp">الحضور الصفي</div><a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطة الربع</span></a>`;
+  let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a>`;
   GROUPS.forEach(g => {
     h += `<div class="grp">${g.t}</div>`;
-    SECTIONS.filter(s => s.g === g.id).forEach(s => { const n = cnt(s.k); h += `<a class="it ${S.view === 'sec:' + s.k ? 'on' : ''}" data-v="sec:${s.k}">${ICON.dot}<span>${s.t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; });
+    if (g.id === 'visits') h += `<a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطة الربع</span></a>`;
+    SECTIONS.filter(s => s.g === g.id && s.k !== 'V').forEach(s => { const n = cnt(s.k); h += `<a class="it ${S.view === 'sec:' + s.k ? 'on' : ''}" data-v="sec:${s.k}">${ICON.dot}<span>${s.t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; });
   });
   h += `<div class="grp">المخرجات</div><a class="it ${S.view === 'report' ? 'on' : ''}" data-v="report">${ICON.doc}<span>تقرير أعمال القسم</span></a><a class="it ${S.view === 'stats' ? 'on' : ''}" data-v="stats">${ICON.chart}<span>مؤشراتي ومقارناتي</span></a>`;
   return h;

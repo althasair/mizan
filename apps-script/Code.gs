@@ -138,8 +138,14 @@ function recObj_(r) {
 }
 function listRecords_(u) {
   if (u.role === 'teacher') return bootTeacher_(u).records;
-  return rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).concat(sabPA_()).concat(indibat_())
-    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))));
+  const all = rows_(SH.rec).rows.filter(r => r[0]).map(recObj_);
+  // زيارات النائب الأكاديمي والمديرة تنعكس على تقرير المنسقة تلقائياً (المعلمة والصف والمحور ونقاط القوة والتحسين فقط)
+  const lead = u.role === 'admin' ? [] : all.filter(x => (x.item === 'VPV' || x.item === 'PRV') && u.dept.indexOf(x.dept) >= 0).map(x => ({
+    id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
+    d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
+  return all.concat(sabPA_()).concat(indibat_())
+    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
+    .concat(lead);
 }
 function repObj_(r) {
   let snap = null; try { snap = r[11] ? JSON.parse(r[11]) : null; } catch (e) {}

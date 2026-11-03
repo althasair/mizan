@@ -44,7 +44,7 @@ const SECTIONS = [
     f: [
       { n: 'date', h: 'التاريخ', ty: 'date' },
       { n: 'ty', h: 'نوع التقييم', ty: 'sel', l: 'as_type', req: 1 },
-      { n: 'lvl', h: 'المستوى', ty: 'sel', l: 'levels', req: 1 },
+      { n: 'lvl', h: 'المستوى / المسار', ty: 'sel', l: 'levels_tr', req: 1 },
       { n: 'n', h: 'العدد', ty: 'int' },
       { n: 'corr', h: 'التصحيح', ty: 'sel', l: 'as_corr' },
       { n: 'an', h: 'تحليل النتائج', ty: 'sel', l: 'as_anal' },

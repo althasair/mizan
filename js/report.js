@@ -3,7 +3,7 @@
 
 function getList(l) {
   if (REF.L[l]) return REF.L[l];
-  const m = { levels: REF.LEVELS, sections: REF.SECTIONS, prio: REF.PRIO, purpose: REF.PURPOSE, prio_full: REF.PRIO_FULL };
+  const m = { levels_tr: ['الصف العاشر', 'الحادي عشر — المسار العلمي', 'الحادي عشر — المسار الأدبي', 'الحادي عشر — المسار التكنولوجي', 'الثاني عشر — المسار العلمي', 'الثاني عشر — المسار الأدبي', 'الثاني عشر — المسار التكنولوجي', 'جميع المستويات'], levels: REF.LEVELS, sections: REF.SECTIONS, prio: REF.PRIO, purpose: REF.PURPOSE, prio_full: REF.PRIO_FULL };
   return m[l] || [];
 }
 const MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
@@ -85,7 +85,16 @@ function buildReport(ctx) {
   T.mt_ext = MTe.length ? `شارك القسم في (${nMT(MTe)}) من الاجتماعات الخارجية: ` + MTe.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات خارجية خلال الفترة.';
 
   /* زيارات القيادة */
-  const OV = Rp('OV');
+  const OV0 = Rp('OV');
+  // زيارات النائب والمديرة من سجلاتهما مباشرة (للإدارة: VPV/PRV، وللمنسقة: نسخة مختصرة LVV)
+  const LVsrc = ctx.recs.filter(r => r.dept === dept && inP(r.date, P) && r.d && (r.item === 'VPV' || r.item === 'PRV' || r.item === 'LVV')).map(r => {
+    const k = r.item === 'LVV' ? r.d.k : r.item === 'PRV' ? 'pr' : 'vp'; const st = r.d.st || [], im = r.d.im || [];
+    return { item: 'OV', date: r.date, d: { ty: k === 'pr' ? 'زيارة مديرة المدرسة' : 'زيارة نائب المدير للشؤون الأكاديمية', t: r.d.t, s: r.d.s, goal: r.d.topic || r.d.goal || r.d.note || '', f1: st[0] || '', f2: st[1] || '', i1: im[0] || '', i2: im[1] || '', date: r.date } };
+  });
+  // ما سجّلته المنسقة يدوياً لنفس الزيارة يُقدَّم (لأنه يحمل متابعتها للتوصيات)
+  const ovKey = (x) => [SEC.OV.cat(d(x)), d(x).t, x.date || d(x).date].join('|');
+  const have = new Set(OV0.map(ovKey));
+  const OV = OV0.concat(LVsrc.filter(x => !have.has(ovKey(x))));
   [['ov_pr', 'pr', 'زارت مديرة المدرسة'], ['ov_vp', 'vp', 'زار نائب المدير للشؤون الأكاديمية'], ['ov_sup', 'sup', 'زار الموجه التربوي']].forEach(([k, c, lab]) => {
     const L = OV.filter(r => SEC.OV.cat(d(r)) === c);
     T[k] = L.length ? `${lab} (${L.length}) من معلمات القسم: ` + L.map(r => SEC.OV.tx(d(r))).join('؛ ') + '.' : 'لا توجد زيارات مسجلة خلال الفترة.';
