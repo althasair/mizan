@@ -46,6 +46,8 @@ const DEMO = {
       t('V', 'الكيمياء', '2026-09-20', { t: 'دانة الهاجري', s: '11-2', subj: 'العلوم', ty: 'الزيارة الأولى', kj: 'كلية', mode: 'ميدانية', f1: REF.CRIT[2].label, f2: REF.CRIT[8].label, r1: REF.REC[3] }),
       t('V', 'الرياضيات', '2026-10-08', { t: 'نوال الخاطر', s: '12-4', subj: 'الرياضيات', ty: 'الزيارة الأولى', kj: 'كلية', mode: 'ميدانية', f1: REF.CRIT[8].label, r1: REF.REC[14] }),
       t('AC', 'الرياضيات', '2026-10-14', { ty: 'مسابقة داخلية', name: 'مسابقة التحدي المعرفي', io: 'داخلي', e1: 'مها الشمري', e2: 'نوال الخاطر', times: 2 }),
+      t('SEN', 'الكيمياء', '2026-10-05', { t: 'دانة الهاجري', s: '11-2', subj: 'الكيمياء', whole: false, stu: ['طالبة أ', 'طالبة ب'], det: 'حصة إثرائية فردية — إعادة شرح' }),
+      t('SEN', 'الرياضيات', '2026-10-08', { t: 'نوال الخاطر', s: '12-4', subj: 'الرياضيات', whole: true, stu: [], det: 'حصة إثرائية جماعية — حل نماذج' }),
       t('VPV', 'الكيمياء', '2026-09-29', { t: 'ريم الكعبي', s: '12-1', note: 'زيارة معاينة' }),
     ];
     const pd = [{ i: 0, sem: 'الفصل الأول', dept: 'الكيمياء', title: 'تطبيق أساليب تغذية راجعة إبداعية', type: 'حلقة نقاشية', hrs: '1', date: '2026-10-21', by: 'منى السالم', n: 4 },
@@ -70,7 +72,7 @@ const DEMO = {
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
     const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE', 'TDS'].includes(r.item));
     if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')', ph: '5500000' + i, rel: 'أب' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
-    if (a === 'boot') return { ok: 1, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
+    if (a === 'boot') return { ok: 1, stuN: 500, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (a === 'save') {
       const r = p.rec; if (me.role === 'teacher') { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; const dOf = n => (d.staff.find(s => s.name === n) || {}).dept || ''; if (r.item === 'TPV') r.d.vdept = dOf(r.d.v); if (r.item === 'TWS') r.d.bydept = r.d.role === 'قدّمتُ لتطوير الزملاء' ? r.dept : dOf(r.d.by); }

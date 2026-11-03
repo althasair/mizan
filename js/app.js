@@ -24,7 +24,7 @@ async function start() {
 }
 async function boot() {
   const j = await call('boot');
-  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, indibatAt: j.indibatAt || '', acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
+  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
   S.dept = S.dept || (isAdmin() ? null : S.user.dept[0]);
@@ -81,7 +81,7 @@ function navHTML() {
     const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
     const PR = typeof isPrincipal === 'function' && isPrincipal();
     return `<div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
-      <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}
+      <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}${it('a_anrep', 'التقارير التحليلية المطبوعة', 'chart')}
       ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور مديرة المدرسة', 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
         : `<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
       <div class="grp">المعلمات</div>${it('a_tacts', 'مبادرات المعلمات وأنشطتهن', 'star')}
@@ -123,7 +123,7 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, a_cvisits: A_cvisits, a_subs: A_subs };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep };
   try {
     if (isTeacher() && !['t_pv', 't_ws', 't_pa', 't_ach', 't_act', 't_ds'].includes(v)) return T_home(el);
     if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);

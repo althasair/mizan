@@ -13,7 +13,7 @@ const SIG_FILE = 'signature-vp.png';
 const INDIBAT_ID = '1VwCK6BZ5eCEFEpQbKTowzgn-dNyHCrhFLoDQLM7Juw0';   // منصة «انضباط»: الاحتياط والتبديل (قراءة فقط)
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
 const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
-const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];
+const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST', 'SEN'];   // SEN: الحصص الإثرائية من سبع سنابل (للتقارير التحليلية)
 const PRINCIPAL_MAIL = 's.al-rumaihi0105@education.qa';   // نسخة (CC) من رسائل النائب الأكاديمي للمعلمات
 function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }                 // بنود خاصة بالنائب لا تراها المنسقات
 
@@ -130,7 +130,8 @@ function boot_(u) {
   });
   const recs = listRecords_(u);
   const reps = listReports_(u);
-  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, server: now_(), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
+  let stuN = 0; if (u.role === 'admin') { const ph = SpreadsheetApp.getActive().getSheetByName('أرقام أولياء الأمور'); if (ph) stuN = ph.getDataRange().getValues().slice(1).filter(r => r[1]).length; }
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, stuN: stuN, server: now_(), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
 }
 function recObj_(r) {
   let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {}
@@ -496,13 +497,13 @@ function sabAccess_() {
   const tok = JSON.parse(r.getContentText()).access_token; if (tok) c.put('sabTok', tok, 3000); return tok || null;
 }
 function sabPA_() {
-  const c = CacheService.getScriptCache(); const hit = c.get('sabPA'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  const c = CacheService.getScriptCache(); const hit = c.get('sabPA2'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   let out = [];
   try {
     const tok = sabAccess_(); if (!tok) return [];
     const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
       method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'EQUAL', value: { integerValue: '5' } } } } }) });
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }] } } } } } }) });
     const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
     const T = rows_(SH.teachers).rows.filter(x => x[1]);
     const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
@@ -511,11 +512,16 @@ function sabPA_() {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
       const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
+      if (Number(g('type')) === 3) {   // حصة إثرائية
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
+          d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
+        return;
+      }
       out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'TPA', date: String(g('date')), sum: 'من سبع سنابل',
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA', txt, 600);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA2', txt, 600);
   return out;
 }
 
