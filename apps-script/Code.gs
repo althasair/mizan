@@ -529,20 +529,36 @@ function sabPA_() {
 /* ------------------------------------------------------------------ إحصاءات المعلمات إلى «سبع سنابل» */
 // الأنشطة والمبادرات (AC) والزيارات التبادلية (PV) والإنجازات (ACH) تُكتب في قاعدة سبع سنابل (shared/mizan)
 // فتظهر في لوحة الصدارة ونجوم المعلمات تلقائياً بعد كل حفظ في الميزان
-function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
+function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH', 'WS', 'EX', 'PA', 'LR', 'TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
+// k: a نشاط · i مبادرة · v حضور حصة تبادلية · w توظيف جوانب التميز (ورشة قدّمتها أو زيارة استضافتها) · h إنجاز/مشاركة
+//    p تطوير مهني (ورشة حضرتها أو برنامج خارجي) · o تواصل مع أولياء الأمور · r مصادر التعلم والتقنية
 function syncSanabil() {
   const tok = sabAccess_(); if (!tok) return 'لم يُضبط مفتاح ربط سبع سنابل (FB_SA)';
   const T = rows_(SH.teachers).rows.filter(x => x[1]);
-  const full = n => { n = String(n || '').trim(); const k = normAr_(n); const t = T.find(x => normAr_(x[1]) === k || normAr_(x[2]) === k); return t ? String(t[2] || t[1]) : n; };
+  const find = n => { const k = normAr_(n); return T.find(x => normAr_(x[1]) === k || normAr_(x[2]) === k); };
+  const full = n => { n = String(n || '').trim(); const t = find(n); return t ? String(t[2] || t[1]) : n; };
   const deptAll = d => T.filter(x => String(x[0]) === String(d)).map(x => String(x[2] || x[1]));
-  const list = [];
-  const ex = (r, names, k, ti) => { const s = {}; names.filter(Boolean).forEach(n => { if (/جميع/.test(n)) deptAll(r.dept).forEach(x => s[x] = 1); else s[full(n)] = 1; });
-    Object.keys(s).forEach(n => list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '', dp: r.dept })); };
+  const list = [], abs = [];
+  // strict: يُحتسب الاسم فقط إن طابق معلمة في جدول «المعلمات» (للخانات النصية الحرة)
+  const ex = (r, names, k, ti, strict) => { const s = {}; names.filter(Boolean).forEach(n => { n = String(n).trim(); if (/جميع/.test(n)) deptAll(r.dept).forEach(x => s[x] = 1); else if (!strict || find(n)) s[full(n)] = 1; });
+    Object.keys(s).forEach(n => list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '' })); };
   rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).forEach(r => { const d = r.d || {};
-    if (r.item === 'AC') ex(r, [d.e1, d.e2, d.e3], /مبادر/.test(d.ty || '') ? 'i' : 'a', d.name || d.ty);
-    else if (r.item === 'PV') ex(r, [d.v], 'v', 'زيارة تبادلية' + (d.t ? ' — ' + d.t : ''));
-    else if (r.item === 'ACH') ex(r, [d.sup], 'h', d.name || d.c); });
-  const body = { fields: { t: { stringValue: JSON.stringify(list) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
+    switch (r.item) {
+      case 'AC': ex(r, [d.e1, d.e2, d.e3], /مبادر/.test(d.ty || '') ? 'i' : 'a', d.name || d.ty); break;
+      case 'TA': ex(r, [d.t], d.kind === 'مبادرة' ? 'i' : 'a', d.name); break;
+      case 'PV': ex(r, [d.v], 'v', 'زيارة تبادلية' + (d.t ? ' — ' + d.t : '')); ex(r, [d.t], 'w', 'استضافة زيارة تبادلية' + (d.v ? ' — ' + d.v : '')); break;
+      case 'TPV': ex(r, [d.t], 'v', 'زيارة تبادلية' + (d.v ? ' — ' + d.v : '')); ex(r, [d.v], 'w', 'استضافة زيارة تبادلية' + (d.t ? ' — ' + d.t : '')); break;
+      case 'TWS': ex(r, [d.t], d.role === 'قدّمتُ لتطوير الزملاء' ? 'w' : 'p', d.title); break;
+      case 'WS': if (!d.g || /^تمت/.test(d.g)) ex(r, [d.pres], 'w', d.c || d.b, true); break;
+      case 'EX': ex(r, [d.t], 'p', d.name); break;
+      case 'ACH': ex(r, [d.sup], 'h', d.name || d.c); break;
+      case 'TACH': ex(r, [d.t], 'h', d.name); break;
+      case 'PA': ex(r, [d.by], 'o', d.c || d.why, true); break;
+      case 'TPA': ex(r, [d.t], 'o', d.topic || 'تواصل مع ولي أمر'); break;
+      case 'LR': ex(r, [d.t], 'r', d.e || d.k); break;
+      case 'TDS': (d.abs || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'غياب' })); (d.perm || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'استئذان' })); break;
+    } });
+  const body = { fields: { t: { stringValue: JSON.stringify(list) }, abs: { stringValue: JSON.stringify(abs) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
   const res = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/shared/mizan', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, payload: JSON.stringify(body), muteHttpExceptions: true });
   const msg = res.getResponseCode() === 200 ? 'تم إرسال ' + list.length + ' سجل إلى سبع سنابل' : 'تعذّر الإرسال: ' + res.getContentText().slice(0, 200);
