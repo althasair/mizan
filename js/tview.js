@@ -108,6 +108,7 @@ function T_page(el, cfg) {
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
     if (copy) { S.edit = null; refresh(); paCopy(r); return; }
     S.edit = null; toast('تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
+    if (cfg.item === 'TA' && !rec) taCelebrate(mine('TA').filter(inCur).length, r.kind);
     if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove(); } }
   };
   if ($('#tsave')) $('#tsave').onclick = () => doSave(false);
@@ -293,10 +294,43 @@ const TA_IMPACT = [
   ['تعزيز الشراكة مع أولياء الأمور', 'زيادة مشاركة أولياء الأمور في تعلم بناتهن', 'تحسّن التواصل بين المدرسة والأسرة', 'متابعة أولياء الأمور لمستوى بناتهن'],
 ];
 const TA_OTHER = 'أخرى (اكتبي الأثر)';
+/* ---- الشكر والثناء على الأنشطة: نجمة لكل نشاط، وثناء أكبر عند 3، وكأس واحتفال عند 5 فأكثر */
+function taStars(n, max) { const k = Math.min(n, max || 5); return '★'.repeat(k) + (n > k ? ` <small style="font-size:13px;letter-spacing:0">×${n}</small>` : ''); }
+function taCheer(n, kind) {
+  if (!n) return '';
+  const nm = 'أ. ' + esc(S.user.name), kd = esc(kind || 'نشاط'), per = esc(curPer().name);
+  if (n >= 5) return `<div class="card ta-cheer" style="background:linear-gradient(135deg,#FFF6DD,#FFFDF6);border:1px solid #E9D3A8;border-inline-start:5px solid var(--gold);text-align:center">
+    <div style="font-size:54px;line-height:1">🏆</div><div style="font-size:26px;color:var(--gold);letter-spacing:5px;margin:6px 0">${taStars(n, 7)}</div>
+    <h3 style="margin:2px 0 6px;color:var(--maroon)">معلمة متميزة في المبادرة والعطاء</h3>
+    <p style="margin:0;text-align:justify;font-weight:600">${nm}، بلغتِ ${n} من الأنشطة والمبادرات والمشاريع في ${per}، وهذا يدل على روح مبادِرة وعطاء متجدد لا ينقطع، وعلى حرصكِ على أن تتعلم طالباتكِ بالتجربة والمشاركة لا بالتلقين وحده. فخورون بكِ وبما تصنعينه في مدرسة الشيماء، وقد قال تعالى: ﴿إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا﴾. بارك الله في جهودكِ وجعلها في ميزان حسناتكِ.</p></div>`;
+  if (n >= 3) return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:5px solid var(--gold)">
+    <div style="font-size:24px;color:var(--gold);letter-spacing:5px">${taStars(n)}</div>
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">ما شاء الله يا ${nm}! ${n} أنشطة ومبادرات في ${per}، وهذا يدل على شغفكِ بمهنتكِ وحرصكِ على إثراء تعلّم طالباتكِ خارج حدود الكتاب. عطاؤكِ محل تقدير واعتزاز، ${n === 3 ? 'وبقيت خطوتان لتنالي كأس التميز 🏆.' : 'وبقيت خطوة واحدة لتنالي كأس التميز 🏆.'}</p></div>`;
+  return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)">
+    <div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">${taStars(n)}</div>
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `شكراً لكِ ${nm} على تسجيل ${kd}؛ بداية جميلة في ${per}، يعود أثرها على طالباتكِ.` : `أحسنتِ يا ${nm}! هذا ثاني نشاط تسجّلينه في ${per}، وهذا يدل على حرصكِ على التنويع في أساليب التعلم. نشاط ثالث يضاعف لكِ النجوم ⭐.`}</p></div>`;
+}
+function confetti(ms) {
+  const c = document.createElement('canvas'); c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60';
+  document.body.appendChild(c); const x = c.getContext('2d'); const W = c.width = innerWidth, H = c.height = innerHeight;
+  const col = ['#7A1F3D', '#B08D57', '#E9D3A8', '#0ABAB5', '#1F4E79', '#F2B705', '#E85D75'];
+  const P = Array.from({ length: 180 }, () => ({ x: Math.random() * W, y: -Math.random() * H, w: 6 + Math.random() * 7, h: 8 + Math.random() * 10, vy: 2 + Math.random() * 3.5, vx: -1.5 + Math.random() * 3, a: Math.random() * 6, va: -.15 + Math.random() * .3, c: col[Math.floor(Math.random() * col.length)] }));
+  const end = Date.now() + (ms || 4500);
+  (function f() { x.clearRect(0, 0, W, H); const live = Date.now() < end;
+    P.forEach(p => { p.y += p.vy; p.x += p.vx + Math.sin(p.a) * .6; p.a += p.va; if (p.y > H + 20 && live) { p.y = -20; p.x = Math.random() * W; }
+      x.save(); x.translate(p.x, p.y); x.rotate(p.a); x.fillStyle = p.c; x.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); x.restore(); });
+    if (live || P.some(p => p.y < H + 20)) requestAnimationFrame(f); else c.remove(); })();
+}
+function taCelebrate(n, kind) {
+  const h = taCheer(n, kind); if (!h) return;
+  const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:${n >= 5 ? 560 : 520}px">${h}<div class="row" style="margin-top:10px;justify-content:center"><button class="btn" id="cOk">${n >= 5 ? 'الحمد لله 🌸' : 'شكراً'}</button></div></div>`;
+  document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove();
+  if (n >= 5) confetti(5000); else if (n >= 3) confetti(1800);
+}
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
-    item: 'TA', title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: { kind: 'نشاط', dur: 'منتهي' }, dateLbl: 'التاريخ (للممتد: تاريخ البداية)',
+    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: { kind: 'نشاط', dur: 'منتهي' }, dateLbl: 'التاريخ (للممتد: تاريخ البداية)',
     form: d => fld('النوع', fRadio('kind', TA_KINDS, d.kind), 1) +
       `<div class="fld" style="grid-column:1/-1" id="taPar"><label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}</div>` +
       fld('الاسم', `<input data-n="name" value="${esc(d.name || '')}" placeholder="اكتبي الاسم" required>`, 1) +
