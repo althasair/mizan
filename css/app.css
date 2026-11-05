@@ -216,3 +216,7 @@ select.smsel option{font-size:12px;color:#222}
 .ptb th{background:#F3E9EC;color:var(--maroon);font-weight:700;border:1px solid #CBB;padding:3px 4px;text-align:center}
 .ptb td{border:1px solid #CCC;padding:3px 4px;vertical-align:top;line-height:1.5;text-align:justify}
 .ptb td:first-child,.ptb th:first-child{width:4%;text-align:center}
+
+/* الموجهة التربوية: اطلاع فقط */
+body.ro .btn:not(.ro-keep),body.ro [data-del],body.ro .del{display:none!important}
+body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:var(--gold);font-weight:600}

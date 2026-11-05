@@ -8,6 +8,7 @@ const $$ = (q, el = document) => [...el.querySelectorAll(q)];
 const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const today = () => new Date(Date.now() - new Date().getTimezoneOffset() * 6e4).toISOString().slice(0, 10);
 const isAdmin = () => S.user && S.user.role === 'admin';
+const isViewer = () => S.user && S.user.role === 'viewer';
 const P = () => S.periods.find(p => p.name === S.period) || S.periods[0];
 const fmtPct = v => v == null ? '—' : Math.round(v * 100) + '%';
 
@@ -98,6 +99,7 @@ function navHTML() {
   return h;
 }
 function renderApp() {
+  document.body.classList.toggle('ro', !!isViewer());
   document.onkeydown = null;
   const deptSel = !isAdmin() && !isTeacher() && S.user.dept.length > 1 ? `<select id="deptSel">${S.user.dept.map(d => `<option ${d === S.dept ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select>` : '';
   document.body.innerHTML = `
@@ -317,14 +319,14 @@ async function C_report(el, deptArg) {
   if (rp && (rp.status === 'معتمد' || rp.feedback)) { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
   let csig = '';
   { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
-  const canSign = !isAdmin() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
+  const canSign = !isAdmin() && !isViewer() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
   el.innerHTML = `
     <div class="row noprint" style="margin-bottom:14px">
       <span class="chip ${rp && rp.status === 'معتمد' ? 'ok' : rp && rp.status === 'موقّع من المنسقة' ? 'tf' : rp && rp.status === 'معاد للتعديل' ? 'bad' : ''}">${esc(rp ? rp.status : 'مسودة — يتحدّث تلقائياً من السجلات')}</span>
       <span class="sp"></span>
       ${canSign ? '<button class="btn" id="sign">توقيع التقرير برقمي السري</button>' : ''}
       ${isAdmin() ? adminRepButtons(rp) : ''}
-      <button class="btn sec" onclick="window.print()">طباعة / حفظ PDF</button>
+      <button class="btn sec ro-keep" onclick="window.print()">طباعة / حفظ PDF</button>
     </div>
     ${paperHTML(R, rp, sig, csig)}`;
   if ($('#sign')) $('#sign').onclick = () => pinModal('توقيع التقرير', 'بالتوقيع تُقفل سجلات هذه الفترة ويُرسل التقرير للنائب الأكاديمي للاعتماد. أدخلي رقمك السري:', async pin => {

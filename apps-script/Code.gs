@@ -71,7 +71,7 @@ function login_(pin, app) {
   if (!u) { cache.put('fails', String(fails + 1), 600); Utilities.sleep(700); fail_('الرقم السري غير صحيح'); }
   // المنسقات من «الميزان» فقط؛ والمعلمات يدخلن «الميزان» بتبويبات محدودة، و«سبع سنابل» لمبادراتهن وأنشطتهن
   if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
-  if (u.role === 'viewer' && app !== 'sab3') fail_('هذا الرقم للاطلاع على منصة سبع سنابل فقط');
+  if (u.role === 'viewer' && app !== 'sab3' && app !== 'mizan') fail_('هذا الرقم للاطلاع على منصتي سبع سنابل والميزان فقط');
   const token = Utilities.getUuid();
   cache.put('tok_' + token, u.id, SESSION_SECONDS);
   log_(u, 'دخول', u.dept.join('، '));
@@ -567,6 +567,11 @@ function route_(req) {
   if (a === 'login') return login_(req.pin, req.app);
   if (a === 'fbToken') return fbToken_(req.pin);
   const u = auth_(req.token);
+  // الموجهة التربوية: اطلاع فقط على أقسامها في الميزان (جميع الأقسام للحساب العام)
+  if (u.role === 'viewer') {
+    if (u.dept.indexOf('جميع الأقسام') >= 0) u.dept = rows_(SH.teachers).rows.map(r => String(r[0])).filter((d, i, A) => d && A.indexOf(d) === i);
+    if (['boot', 'records', 'signature'].indexOf(a) < 0) fail_('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
+  }
   switch (a) {
     case 'boot': return boot_(u);
     case 'records': return { records: listRecords_(u) };
