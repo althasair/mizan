@@ -220,3 +220,14 @@ select.smsel option{font-size:12px;color:#222}
 /* الموجهة التربوية: اطلاع فقط */
 body.ro .btn:not(.ro-keep),body.ro [data-del],body.ro .del{display:none!important}
 body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:var(--gold);font-weight:600}
+
+/* اختيار نوع النشاط مع التعريف */
+.takind{display:flex;flex-direction:column;gap:6px}
+.takind .tk{display:grid;grid-template-columns:auto 70px 1fr;gap:2px 10px;align-items:start;border:1px solid var(--line);border-radius:12px;padding:8px 12px;cursor:pointer;background:#fff;font-size:12.5px;line-height:1.7;text-align:justify}
+.takind .tk input{margin-top:5px}
+.takind .tk b{color:var(--maroon);font-size:14px}
+.takind .tk .tkd{grid-column:3}
+.takind .tk .tkw{grid-column:3;color:#B3261E;font-weight:600}
+.takind .tk .tke{grid-column:3;color:#1F4E79;font-size:12px}
+.takind .tk.on{border-color:var(--maroon);background:#FBF3F5;box-shadow:0 0 0 2px rgba(122,31,61,.12)}
+@media (max-width:640px){.takind .tk{grid-template-columns:auto 1fr}.takind .tk .tkd,.takind .tk .tkw,.takind .tk .tke{grid-column:1/-1}}
