@@ -3,7 +3,7 @@
    ===================================================================== */
 function isPrincipal() { return !!(S.user && S.user.role === 'admin' && S.user.id !== 'admin'); }
 const yearRange = () => { const a = semRange(SEMS[0]), b = semRange(SEMS[1]); return { from: a.from, to: b.to }; };
-const tPool = () => S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
+const tPool = () => S.staff.filter(s => +s.load > 0);
 const CUPC = [['#F4D27A', '#C9971F', 'الأول'], ['#E3E6EA', '#9AA3AD', 'الثاني'], ['#E9B88A', '#A8682E', 'الثالث']];
 function cupSVG(i, sz) {
   const [a, b] = CUPC[i] || CUPC[2]; const id = 'cg' + i + Math.random().toString(36).slice(2, 6);

@@ -163,7 +163,8 @@ function saveRecord_(u, rec) {
   if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند خاص بالنائب الأكاديمي');
   if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
   if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
-  if (u.role === 'teacher') {
+  const coordOwn = u.role === 'coord' && (rec.item === 'TPV' || rec.item === 'TWS');   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
+  if (u.role === 'teacher' || coordOwn) {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
     const T = rows_(SH.teachers).rows; const dOf = n => { const x = T.find(r => r[1] === n); return x ? String(x[0]) : ''; };

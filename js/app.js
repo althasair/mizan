@@ -95,6 +95,8 @@ function navHTML() {
     if (g.id === 'visits') h += `<a class="it ${S.view === 'c_visit' ? 'on' : ''}" data-v="c_visit">${ICON.scale || ICON.dot}<span>الحضور الصفي وخطة الربع</span></a>`;
     SECTIONS.filter(s => s.g === g.id && s.k !== 'V').forEach(s => { const n = cnt(s.k); h += `<a class="it ${S.view === 'sec:' + s.k ? 'on' : ''}" data-v="sec:${s.k}">${ICON.dot}<span>${s.t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`; });
   });
+  if (S.user.role === 'coord') { const nn = k => S.records.filter(r => r.item === k && r.d && r.d.t === S.user.name && inP(r.date, curPer())).length;
+    h += `<div class="grp">سجلّي الشخصي</div>` + [['t_pv', 'زياراتي التبادلية', 'TPV'], ['t_ws', 'الورش وتطوير الزملاء', 'TWS']].map(([v, t, k]) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON.dot}<span>${t}</span>${nn(k) ? `<span class="n">${nn(k)}</span>` : ''}</a>`).join(''); }
   h += `<div class="grp">المخرجات</div><a class="it ${S.view === 'report' ? 'on' : ''}" data-v="report">${ICON.doc}<span>تقرير أعمال القسم</span></a><a class="it ${S.view === 'stats' ? 'on' : ''}" data-v="stats">${ICON.chart}<span>مؤشراتي ومقارناتي</span></a>`;
   return h;
 }

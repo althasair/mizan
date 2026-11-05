@@ -38,7 +38,7 @@ const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف ال
 function curPer() { const t = today(); return S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0]; }
 const mine = it => S.records.filter(r => r.item === it && r.d && r.d.t === S.user.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 const inCur = r => inP(r.date, curPer());
-const others = () => (S.staffAll || []).filter(s => s.name !== S.user.name && s.role !== 'منسقة');
+const others = () => ((S.staffAll && S.staffAll.length) ? S.staffAll : (S.staff || [])).filter(s => s.name && s.name !== S.user.name);
 const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 
 function T_navHTML() {
@@ -69,8 +69,9 @@ const fCombo = (n, opts, v, ph) => `<input data-n="${n}" list="dl_${n}" value="$
 const fMulti = (n, opts, v) => { const cur = Array.isArray(v) ? v : (v ? [v] : []); const extra = cur.filter(x => !opts.includes(x));
   return `<div class="multi" data-m="${n}" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:170px;overflow:auto;font-size:12px;line-height:1.9">${opts.map(o => `<label style="display:block"><input type="checkbox" value="${esc(o)}" ${cur.includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}<input data-mx="${n}" value="${esc(extra.join('، '))}" placeholder="أخرى (اكتبي)" style="width:100%;margin-top:4px;font-size:12px"></div>`; };
 const fRadio = (n, opts, v) => `<div class="row tradio" style="gap:14px;font-size:13px">${opts.map(o => `<label><input type="radio" name="r_${n}" value="${esc(o)}" ${o === v ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
-const staffSel = (n, v) => { const by = {}; others().forEach(s => (by[s.dept] = by[s.dept] || []).push(s.name));
-  return `<select data-n="${n}"><option value="">اختاري المعلمة…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, 'ar')).map(dp => `<optgroup label="${esc(dp)}">${by[dp].sort((a, b) => a.localeCompare(b, 'ar')).map(x => `<option ${x === v ? 'selected' : ''}>${esc(x)}</option>`).join('')}</optgroup>`).join('')}</select>`; };
+const staffSel = (n, v) => { const by = {}, co = {}; others().forEach(s => { by[s.dept] = by[s.dept] || []; if (!by[s.dept].includes(s.name)) by[s.dept].push(s.name); if (s.role === 'منسقة') co[s.name] = 1; });
+  const ord = L => L.sort((a, b) => (co[b] ? 1 : 0) - (co[a] ? 1 : 0) || a.localeCompare(b, 'ar'));
+  return `<select data-n="${n}"><option value="">اختاري المعلمة أو المنسقة…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, 'ar')).map(dp => `<optgroup label="${esc(dp)}">${ord(by[dp]).map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(x)}${co[x] ? ' (منسقة القسم)' : ''}</option>`).join('')}</optgroup>`).join('')}</select>`; };
 function readT(form) {
   const r = readForm(form);
   $$('[data-m]', form).forEach(m => { const L = $$('input[type=checkbox]', m).filter(c => c.checked).map(c => c.value); const x = ($(`[data-mx="${m.dataset.m}"]`, m).value || '').split(/[،,]/).map(s => s.trim()).filter(Boolean); r[m.dataset.m] = [...L, ...x]; });

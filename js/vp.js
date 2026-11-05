@@ -97,7 +97,7 @@ async function A_vpvisit(el) {
   if (S.vpv) return vpVisitForm(el, S.vpv === 'new' ? null : S.records.find(r => r.id === S.vpv));
   const L = vpVisits(); const sem = S.vsem || curSem(); const R = semRange(sem);
   const inS = L.filter(r => r.date >= R.from && r.date <= R.to);
-  const pool = S.staff.filter(s => s.role !== 'منسقة' && +s.load > 0);
+  const pool = S.staff.filter(s => +s.load > 0);
   const seen = new Set(inS.map(r => r.d.t)); const RO = typeof isPrincipal === 'function' && isPrincipal(); const pct = pool.length ? Math.round([...seen].filter(n => pool.some(p => p.name === n)).length / pool.length * 100) : 0;
   const lv = r => { const rt = r.d.rt || {}; const v = Object.values(rt).filter(x => x < 5); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
   el.innerHTML = `

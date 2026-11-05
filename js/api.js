@@ -77,7 +77,7 @@ const DEMO = {
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (me && me.role === 'viewer' && !['boot', 'records', 'signature'].includes(a)) throw new Error('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
     if (a === 'save') {
-      const r = p.rec; if (me.role === 'teacher') { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; const dOf = n => (d.staff.find(s => s.name === n) || {}).dept || ''; if (r.item === 'TPV') r.d.vdept = dOf(r.d.v); if (r.item === 'TWS') r.d.bydept = r.d.role === 'قدّمتُ لتطوير الزملاء' ? r.dept : dOf(r.d.by); }
+      const r = p.rec; if (me.role === 'teacher' || (me.role === 'coord' && ['TPV', 'TWS'].includes(r.item))) { r.d = r.d || {}; r.d.t = me.name; r.dept = me.dept[0]; const dOf = n => (d.staff.find(s => s.name === n) || {}).dept || ''; if (r.item === 'TPV') r.d.vdept = dOf(r.d.v); if (r.item === 'TWS') r.d.bydept = r.d.role === 'قدّمتُ لتطوير الزملاء' ? r.dept : dOf(r.d.by); }
       if (!can(r.dept)) throw new Error('لا تملكين صلاحية على هذا القسم');
       if (r.key && d.recs.some(x => x.dept === r.dept && x.item === r.item && x.d && x.d._key === r.key && x.id !== r.id)) throw new Error('هذا السجل موجود مسبقاً (تم منع التكرار)');
       if (r.key) r.d._key = r.key;
