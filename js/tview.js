@@ -296,6 +296,18 @@ const TA_DEF = {
 };
 const taKindPick = v => `<div class="takind">${TA_KINDS.map(k => { const x = TA_DEF[k]; return `<label class="tk ${k === v ? 'on' : ''}"><input type="radio" name="r_kind" value="${esc(k)}" ${k === v ? 'checked' : ''}><b>${esc(k)}</b><span class="tkd">${esc(x.d)}</span><span class="tkw">${esc(x.w)}</span><span class="tke">مثال: ${esc(x.e)}</span></label>`; }).join('')}</div>`;
 const TA_PARENT = { 'مشروع': 'برنامج', 'نشاط': 'مشروع' };
+const TA_TERMS = ['الفصل الدراسي الأول', 'الفصل الدراسي الثاني', 'العام الدراسي كاملاً'];
+const TA_NEEDS = ['تدني التحصيل لدى فئة من الطالبات', 'ضعف الدافعية نحو التعلم', 'الغياب والتأخر الصباحي', 'السلوك والقيم', 'رعاية المتفوقات والموهوبات', 'ضعف مهارة محددة (قراءة، كتابة، حساب…)', 'التواصل مع أولياء الأمور', 'جودة الحياة المدرسية والانتماء', 'دعم الزميلات المعلمات', 'أخرى'];
+const TA_LVL = ['على مستوى الصف', 'على مستوى القسم', 'على مستوى المدرسة', 'على مستوى المدارس (الوزارة)', 'محلية خارجية', 'دولية'];
+/* ما يميز خانات كل نوع: تظهر للمعلمة بعد الاختيار */
+const TA_FORM = {
+  'برنامج': { h: 'ممتد دائماً على فصل أو عام، له هدف عام وفئة مستهدفة، وتسجّلين مشاريعه وأنشطته لاحقاً كلٌّ على حدة.', date: 'تاريخ بداية البرنامج', name: 'اسم البرنامج' },
+  'مشروع': { h: 'ممتد من تاريخ إلى تاريخ، يتكوّن من مرحلتين أو أكثر، وينتهي بمُخرَج نهائي.', date: 'تاريخ بداية المشروع', name: 'اسم المشروع' },
+  'نشاط': { h: 'فعالية واحدة بتاريخ تنفيذ واحد، بلا مدة ممتدة. إن احتاج عدة مراحل فهو «مشروع».', date: 'تاريخ التنفيذ', name: 'اسم النشاط' },
+  'مبادرة': { h: 'فكرة شخصية غير مكلّفة بها، تحددين الحاجة التي تعالجها والفئة المستهدفة، وتؤكدين أنها من مبادرتكِ.', date: 'تاريخ التنفيذ (أو البداية إن كانت ممتدة)', name: 'اسم المبادرة' },
+  'مسابقة': { h: 'منافسة بتاريخ واحد، تحددين مستواها وعدد المشاركات والفائزات.', date: 'تاريخ المسابقة', name: 'اسم المسابقة' }
+};
+const kf = (kinds, inner, wide, id) => `<div class="fld"${id ? ` id="${id}"` : ''} data-k="${kinds}"${wide ? ' style="grid-column:1/-1"' : ''}>${inner}</div>`;
 /* الأثر: قائمة منسدلة حسب الأولوية المختارة */
 const TA_IMPACT = [
   ['تحسّن التحصيل الدراسي لدى الطالبات المستهدفات', 'رفع دافعية الطالبات نحو التعلم', 'معالجة الفاقد التعليمي لدى الطالبات المتعثرات', 'تحسّن استعداد الطالبات للاختبارات', 'تنمية مهارات التفكير والإبداع', 'تحسّن مهارات القراءة والكتابة', 'اكتشاف الموهوبات ورعايتهن'],
@@ -340,17 +352,37 @@ function taCelebrate(n, kind) {
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
-    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: { dur: 'منتهي' }, dateLbl: 'التاريخ (للممتد: تاريخ البداية)',
-    form: d => fld('النوع <small style="color:var(--muted)">(اقرئي التعريف قبل الاختيار)</small>', taKindPick(d.kind), 1) +
-      `<div class="fld" style="grid-column:1/-1" id="taPar"><label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}</div>` +
-      fld('الاسم', `<input data-n="name" value="${esc(d.name || '')}" placeholder="اكتبي الاسم" required>`, 1) +
-      fld('المدة', fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')) + `<div class="fld" id="taTo"><label>إلى تاريخ</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
-      fld('عدد الطالبات المشاركات', `<input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) + fld('الأولوية التي يخدمها <span style="color:#A33">*</span>', fSel('p', REF.PRIO || [], d.p, 'اختاري الأولوية')) +
-      fld('الأثر', `<select data-n="impact" id="taImp" class="smsel"></select><input id="taImpO" class="smsel" placeholder="اكتبي الأثر الذي تحقق في الطالبات" style="display:none;margin-top:6px">`, 1),
+    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: {}, dateLbl: 'التاريخ',
+    form: d => fld('النوع <small style="color:var(--muted)">(اقرئي التعريف قبل الاختيار، وستظهر لكِ خانات النوع الذي تختارينه فقط)</small>', taKindPick(d.kind), 1) +
+      `<div id="taHint" class="tahint" style="grid-column:1/-1"></div>` +
+      kf('مشروع نشاط', `<label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}`, 1, 'taPar') +
+      kf('*', `<label id="taNameL">الاسم</label><input data-n="name" value="${esc(d.name || '')}" placeholder="اكتبي الاسم" required>`, 1) +
+      kf('برنامج مشروع', `<label>الهدف العام</label><input data-n="goal" value="${esc(d.goal || '')}" placeholder="ماذا يريد أن يحقق؟">`, 1) +
+      kf('برنامج', `<label>مدة البرنامج</label>${fSel('term', TA_TERMS, d.term, 'اختاري المدة')}`) +
+      kf('مشروع', `<label>عدد المراحل أو الأنشطة</label><input type="number" min="2" data-n="stages" value="${esc(d.stages || '')}" placeholder="2 فأكثر">`) +
+      kf('مشروع', `<label>المُخرَج النهائي</label><input data-n="out" value="${esc(d.out || '')}" placeholder="مثال: معرض، بحث، منتج، عرض نهائي">`, 1) +
+      kf('مبادرة', `<label>الحاجة أو المشكلة التي تعالجها</label>${fSel('need', TA_NEEDS, d.need, 'اختاري الحاجة')}`) +
+      kf('برنامج مبادرة', `<label>الفئة المستهدفة</label>${fSel('tg', TA_TG, d.tg, 'اختاري الفئة')}`) +
+      kf('مسابقة', `<label>مستوى المسابقة</label>${fSel('lvl', TA_LVL, d.lvl, 'اختاري المستوى')}`) +
+      kf('مبادرة', `<label>المدة</label>${fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')}`) +
+      `<div class="fld" id="taTo"><label>تاريخ النهاية</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
+      kf('مشروع نشاط مبادرة مسابقة', `<label id="taNL">عدد الطالبات المشاركات</label><input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) +
+      kf('مسابقة', `<label>عدد الفائزات</label><input type="number" min="0" data-n="win" value="${esc(d.win || '')}">`) +
+      kf('*', `<label>الأولوية التي يخدمها <span style="color:#A33">*</span></label>${fSel('p', REF.PRIO || [], d.p, 'اختاري الأولوية')}`) +
+      kf('مبادرة', `<label class="tkok"><input type="checkbox" data-n="own" ${d.own ? 'checked' : ''}> أؤكد أن الفكرة من مبادرتي الشخصية، وغير مكلّفة بها ضمن مهامي أو خطة المدرسة</label>`, 1) +
+      kf('*', `<label>الأثر</label><select data-n="impact" id="taImp" class="smsel"></select><input id="taImpO" class="smsel" placeholder="اكتبي الأثر الذي تحقق في الطالبات" style="display:none;margin-top:6px">`, 1),
     bind: (el, d) => { const f = $('#tf'); if (!f) return;
-      const upd = () => { const k = ($('input[name="r_kind"]:checked', f) || {}).value || d.kind; const pk = TA_PARENT[k]; const pw = $('#taPar', f);
-        pw.style.display = pk ? '' : 'none'; if (pk) { $('label', pw).firstChild.textContent = 'ينبثق من ' + pk + ' '; $('datalist', pw).innerHTML = parents(pk).map(o => `<option value="${esc(o)}">`).join(''); }
-        $('#taTo', f).style.display = (($('input[name="r_dur"]:checked', f) || {}).value || d.dur) === 'ممتد' ? '' : 'none'; };
+      const dateF = $('input[data-n="date"]', f).closest('.fld'); if (dateF) $('#taTo', f).before(dateF);
+      const upd = () => { const k = ($('input[name="r_kind"]:checked', f) || {}).value || d.kind || '';
+        $$('[data-k]', f).forEach(x => { const ks = x.dataset.k; x.style.display = k && (ks === '*' || ks.split(' ').includes(k)) ? '' : 'none'; });
+        const H = TA_FORM[k]; $('#taHint', f).innerHTML = H ? `<b>خانات «${esc(k)}»:</b> ${esc(H.h)}` : 'اختاري النوع أولاً لتظهر لكِ خاناته.';
+        $('#taHint', f).classList.toggle('on', !!H);
+        if (dateF) { dateF.style.display = k ? '' : 'none'; $('label', dateF).textContent = H ? H.date : 'التاريخ'; }
+        $('#taNameL', f).textContent = H ? H.name : 'الاسم';
+        const pk = TA_PARENT[k], pw = $('#taPar', f);
+        if (pk) { $('label', pw).firstChild.textContent = 'ينبثق من ' + pk + ' '; $('datalist', pw).innerHTML = parents(pk).map(o => `<option value="${esc(o)}">`).join(''); }
+        const dur = k === 'مبادرة' ? (($('input[name="r_dur"]:checked', f) || {}).value || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
+        $('#taTo', f).style.display = dur === 'ممتد' ? '' : 'none'; };
       $$('input[name="r_kind"],input[name="r_dur"]', f).forEach(i => i.onchange = () => { $$('.tk', f).forEach(l => l.classList.toggle('on', $('input', l).checked)); upd(); }); upd();
       const imp = $('#taImp', f), oth = $('#taImpO', f), pSel = $('select[data-n="p"]', f); let cur = d.impact || d.desc || '';
       const all = TA_IMPACT.flat();
@@ -360,11 +392,21 @@ function T_act(el) {
         imp.innerHTML = `<option value="">اختاري الأثر…</option>` + (pi >= 0 ? grp(pi) + TA_IMPACT.map((_, i) => i === pi ? '' : grp(i)).join('') : TA_IMPACT.map((_, i) => grp(i)).join('')) + `<option ${v === TA_OTHER ? 'selected' : ''}>${TA_OTHER}</option>`;
         oth.style.display = imp.value === TA_OTHER ? '' : 'none'; };
       pSel.addEventListener('change', fill); imp.onchange = () => { oth.style.display = imp.value === TA_OTHER ? '' : 'none'; if (imp.value === TA_OTHER) oth.focus(); }; fill(); },
-    pre: r => { if (!TA_PARENT[r.kind]) delete r.par; if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
-    check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' : !r.p ? 'اختاري الأولوية التي يخدمها' : r.dur === 'ممتد' && !r.to ? 'حدّدي تاريخ النهاية' : r.dur === 'ممتد' && r.to < r.date ? 'تاريخ النهاية قبل البداية' : '',
+    pre: r => { const k = r.kind; const ow = $('#tf [data-n="own"]'); r.own = !!(ow && ow.checked); r.dur = k === 'مبادرة' ? (r.dur || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
+      const keep = { 'برنامج': ['goal', 'term', 'tg'], 'مشروع': ['par', 'goal', 'stages', 'out', 'n'], 'نشاط': ['par', 'n'], 'مبادرة': ['need', 'tg', 'n', 'own'], 'مسابقة': ['lvl', 'n', 'win'] }[k] || [];
+      ['par', 'goal', 'term', 'stages', 'out', 'need', 'tg', 'lvl', 'n', 'win', 'own'].forEach(x => { if (!keep.includes(x)) delete r[x]; });
+      if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
+    check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' : !r.p ? 'اختاري الأولوية التي يخدمها'
+      : r.kind === 'برنامج' && !r.term ? 'حدّدي مدة البرنامج، فالبرنامج ممتد على فصل أو عام'
+      : r.kind === 'مشروع' && !(+r.stages >= 2) ? 'المشروع يتكوّن من مرحلتين أو نشاطين على الأقل؛ إن كان فعالية واحدة فاختاري «نشاط»'
+      : r.kind === 'مشروع' && !r.out ? 'اكتبي المُخرَج النهائي للمشروع'
+      : r.kind === 'مبادرة' && !r.need ? 'اختاري الحاجة التي تعالجها المبادرة'
+      : r.kind === 'مبادرة' && !r.own ? 'المبادرة فكرة شخصية غير مكلّف بها؛ إن كانت مكلّفة بها فاختاري «نشاط»'
+      : r.kind === 'مسابقة' && !r.lvl ? 'اختاري مستوى المسابقة'
+      : r.dur === 'ممتد' && !r.to ? 'حدّدي تاريخ النهاية' : r.dur === 'ممتد' && r.to < r.date ? 'تاريخ النهاية قبل البداية' : '',
     sum: r => r.kind + ': ' + r.name,
     head: '<tr><th>التاريخ</th><th>النوع</th><th>الاسم</th><th>الطالبات</th><th>الأولوية</th><th>الأثر</th><th></th></tr>',
-    row: r => `<td style="white-space:nowrap">${dmy(r.date)}${r.d.to ? '<br><small>إلى ' + dmy(r.d.to) + '</small>' : ''}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : r.d.kind === 'برنامج' ? 'ok' : ''}">${esc(r.d.kind)}</span></td><td><b>${esc(r.d.name)}</b>${r.d.par ? `<div style="font-size:11px;color:var(--muted)">من: ${esc(r.d.par)}</div>` : ''}</td><td>${esc(r.d.n || '')}</td><td style="font-size:12px">${esc(r.d.p || '')}</td><td style="font-size:12px">${esc(r.d.impact || r.d.desc || '')}</td>`,
+    row: r => `<td style="white-space:nowrap">${dmy(r.date)}${r.d.to ? '<br><small>إلى ' + dmy(r.d.to) + '</small>' : ''}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : r.d.kind === 'برنامج' ? 'ok' : ''}">${esc(r.d.kind)}</span></td><td><b>${esc(r.d.name)}</b>${r.d.par ? `<div style="font-size:11px;color:var(--muted)">من: ${esc(r.d.par)}</div>` : ''}${(x => x ? `<div style="font-size:11px;color:var(--muted)">${esc(x)}</div>` : '')([r.d.term, r.d.need, r.d.lvl, r.d.out ? 'المُخرَج: ' + r.d.out : '', r.d.win ? 'الفائزات: ' + r.d.win : ''].filter(Boolean).join(' · '))}</td><td>${esc(r.d.n || '')}</td><td style="font-size:12px">${esc(r.d.p || '')}</td><td style="font-size:12px">${esc(r.d.impact || r.d.desc || '')}</td>`,
   });
 }
 
