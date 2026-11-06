@@ -38,6 +38,8 @@ const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف ال
 function curPer() { const t = today(); return S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0]; }
 const mine = it => S.records.filter(r => r.item === it && r.d && r.d.t === S.user.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 const inCur = r => inP(r.date, curPer());
+const yrFrom = () => ([...S.periods].sort((a, b) => a.from.localeCompare(b.from))[0] || {}).from || '';
+const pastPers = () => { const c = curPer(); return [...S.periods].sort((a, b) => a.from.localeCompare(b.from)).filter(x => x.from <= c.from); };
 const others = () => ((S.staffAll && S.staffAll.length) ? S.staffAll : (S.staff || [])).filter(s => s.name && s.name !== S.user.name);
 const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 
@@ -110,11 +112,11 @@ function T_page(el, cfg) {
   const rec = S.edit && S.edit !== 'new' ? L.find(r => r.id === S.edit) : null;
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : (S.tDraft ? S.tDraft : Object.assign({ date: today() }, cfg.blank || {})); S.tDraft = null;
   const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.prioMulti ? prioFld(d) : ''}${cfg.form(d)}${cfg.vis ? visFld(d) : ''}
-     ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
+     ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${yrFrom()}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
-  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="tins">${esc(cfg.note || '')}<span class="tper">التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</span>${stdLine(cfg.item)}${fixLine(cfg.fixP)}</div>${form}
-  <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
-  <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
+  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="tins">${esc(cfg.note || '')}<span class="tper">الفترة الحالية: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}). يُنسب كل تسجيل إلى ربعه تلقائياً حسب تاريخه، ويمكنكِ تسجيل ما فاتكِ من ربعٍ سابق بتاريخه.</span>${stdLine(cfg.item)}${fixLine(cfg.fixP)}</div>${form}
+  ${pastPers().map(pp => { const LL = L.filter(r => inP(r.date, pp)); const isCur = pp.name === p.name; return `<div class="card ${isCur ? 'percur' : 'perold'}"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(pp.name)} (${LL.length})${isCur ? ' <span class="chip ok" style="font-size:11px">الفترة الحالية</span>' : ''}</h2><span class="sp"></span>${isCur ? (cfg.actions || '') + (S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>') : ''}</div>
+  <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${LL.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>`; }).join('')}${cfg.bottom ? cfg.bottom() : ''}`;
   if (cfg.top) fillVps(el);
   if ($('#tnew')) $('#tnew').onclick = () => { S.edit = 'new'; show(); };
   $$('[data-e]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.e; show(); window.scrollTo(0, 0); });
@@ -128,11 +130,11 @@ function T_page(el, cfg) {
     if (cfg.fixP != null) { r.ps = [REF.PRIO[cfg.fixP]]; r.p = REF.PRIO[cfg.fixP]; } else if (cfg.prioMulti) { r.ps = (r.ps || []).filter(Boolean); r.p = r.ps[0] || ''; if (!r.ps.length) return toast('اختاري أولوية واحدة على الأقل', 1); }
     if (cfg.pre) cfg.pre(r, f);
     const err = cfg.check ? cfg.check(r) : ''; if (err) return toast(err, 1);
-    if (!r.date || r.date < p.from || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن ' + p.name, 1);
+    const rp = S.periods.find(x => r.date >= x.from && r.date <= x.to); if (!r.date || !rp || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن أرباع العام الدراسي، وليس بعد ' + dmy(p.to), 1);
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.user.dept[0], item: cfg.item, date: r.date, sum: cfg.sum(r), d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
     if (copy) { S.edit = null; refresh(); paCopy(r); return; }
-    S.edit = null; toast('تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
+    S.edit = null; toast(rp.name !== p.name ? `تم الحفظ ✓ — نُسب إلى ${rp.name} حسب تاريخه` : 'تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
     if (cfg.item === 'TA' && !rec) taCelebrate(mine('TA').filter(inCur).length, r.kind);
     if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); fillVps(m); chime(n >= 3); $('#cOk', m).onclick = () => m.remove(); } }
   };

@@ -171,7 +171,7 @@ function saveRecord_(u, rec) {
     if (rec.item === 'TPV') rec.d.vdept = dOf(rec.d.v);
     if (rec.item === 'TWS') rec.d.bydept = rec.d.role === 'قدّمتُ لتطوير الزملاء' ? rec.dept : dOf(rec.d.by);
   } else if (TEACHER_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند تسجّله المعلمة بنفسها');
-  if (u.role === 'coord') assertNotLocked_(rec.dept, rec.date);
+  if (u.role === 'coord' && !coordOwn) assertNotLocked_(rec.dept, rec.date);   // سجلات المعلمة والمنسقة الشخصية تُقبل في الأرباع السابقة، والتقرير الموقّع محفوظ بنسخته
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const t = rows_(SH.rec);
