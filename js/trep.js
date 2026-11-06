@@ -66,6 +66,24 @@ function trBody(name, mk, D) {
   <div class="gen"><div class="h">التقدير العام: ${verdict[0]}</div><div class="b">${esc(verdict[1])}</div></div>`;
 }
 
+/* خانة التواقيع: يميناً المنسقة، ويساراً النائب الأكاديمي. التواقيع تظهر للمنسقة والنائب فقط، أما المعلمة فترى الأسماء دون تواقيع */
+const TR_SIG = {};
+async function trSigs(dept) {
+  if (isTeacher()) return { c: '', v: '' };
+  const k = dept || ''; if (TR_SIG[k]) return TR_SIG[k];
+  const cid = isAdmin() ? (S.coords.find(c => (c.dept || []).includes(dept)) || {}).id : S.user.id; let c = '', v = '';
+  try { if (cid) c = (await API.call('signature', { who: cid })).data || ''; } catch (e) {}
+  try { v = isAdmin() ? (await API.call('signature', {})).data || '' : (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) {}
+  return (TR_SIG[k] = { c, v });
+}
+function trSignBlock(name, sig) {
+  const st = (S.staff || []).find(x => x.name === name) || {}; const dept = st.dept || (S.user.dept || [])[0] || '';
+  const coord = isAdmin() ? ((S.coords.find(c => (c.dept || []).includes(dept)) || {}).name || '') : isTeacher() ? (((S.coords || []).find(c => (c.dept || []).includes(dept)) || {}).name || ((S.staffAll || []).concat(S.staff || [])).filter(x => x.dept === dept && x.role === 'منسقة').map(x => x.name)[0] || '') : S.user.name;
+  const cell = (ttl, nm, img) => `<td style="border:0;width:50%;text-align:center;vertical-align:top;padding-top:4mm"><div style="font-weight:bold;color:#7A1F33">${esc(ttl)}</div>
+    <div style="position:relative;height:22mm;margin-top:1mm">${img ? `<img src="${img}" alt="" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);height:20mm;max-width:46mm">` : ''}<div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);white-space:nowrap;font-weight:bold">${nm ? 'أ. ' + esc(nm) : '........................'}</div></div></td>`;
+  return `<table style="width:100%;border:0;margin-top:5mm"><tr>${cell('منسقة قسم ' + dept, coord, sig.c)}${cell('نائب المدير للشؤون الأكاديمية', 'آسيا الذبياني', sig.v)}</tr></table>`;
+}
+
 function T_rep(el) { trPage(el, S.user.name); }
 function C_trep(el) { trPage(el, null); }
 function trPage(el, fixed) {
@@ -83,16 +101,14 @@ function trPage(el, fixed) {
     <span class="sp"></span>${S.trt ? '<button class="btn ro-keep" id="trP">طباعة / حفظ PDF</button>' : ''}</div>
   ${fixed ? '' : `<div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الأعمال</th><th>مبادرات</th><th>زيارات تبادلية</th><th>أولياء أمور</th><th>التقدير</th><th></th></tr>
     ${staff.map(t => { const x = trData(t, S.trm); return `<tr><td style="white-space:nowrap"><b>${esc(t)}</b></td><td>${x.work}</td><td>${x.ini}</td><td>${x.pv.length}</td><td>${x.pa.length}</td><td>${chip(x.cls)}</td><td><button class="btn sm sec" data-tt="${esc(t)}">عرض</button></td></tr>`; }).join('')}</table></div>`}</div>
-  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, S.trm, D)}${vpSignLine()}</div></div>` : '<div class="empty">لا توجد معلمات</div>'}`;
-  fillVps(el);
+  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, S.trm, D)}<div id="trSign">${trSignBlock(S.trt, { c: '', v: '' })}</div></div></div>` : '<div class="empty">لا توجد معلمات</div>'}`;
+  if (S.trt && !isTeacher()) trSigs(((S.staff || []).find(x => x.name === S.trt) || {}).dept).then(sg => { const b = $('#trSign', el); if (b) b.innerHTML = trSignBlock(S.trt, sg); });
   $('#trM').onchange = e => { S.trm = e.target.value; show(); };
   if ($('#trT')) $('#trT').onchange = e => { S.trt = e.target.value; show(); };
   $$('[data-tt]', el).forEach(b => b.onclick = () => { S.trt = b.dataset.tt; show(); setTimeout(() => { const c = $('.trv'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 50); });
   if ($('#trP')) $('#trP').onclick = async () => {
-    const imgs = await lhImgs(); await fillVps();
-    const font = new URL('fonts/ruqaa.ttf', location.href).href;
-    const sign = VPS_CHEER ? `<div style="position:relative;width:200px;height:84px;margin:6mm 0 0 4mm;margin-inline-start:auto"><img src="${VPS_CHEER}" style="height:84px;opacity:.2;filter:grayscale(1);transform:translateX(-45px)"><div style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-family:RuqaaName;font-size:24px;color:#8E929A;white-space:nowrap">آسيا الذبياني</div></div>` : `<div style="text-align:left;margin-top:6mm;font-family:RuqaaName;font-size:22px;color:#8E929A">آسيا الذبياني</div>`;
-    const html = docHTML(trBody(S.trt, S.trm, trData(S.trt, S.trm)) + sign, imgs, `تقرير أعمال ${S.trt} ${trM(S.trm)}`).replace('</style>', `@font-face{font-family:'RuqaaName';src:url('${font}') format('truetype')}</style>`);
+    const imgs = await lhImgs(); const sg = await trSigs(((S.staff || []).find(x => x.name === S.trt) || {}).dept);
+    const html = docHTML(trBody(S.trt, S.trm, trData(S.trt, S.trm)) + trSignBlock(S.trt, sg), imgs, `تقرير أعمال ${S.trt} ${trM(S.trm)}`);
     const w = window.open('', '_blank'); if (!w) { toast('اسمحي بالنوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة', 1); return; }
     w.document.write(html); w.document.close(); setTimeout(() => w.print(), 700);
   };
