@@ -6,13 +6,25 @@
    perMonth: خطة خاصة تُحسب شهرياً، فيكون المطلوب في الربع = العدد × أشهر الربع */
 const VDEF = { n: 2, seq: ['كلية', 'جزئية'], min: 10, max: 15, lbl: 'كلية ثم جزئية' };
 const VPLAN = {
-  'هبه الإبراهيم': { perMonth: true, n: 4, seq: ['كلية', 'جزئية', 'كلية', 'جزئية'], min: 6, max: 9, lbl: 'أسبوعياً بالتناوب (معلمة مستجدة)' },
-  'إسراء عزت': { perMonth: true, n: 3, seq: ['كلية', 'جزئية', 'جزئية'], min: 7, max: 12, lbl: 'كلية ثم جزئية ثم جزئية' },
+  'هبه الإبراهيم': { perMonth: true, n: 3, seq: ['كلية', 'جزئية', 'جزئية'], min: 7, max: 12, lbl: 'شهرياً: كلية ثم جزئيتان', sess: 2 },
+  'إسراء عزت': { perMonth: true, n: 3, seq: ['كلية', 'جزئية', 'جزئية'], min: 7, max: 12, lbl: 'شهرياً: كلية ثم جزئيتان', sess: 1 },
 };
 const perOfDate = d => S.periods.find(p => d >= p.from && d <= p.to) || null;
 const perKey = d => { const p = perOfDate(d); return p ? p.name : ''; };
 const perMonths = per => per ? Math.max(1, Math.round(daysBtw(per.from, per.to) / 30)) : 1;
 const planOf = (t, per) => { const P = Object.assign({}, VDEF, VPLAN[t] || {}); P.m = P.n; if (P.perMonth) P.n = P.n * perMonths(per); return P; };
+/* المتابعة الشهرية للمعلمات ذوات الخطة الخاصة: 3 زيارات (كلية + جزئيتان) والجلسات الفردية المطلوبة كل شهر */
+const IS_TOPICS = ['التخطيط للدرس وصياغة الأهداف', 'إدارة الصف وضبط السلوك', 'استراتيجيات التعلم النشط', 'التمايز ومراعاة الفروق الفردية', 'التقويم البنائي والتغذية الراجعة', 'توظيف التقنية في التدريس', 'متابعة تنفيذ توصيات الزيارة', 'تحليل نتائج الطالبات وخطط الدعم', 'إعداد التقييمات وفق جداول المواصفات', 'التوثيق والسجلات'];
+const monthsOf = per => { const L = []; if (!per) return L; let d = new Date(per.from.slice(0, 7) + '-01T12:00:00'); const end = per.to.slice(0, 7); while (true) { const k = d.toISOString().slice(0, 7); L.push(k); if (k >= end) break; d.setMonth(d.getMonth() + 1); } return L; };
+const cntAr = (n, one, two, pl) => n === 1 ? one + ' واحدة' : n === 2 ? two : n + ' ' + pl;
+const MONTH_AR = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+const mAr = k => MONTH_AR[+String(k).slice(5, 7) - 1] || k;
+function specFollow(t, per, recs) {   // recs: سجلات القسم (V و IS)
+  const P = VPLAN[t]; if (!P || !P.perMonth) return null; const cur = today().slice(0, 7);
+  return monthsOf(per).filter(m => m <= cur).map(m => { const v = recs.filter(r => r.item === 'V' && r.d.t === t && monthKey(r.date) === m), ss = recs.filter(r => r.item === 'IS' && r.d.t === t && monthKey(r.date) === m);
+    const vk = v.filter(r => r.d.kj === 'كلية').length, vj = v.length - vk; const done = m < cur;
+    return { m, v: v.length, vk, vj, needV: P.n, s: ss.length, needS: P.sess || 0, done, shortV: v.length < P.n || vk < 1, shortS: ss.length < (P.sess || 0) }; });
+}
 const FU_ST = ['تم التنفيذ', 'تم التنفيذ جزئياً', 'لم تُنفذ بعد'];
 const ORD = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة', 'الثالثة عشرة', 'الرابعة عشرة', 'الخامسة عشرة', 'السادسة عشرة', 'السابعة عشرة', 'الثامنة عشرة', 'التاسعة عشرة', 'العشرون'];
 const daysBtw = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
@@ -66,12 +78,20 @@ async function C_visit(el) {
     ${kpi('معلمات يحتجن زيارة', late.length, mk === perKey(today()) ? 'متأخرة أو لم تُزر' : 'لم تكتمل خطتهن', 'var(--maroon)')}
     ${kpi('زيارات متقاربة', close.length, 'فاصل أقل من المطلوب', 'var(--gold)')}
   </div>
-  <div class="note">خطة الربع لكل معلمة: زيارتان (كلية ثم جزئية) بفاصل 10–15 يوماً، ما عدا: ${Object.entries(VPLAN).map(([n, p]) => `أ. ${esc(n)} (${p.n} زيارات شهرياً: ${esc(p.lbl)})`).join('، ')}. ويمكنكِ إضافة زيارات إضافية. <b>كل زيارة تبدأ بمتابعة توصيات الزيارة السابقة</b>، كلية كانت أو جزئية، وتنعكس الزيارة تلقائياً على تقرير القسم.</div>
+  <div class="note">خطة الربع لكل معلمة: زيارتان (كلية ثم جزئية) بفاصل 10–15 يوماً، ما عدا: ${Object.entries(VPLAN).map(([n, p]) => `أ. ${esc(n)} (${p.n} زيارات شهرياً: ${esc(p.lbl)}، و${p.sess === 1 ? 'جلسة فردية واحدة' : p.sess + ' جلستين فرديتين'} شهرياً)`).join('، ')}. ويمكنكِ إضافة زيارات إضافية. <b>كل زيارة تبدأ بمتابعة توصيات الزيارة السابقة</b>، كلية كانت أو جزئية، وتنعكس الزيارة تلقائياً على تقرير القسم.</div>
   ${(late.length || close.length || order.length) ? `<div class="card" style="border-inline-start:4px solid var(--gold)"><h2>تنبيهات لتنظيم وقتكِ <span class="sub">خاصة بكِ وحدكِ — لا تظهر في التقرير الشهري ولا لأي جهة أخرى</span></h2>
   <div style="font-size:13px;color:var(--muted);margin-bottom:6px">الغاية أن تتاح للمعلمة فرصة (10–15) يوماً بعد كل زيارة لتطبيق التوصيات قبل الزيارة التالية. وإن كنتِ ترغبين بالحضور لمعلمة أكثر من المطلوب، فلا حرج في تجاهل هذه التنبيهات.</div><ul style="margin:0;padding-inline-start:18px;line-height:2">
     ${late.map(x => `<li><b>أ. ${esc(x.t)}</b>: ${x.last ? 'تأخر موعد الحضور' + (x.gap != null ? ` (مضى ${x.gap} يوماً على آخر زيارة)` : '') : 'لم تُزر بعد'} — المخطط ${x.P.n} في الربع، والمنفذ ${x.inM.length}.</li>`).join('')}
     ${close.map(c => `<li><b>أ. ${esc(c.t)}</b>: زيارة ${dm(c.r.date)} بعد ${c.g} ${c.g === 1 ? 'يوم' : 'أيام'} فقط من سابقتها — قد لا يتيح هذا الفاصل للمعلمة تطبيق التوصيات.</li>`).join('')}
     ${order.map(o => `<li><b>أ. ${esc(o.t)}</b>: زيارة ${dm(o.r.date)} سُجّلت ${esc(o.r.d.kj)} والمتوقع وفق الخطة ${esc(o.exp)}.</li>`).join('')}</ul></div>` : ''}
+  ${(() => { const per = S.periods.find(p => p.name === mk); const recs = S.records.filter(r => r.dept === S.dept); const SP = T.filter(t => VPLAN[t] && VPLAN[t].perMonth);
+    if (!SP.length) return '';
+    return `<div class="card" style="border-inline-start:4px solid var(--maroon)"><h2>المتابعة الشهرية للمعلمات ذوات الخطة الخاصة</h2>
+    <p style="color:#8A8F99;font-size:12.5px;margin:0 0 8px;text-align:justify">المطلوب لكل منهن شهرياً: ثلاث زيارات (كلية ثم جزئيتان)، والجلسات الفردية المحددة. وما لم يكتمل في شهرٍ انقضى يُعدّ قصوراً في متابعة المعلمة، ويظهر في تقرير القسم.</p>
+    <div class="tbl"><table class="t"><tr><th>المعلمة</th><th>الشهر</th><th>الزيارات</th><th>الجلسات الفردية</th><th>الحالة</th><th></th></tr>
+    ${SP.map(t => (specFollow(t, per, recs) || []).map(x => `<tr><td><b>${esc(t)}</b></td><td>${mAr(x.m)}</td><td>${x.v} من ${x.needV} <small style="color:var(--muted)">(كلية ${x.vk} · جزئية ${x.vj})</small></td><td>${x.s} من ${x.needS} ${recs.filter(r => r.item === 'IS' && r.d.t === t && monthKey(r.date) === x.m).map(r => `<button class="chip" data-is="${r.id}" style="cursor:pointer">${dm(r.date)}</button>`).join(' ')}</td>
+      <td>${!x.shortV && !x.shortS ? '<span class="chip ok">مكتملة</span>' : x.done ? '<span class="chip bad">قصور في متابعة المعلمة</span>' : `<span class="chip warn">متبقٍ: ${[x.shortV ? (x.needV - x.v > 0 ? cntAr(x.needV - x.v, 'زيارة', 'زيارتان', 'زيارات') : 'زيارة كلية') : '', x.shortS ? cntAr(x.needS - x.s, 'جلسة', 'جلستان', 'جلسات') : ''].filter(Boolean).join(' و')}</span>`}</td>
+      <td>${x.m === today().slice(0, 7) ? `<button class="btn sm" data-isn="${esc(t)}">+ جلسة فردية</button>` : ''}</td></tr>`).join('')).join('')}</table></div></div>`; })()}
   <div class="card"><div class="row"><h2 style="margin:0">خطة ${mName(mk)}</h2><span class="sp"></span><button class="btn" id="cvNew">+ حضور صفي جديد</button></div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الخطة</th><th>زيارات الشهر</th><th>آخر زيارة</th><th>التالية المتوقعة</th><th>الحالة</th><th></th></tr>
   ${X.map(x => `<tr><td><b>${esc(x.t)}</b></td><td style="font-size:12px">${x.P.n} · ${esc(x.P.lbl)}</td>
@@ -87,6 +107,27 @@ async function C_visit(el) {
   $('#cvNew').onclick = () => { S.cvv = 'new'; S.cvT = ''; S.cvK = ''; show(); };
   $$('[data-nt]', el).forEach(b => b.onclick = () => { S.cvv = 'new'; S.cvT = b.dataset.nt; S.cvK = b.dataset.kj; show(); });
   $$('[data-o]', el).forEach(b => b.onclick = () => { S.cvv = b.dataset.o; show(); });
+  $$('[data-isn]', el).forEach(b => b.onclick = () => isForm(b.dataset.isn));
+  $$('[data-is]', el).forEach(b => b.onclick = () => isForm(null, S.records.find(r => r.id === b.dataset.is)));
+}
+
+/* ================================================================== الجلسة الفردية */
+function isForm(t, rec) {
+  const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t, date: today(), top: [], out: '' }; d.top = d.top || [];
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="box" style="max-width:560px"><h3>جلسة فردية مع أ. ${esc(d.t)}</h3>
+    <p style="color:#8A8F99;font-size:12.5px;margin:0 0 8px;text-align:justify">اختاري محاور الجلسة (أكثر من محور)، أو اكتبيها بعباراتكِ، ثم ما اتُّفق عليه مع المعلمة.</p>
+    <div class="fld"><label>التاريخ</label><input type="date" id="isD" value="${esc(d.date)}"></div>
+    <div class="fld"><label>محاور الجلسة</label><div style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:190px;overflow:auto;font-size:12.5px;line-height:1.9">${IS_TOPICS.map(o => `<label style="display:block"><input type="checkbox" value="${esc(o)}" ${d.top.includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}<input id="isX" placeholder="أو اكتبي محوراً آخر" value="${esc(d.top.filter(x => !IS_TOPICS.includes(x)).join('، '))}" style="margin-top:6px"></div></div>
+    <div class="fld"><label>ما اتُّفق عليه <small style="color:var(--muted)">(اختياري)</small></label><input id="isO" value="${esc(d.out || '')}" placeholder="مثل: تطبيق استراتيجية التعلم التعاوني في الحصة القادمة"></div>
+    <div class="row" style="margin-top:10px;gap:8px"><button class="btn" id="isS">حفظ</button><button class="btn sec" id="isC">إلغاء</button>${rec ? '<span class="sp"></span><button class="btn sec" id="isDel" style="color:var(--bad)">حذف</button>' : ''}</div></div>`;
+  document.body.appendChild(m);
+  $('#isC', m).onclick = () => m.remove();
+  $('#isS', m).onclick = async () => { d.date = $('#isD', m).value; d.top = [...$$('input[type=checkbox]:checked', m).map(c => c.value), ...$('#isX', m).value.split(/[،,]/).map(x => x.trim()).filter(Boolean)]; d.out = $('#isO', m).value.trim();
+    if (!d.top.length) return toast('اختاري محوراً واحداً على الأقل', 1); if (!perOfDate(d.date)) return toast('التاريخ خارج فترات العام', 1);
+    const j = await call('save', { rec: { id: rec && rec.id, dept: S.dept, item: 'IS', date: d.date, sum: `جلسة فردية — أ. ${d.t}: ${d.top.join('، ')}`, d } });
+    const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); m.remove(); toast('تم حفظ الجلسة ✓'); show(); };
+  if (rec) $('#isDel', m).onclick = async () => { if (!confirm('حذف هذه الجلسة؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); m.remove(); show(); };
 }
 
 /* ================================================================== الاستمارة */

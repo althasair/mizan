@@ -148,6 +148,13 @@ function buildReport(ctx) {
     : `نفّذت المنسقة زيارات صفية بلغ عددها (${vN}) ${vN >= 3 && vN <= 10 ? 'زيارات' : 'زيارة'} خلال الفترة، شملت ${vK} من أصل ${NT} معلمات بنسبة ${pct(vK, NT)}${kjTxt(per)}` + (vMax > 1 && per.some(p => p.c && p.c < vMax) ? `، وكانت أكثر المعلمات زيارةً: أ. ${per.filter(p => p.c === vMax).map(p => p.t).join('، ')} (${vMax}).` : (vMax === 1 ? '، بزيارة واحدة لكل معلمة.' : '.'))
       + (per.some(p => !p.c) ? ' ولم تتم زيارة: ' + per.filter(p => !p.c).map(p => p.t).join('، ') + '.' : '');
   T.v_ch = per.map(p => p.z);
+  // المتابعة الشهرية للمعلمات ذوات الخطة الخاصة (زيارات + جلسات فردية)
+  T.v_spec = (typeof VPLAN === 'undefined') ? [] : Object.keys(VPLAN).filter(t => VPLAN[t].perMonth && (ctx.staff || S.staff || []).some(s => s.name === t && s.dept === dept)).map(t => {
+    const L = specFollow(t, P, R('V').concat(R('IS'))) || []; if (!L.length) return '';
+    const parts = L.map(x => `${mAr(x.m)}: ${x.v} من ${x.needV} زيارات و${x.s} من ${x.needS} ${x.needS === 1 ? 'جلسة فردية' : 'جلسات فردية'}`);
+    const sh = L.filter(x => x.done && (x.shortV || x.shortS)).map(x => mAr(x.m));
+    return `• متابعة أ. ${t} (خطة شهرية خاصة): ${parts.join('؛ ')}.` + (sh.length ? ` ويُلاحظ قصور في متابعة المعلمة خلال شهر ${sh.join(' و')}، إذ لم تكتمل الزيارات أو الجلسات الفردية المطلوبة.` : '');
+  }).filter(Boolean);
   // التوصيات المشتركة (تكررت لدى معلمتين فأكثر)
   const recStats = uniq([...REF.REC, ...V.flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)]).map((rc, i) => {
     const l = V.filter(v => !isFU(v) && [v.r1, v.r2, v.r3].includes(rc));
@@ -316,7 +323,7 @@ function buildReport(ctx) {
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
-      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
+      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), ...(T.v_spec || []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
     ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
