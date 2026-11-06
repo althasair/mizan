@@ -254,7 +254,7 @@ function paCopy(src) {
 function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
-    item: 'TPA', fixP: 3, vis: 1, title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الشعبة والطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. أما التواصل مع ولي أمر طالبة مستهدفة فيُسجَّل في سبع سنابل فقط، ويصل هنا تلقائياً.',
+    item: 'TPA', fixP: 3, vis: 1, title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الشعبة والطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. وسجّلي هنا كل تواصلكِ مع أولياء الأمور، ومنه أولياء أمور الطالبات المستهدفات في رفع التحصيل؛ فهو يملأ سنبلة «التواصل مع ولي الأمر» عند الطالبة في سبع سنابل تلقائياً، فلا تسجّليه هناك.',
     form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبة ورقم ولي أمرها', '<div id="stuBox"></div><div id="phBox" style="margin-top:6px"></div>', 1) +
       fld('الغرض من التواصل', fRadio('cat', TPA_CAT, d.cat), 1) +
       fld('الموضوع', `<select data-n="topic" id="paTop"></select><input data-n="topicx" placeholder="اكتبي الموضوع" style="margin-top:6px;display:none">`) + fld('وسيلة التواصل', selX('way', TPA_WAY, d.way)) +
