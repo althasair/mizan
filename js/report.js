@@ -54,6 +54,12 @@ function buildReport(ctx) {
   /* رفع التحصيل */
   const RA = Rp('RA');
   T.ra = sec(RA, r => SEC.RA.tx(d(r)), 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.', 'نفّذ القسم الإجراءات الآتية لرفع التحصيل: ');
+  /* تعزيز الطالبات بالشهادات من سبع سنابل: من عزّزت، وكم طالبة، وعلى ماذا */
+  { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
+    if (RF.length) { const by = {}; RF.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      const why = r => { const m = String(r.d.det || '').split(' — على: '); return { tt: m[0] || 'شهادة', on: m[1] || '' }; };
+      T.ra = (/^لم /.test(T.ra) ? '' : T.ra + ' ') + `وعزّزت معلمات القسم (${new Set(RF.flatMap(r => r.d.stu || [])).size}) من الطالبات بـ(${RF.length}) من الشهادات: ` +
+        Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length}): ` + L.map(r => { const w = why(r); return `${w.tt} للطالبة ${(r.d.stu || []).join('، ')} (${r.d.s || ''}) على ${w.on}`; }).join('؛ ')).join('. ') + '.'; } }
 
   /* التطوير الداخلي */
   const WSall = R('WS').map(r => ({ r, x: d(r), w: SEC.WS.when(d(r)) || r.date }));

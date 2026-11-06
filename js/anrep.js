@@ -29,6 +29,13 @@ const AR_TYPES = {
       return { dept: r.dept, date: r.date, t: d.t || '', stu, n: stu.length, cat: d.subj || 'غير محدد', sub: d.whole ? 'جماعية (للشعبة)' : 'فردية', det: [d.s, d.det].filter(Boolean).join(' — '), whole: !!d.whole, sec: d.s || '' };
     }),
   },
+  rf: {
+    t: 'تعزيز الطالبات بالشهادات', unit: ['شهادة', 'شهادات'], catH: 'عنوان الشهادة', sub2: 'سبب التكريم', stuLine: 1,
+    rows: () => S.records.filter(r => r.item === 'SRF' && r.d).map(r => {
+      const d = r.d; const stu = arList(d.stu); const m = String(d.det || '').split(' — على: ');
+      return { dept: r.dept, date: r.date, t: d.t || '', stu, n: stu.length || 1, cat: m[0] || 'شهادة', sub: (m[1] || '').split('، ')[0] || '', det: [d.s, d.subj, m[1] ? 'على: ' + m[1] : ''].filter(Boolean).join(' — ') };
+    }),
+  },
   act: {
     t: 'المبادرات والأنشطة والمسابقات', unit: ['برنامجاً أو نشاطاً', 'برامج وأنشطة'], catH: 'النوع', sub2: 'الأولوية التي يخدمها',
     rows: () => S.records.filter(r => (r.item === 'TA' && r.d && !r.d.q1) || r.item === 'AC').map(r => {

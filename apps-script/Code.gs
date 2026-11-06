@@ -499,13 +499,13 @@ function sabAccess_() {
   const tok = JSON.parse(r.getContentText()).access_token; if (tok) c.put('sabTok', tok, 3000); return tok || null;
 }
 function sabPA_() {
-  const c = CacheService.getScriptCache(); const hit = c.get('sabPA2'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  const c = CacheService.getScriptCache(); const hit = c.get('sabPA3'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   let out = [];
   try {
     const tok = sabAccess_(); if (!tok) return [];
     const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
       method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }] } } } } } }) });
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }, { integerValue: '6' }] } } } } } }) });
     const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
     const T = rows_(SH.teachers).rows.filter(x => x[1]);
     const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
@@ -514,6 +514,11 @@ function sabPA_() {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
       const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
+      if (Number(g('type')) === 6) {   // تعزيز الطالبات وشهاداتهن (العنوان وأسباب التكريم)
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SRF', date: String(g('date')), sum: 'تعزيز — سبع سنابل',
+          d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
+        return;
+      }
       if (Number(g('type')) === 3) {   // حصة إثرائية
         out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
@@ -523,7 +528,7 @@ function sabPA_() {
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA2', txt, 600);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA3', txt, 600);
   return out;
 }
 
@@ -539,7 +544,7 @@ function syncSanabil() {
   const find = n => { const k = normAr_(n); return T.find(x => normAr_(x[1]) === k || normAr_(x[2]) === k); };
   const full = n => { n = String(n || '').trim(); const t = find(n); return t ? String(t[2] || t[1]) : n; };
   const deptAll = d => T.filter(x => String(x[0]) === String(d)).map(x => String(x[2] || x[1]));
-  const list = [], abs = [];
+  const list = [], abs = [], pa = [];
   // strict: يُحتسب الاسم فقط إن طابق معلمة في جدول «المعلمات» (للخانات النصية الحرة)
   const ex = (r, names, k, ti, strict) => { const s = {}; names.filter(Boolean).forEach(n => { n = String(n).trim(); if (/جميع/.test(n)) deptAll(r.dept).forEach(x => s[x] = 1); else if (!strict || find(n)) s[full(n)] = 1; });
     Object.keys(s).forEach(n => list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '' })); };
@@ -555,14 +560,18 @@ function syncSanabil() {
       case 'ACH': ex(r, [d.sup], 'h', d.name || d.c); break;
       case 'TACH': ex(r, [d.t], 'h', d.name); break;
       case 'PA': ex(r, [d.by], 'o', d.c || d.why, true); break;
-      case 'TPA': ex(r, [d.t], 'o', d.topic || 'تواصل مع ولي أمر'); break;
+      case 'TPA': ex(r, [d.t], 'o', d.topic || 'تواصل مع ولي أمر'); if (d.s && d.stu && d.stu.length) pa.push({ id: r.id, t: full(d.t), s: String(d.s), st: d.stu, d: r.date || '', c: d.cat || '', tp: d.topic || '', w: d.way || '' }); break;
       case 'LR': ex(r, [d.t], 'r', d.e || d.k); break;
       case 'TDS': (d.abs || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'غياب' })); (d.perm || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'استئذان' })); break;
     } });
   const body = { fields: { t: { stringValue: JSON.stringify(list) }, abs: { stringValue: JSON.stringify(abs) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
   const res = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/shared/mizan', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, payload: JSON.stringify(body), muteHttpExceptions: true });
-  const msg = res.getResponseCode() === 200 ? 'تم إرسال ' + list.length + ' سجل إلى سبع سنابل' : 'تعذّر الإرسال: ' + res.getContentText().slice(0, 200);
+  // تواصل المعلمات مع أولياء الأمور بأسماء الطالبات: في وثيقة لا يقرؤها إلا حساب النائب الأكاديمي، ومنها تمتلئ سنبلة «التواصل مع ولي الأمر» لكل طالبة
+  UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/adm/mizanpa', {
+    method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+    payload: JSON.stringify({ fields: { t: { stringValue: JSON.stringify(pa) }, at: { stringValue: new Date().toISOString() } } }) });
+  const msg = res.getResponseCode() === 200 ? 'تم إرسال ' + list.length + ' سجل و' + pa.length + ' تواصل مع أولياء الأمور إلى سبع سنابل' : 'تعذّر الإرسال: ' + res.getContentText().slice(0, 200);
   Logger.log(msg); return msg;
 }
 
