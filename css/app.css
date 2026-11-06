@@ -236,7 +236,11 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .tahint.on{color:#1F4E79;background:#EEF4FB;border-inline-start:4px solid #1F4E79}
 .tkok{display:flex;gap:8px;align-items:flex-start;font-weight:600;color:#B3261E;font-size:13px}
 
-.vpsign{margin-top:10px;text-align:left;color:#8A8F99;font-size:12.5px;font-weight:400}
-.vpsign .vps img{height:44px;max-width:170px;filter:grayscale(1);opacity:.42;display:block;margin:0 0 -4px auto;margin-inline-start:auto;margin-inline-end:0}
-.vpsign .vps{display:block;min-height:6px;direction:ltr;text-align:left}
-.vpsign .vps img{margin:0 0 -4px 8px}
+@font-face{font-family:'RuqaaName';src:url('../fonts/ruqaa.ttf') format('truetype');font-display:swap}
+.vpsign{margin-top:8px;display:flex;flex-direction:column;align-items:flex-end;width:max-content;margin-inline-start:auto}
+.vpsign .vps img{height:78px;max-width:200px;filter:grayscale(1);opacity:.38;display:block;margin-bottom:-14px}
+.vpsign .vpn{font-family:'RuqaaName',serif;font-size:24px;color:#9A9EA6;line-height:1.3;text-align:center;align-self:center}
+
+/* عبارات التعزيز بخط الرقعة */
+.ta-cheer p,.ta-cheer h3,.pv-cheer p{font-family:'RuqaaName','Lusail',serif !important;font-weight:400 !important;font-size:18px;line-height:1.9}
+.ta-cheer h3{font-size:22px}

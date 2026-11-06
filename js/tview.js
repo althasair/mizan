@@ -123,9 +123,9 @@ document.addEventListener('click', async e => { const b = e.target.closest && e.
 const monthOf = d => String(d || '').slice(0, 7);
 function pvCheer(n) {
   const nm = 'أ. ' + esc(S.user.name);
-  if (n >= 3) return `<div class="card" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:22px;color:var(--gold);letter-spacing:4px">★★★ 💛</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، إنّ حرصكِ على أن تشهدي تجارب زميلاتكِ مرةً بعد مرة لَشاهدٌ على نفسٍ تواقةٍ إلى الكمال، لا ترضى بما بلغت، وتنشد الأفضل لطالباتها؛ وهذا ديدنكِ الذي عهدناه منكِ. فخورةٌ بكِ، وبارك الله في علمكِ وعملكِ، وجعله في ميزان حسناتكِ.</p>${vpSignLine()}</div>`;
-  if (n === 2) return `<div class="card" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)"><div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، زيارتكِ الثانية في هذا الشهر تنبئ عن شغفٍ صادق بالتعلّم المستمر، وتقديرٍ رفيع لخبرات زميلاتكِ؛ ومن جعل التعلّم دأبه ارتقى وارتقت به طالباته. ماضيةٌ أنتِ في دربٍ مباركٍ، والزيارة الثالثة تُتوِّج هذا الدرب.</p>${vpSignLine()}</div>`;
-  if (n === 1) return `<div class="card" style="border-inline-start:4px solid var(--maroon)"><div style="font-size:18px;color:var(--maroon)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ على زيارتكِ التبادلية؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة، وأثره يتجلّى في تعلّم طالباتكِ.</p>${vpSignLine()}</div>`;
+  if (n >= 3) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:22px;color:var(--gold);letter-spacing:4px">★★★ 💛</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، حرصكِ المتجدد على التعلّم من زميلاتكِ شاهدٌ على همّةٍ لا ترضى بما دون الكمال، وهذا ديدنكِ. فخورةٌ بكِ.</p>${vpSignLine()}</div>`;
+  if (n === 2) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)"><div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، زيارتكِ الثانية تنبئ عن شغفٍ صادقٍ بالتعلّم المستمر؛ ومن جعل التعلّم دأبه ارتقى وارتقت به طالباته.</p>${vpSignLine()}</div>`;
+  if (n === 1) return `<div class="card pv-cheer" style="border-inline-start:4px solid var(--maroon)"><div style="font-size:18px;color:var(--maroon)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة.</p>${vpSignLine()}</div>`;
   return '';
 }
 function T_pv(el) {
@@ -325,17 +325,17 @@ function taCheer(n, kind) {
   if (n >= 5) return `<div class="card ta-cheer" style="background:linear-gradient(135deg,#FFF6DD,#FFFDF6);border:1px solid #E9D3A8;border-inline-start:5px solid var(--gold);text-align:center">
     <div style="font-size:54px;line-height:1">🏆</div><div style="font-size:26px;color:var(--gold);letter-spacing:5px;margin:6px 0">${taStars(n, 7)}</div>
     <h3 style="margin:2px 0 6px;color:var(--maroon)">معلمةٌ متميزةٌ في المبادرة والعطاء</h3>
-    <p style="margin:0;text-align:justify;font-weight:600">${nm}، بلغتِ ${n} من البرامج والمشاريع والأنشطة والمبادرات في ${per}، وما هذا إلا ثمرة همّةٍ عالية لا تعرف الفتور، وروحٍ مبادِرةٍ تجعل من كل يومٍ دراسيٍّ فرصةً لصناعة الأثر. لقد جعلتِ التميّز ديدنكِ، والإتقانَ عنوانكِ، وهذا هو المعهود منكِ. إنني فخورةٌ بكِ أيّما فخر، وقد قال تعالى: ﴿إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا﴾. بارك الله في جهودكِ، وجعلها في ميزان حسناتكِ.</p>${vpSignLine()}</div>`;
+    <p style="margin:0;text-align:justify;font-weight:600">${nm}، ${n} أعمالٍ في ${per}، وما هذا إلا ثمرة همّةٍ عالية جعلت التميّز ديدنكِ والإتقانَ عنوانكِ. فخورةٌ بكِ أيّما فخر، ﴿إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا﴾.</p>${vpSignLine()}</div>`;
   if (n >= 3) return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:5px solid var(--gold)">
     <div style="font-size:24px;color:var(--gold);letter-spacing:5px">${taStars(n)} 💛</div>
-    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، ${n} أعمالٍ نوعيةٍ في ${per}، شاهدةٌ على شغفٍ أصيلٍ بالمهنة، وحرصٍ على أن تتعلّم طالباتكِ بالتجربة والمشاركة لا بالتلقين وحده. عطاؤكِ محلّ تقديرٍ واعتزاز، وما أنتِ إلا على طريق التميّز ماضية؛ ${n === 3 ? 'وبقي عملان لتنالي كأس التميز 🏆.' : 'وبقي عملٌ واحد لتنالي كأس التميز 🏆.'}</p>${vpSignLine()}</div>`;
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، ${n} أعمالٍ نوعيةٍ في ${per}، شاهدةٌ على شغفٍ أصيلٍ بالمهنة، وعطاؤكِ محلّ تقديرٍ واعتزاز؛ ${n === 3 ? 'وبقي عملان لتنالي كأس التميز 🏆.' : 'وبقي عملٌ واحد لتنالي كأس التميز 🏆.'}</p>${vpSignLine()}</div>`;
   return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)">
     <div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">${taStars(n)}</div>
-    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `${nm}، شكرٌ موصولٌ لكِ على ${({ 'برنامج': 'هذا البرنامج', 'مشروع': 'هذا المشروع', 'نشاط': 'هذا النشاط', 'مبادرة': 'هذه المبادرة', 'مسابقة': 'هذه المسابقة' })[kind] || 'هذا العمل'}؛ بدايةٌ مباركةٌ في ${per}، يمتدّ أثرها إلى طالباتكِ، والبدايات الحسنة تُنبئ بالخواتيم الحسنة.` : `${nm}، عملكِ الثاني في ${per} دليلٌ على حرصكِ على تنويع مصادر التعلّم وإثراء بيئة طالباتكِ؛ ماضيةٌ أنتِ بثبات، والعمل الثالث يضاعف لكِ النجوم ⭐.`}</p>${vpSignLine()}</div>`;
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `${nm}، شكرٌ موصولٌ لكِ على ${({ 'برنامج': 'هذا البرنامج', 'مشروع': 'هذا المشروع', 'نشاط': 'هذا النشاط', 'مبادرة': 'هذه المبادرة', 'مسابقة': 'هذه المسابقة' })[kind] || 'هذا العمل'}؛ بدايةٌ مباركة، والبدايات الحسنة تُنبئ بالخواتيم الحسنة.` : `${nm}، عملكِ الثاني دليلٌ على حرصكِ على إثراء تعلّم طالباتكِ، والثالث يضاعف لكِ النجوم ⭐.`}</p>${vpSignLine()}</div>`;
 }
 /* سطر التوقيع تحت عبارات الشكر: توقيع النائب باهت، ثم المسمى والاسم */
 let VPS_CHEER = null;
-const vpSignLine = () => `<div class="vpsign"><span class="vps">${VPS_CHEER ? `<img src="${VPS_CHEER}" alt="">` : ''}</span><div>نائب المديرة للشؤون الأكاديمية<span style="display:inline-block;width:18px"></span>أ. آسيا الذبياني</div></div>`;
+const vpSignLine = () => `<div class="vpsign"><span class="vps">${VPS_CHEER ? `<img src="${VPS_CHEER}" alt="">` : ''}</span><div class="vpn">آسيا الذبياني</div></div>`;
 async function fillVps(root) {
   if (VPS_CHEER === null) { try { VPS_CHEER = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) { VPS_CHEER = ''; } }
   if (VPS_CHEER) $$('.vps', root || document).forEach(x => { if (!x.firstChild) x.innerHTML = `<img src="${VPS_CHEER}" alt="">`; });
