@@ -77,6 +77,14 @@ const TSTD = {
 const TA_STD = { 'برنامج': ['2.2 · 2.7.1', 'تنوع الأنشطة وإثراء المنهج'], 'مشروع': ['2.2 · 2.7.1', 'تنوع الأنشطة وإثراء المنهج'], 'نشاط': ['2.2 · 2.7.1', 'تنوع الأنشطة وإثراء المنهج'], 'مبادرة': ['5.5.2', 'إظهار المبادرة وأخذ أدوار قيادية بمبادرات إضافية'], 'مسابقة': ['2.6 · 6.3', 'تطوير مهارات التفكير العليا، وإعداد الطالبات مواطنات فاعلات'] };
 const stdLine = it => { const x = TSTD[it]; return x ? `<div class="tstd"><b>${esc(x.n)}</b> · <span>يدخل هذا البند في تقييم أدائكِ: ${esc(x.d)}</span></div>` : ''; };
 
+/* ---------- الربط بالأولويات ورؤية الوزارة ---------- */
+const HINT_FREE = 'معلمتي الغالية، يمكنكِ الاختيار من القائمة أو الكتابة بعباراتكِ التي تجدينها مناسبة';
+const VIS_OPTS = ['إشراك الطالبات في التخطيط والتنفيذ', 'تنمية مهارات الريادة والابتكار', 'تنمية مهارات التفكير العليا وحل المشكلات', 'توعية الطالبات بقضايا الاستدامة', 'ربط التعلّم بالحياة والمجتمع', 'تعزيز الهوية الوطنية والقيم', 'توظيف التقنية والذكاء الاصطناعي في التعلّم', 'تنمية التعلّم الذاتي وتحمّل المسؤولية', 'تعزيز العمل التعاوني وروح الفريق', 'تبادل الخبرات والممارسات الناجحة', 'بناء ثقافة التعلّم المهني المستمر', 'إشراك أولياء الأمور في تعلّم بناتهم', 'الشراكة مع مؤسسات المجتمع'];
+const ORD_P = ['الأولوية الأولى', 'الأولوية الثانية', 'الأولوية الثالثة', 'الأولوية الرابعة'];
+const visFld = d => `<div class="fld" style="grid-column:1/-1"><label>تحقيق رؤية الوزارة «متعلم ريادي لتنمية مستدامة» من خلال <small class="hfree">${HINT_FREE}</small></label>${fMulti('vis', VIS_OPTS, d.vis)}</div>`;
+const prioFld = d => { const cur = d.ps || (d.p ? [d.p] : []); return `<div class="fld" style="grid-column:1/-1"><label>الأولويات التي يحققها <small style="color:var(--muted)">(يمكن اختيار أكثر من أولوية)</small> <span style="color:#A33">*</span></label><div class="multi pmul" data-m="ps">${(REF.PRIO || []).map(o => `<label><input type="checkbox" value="${esc(o)}" ${cur.includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}<input type="hidden" data-mx="ps" value=""></div></div>`; };
+const fixLine = i => i == null ? '' : `<div class="tfix">تدخل هذه الاستمارة ضمن نطاق تحقيق ${ORD_P[i]}: ${esc(((REF.PRIO_FULL || [])[i] || (REF.PRIO || [])[i] || '').replace(/^الأولوية \d: /, ''))}</div>`;
+
 /* ---------- محرك نماذج بسيط ---------- */
 const fSel = (n, opts, v, ph) => `<select data-n="${n}"><option value="">${esc(ph || 'اختاري…')}</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
 const fCombo = (n, opts, v, ph) => `<input data-n="${n}" list="dl_${n}" value="${esc(v || '')}" placeholder="${esc(ph || 'اختاري من القائمة أو اكتبي')}"><datalist id="dl_${n}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
@@ -101,10 +109,10 @@ function T_page(el, cfg) {
   const L = mine(cfg.item); const cur = L.filter(inCur);
   const rec = S.edit && S.edit !== 'new' ? L.find(r => r.id === S.edit) : null;
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : (S.tDraft ? S.tDraft : Object.assign({ date: today() }, cfg.blank || {})); S.tDraft = null;
-  const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.form(d)}
+  const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.prioMulti ? prioFld(d) : ''}${cfg.form(d)}${cfg.vis ? visFld(d) : ''}
      ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
-  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="tins">${esc(cfg.note || '')}<span class="tper">التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</span>${stdLine(cfg.item)}</div>${form}
+  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="tins">${esc(cfg.note || '')}<span class="tper">التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</span>${stdLine(cfg.item)}${fixLine(cfg.fixP)}</div>${form}
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
   if (cfg.top) fillVps(el);
@@ -117,6 +125,7 @@ function T_page(el, cfg) {
   const doSave = async (copy) => {
     const f = $('#tf'); const r = Object.assign({}, d, readT(f));
     if (cfg.files) for (const k of cfg.files) { const inp = $(`[data-file="${k}"]`, f); if (inp && inp.files[0]) { const fl = inp.files[0]; if (fl.size > 8e6) return toast('حجم الملف أكبر من 8 ميجابايت', 1); const j = await call('upload', { name: fl.name, data: await fileToData(fl) }); r[k] = { fid: j.fid, name: j.name }; } }
+    if (cfg.fixP != null) { r.ps = [REF.PRIO[cfg.fixP]]; r.p = REF.PRIO[cfg.fixP]; } else if (cfg.prioMulti) { r.ps = (r.ps || []).filter(Boolean); r.p = r.ps[0] || ''; if (!r.ps.length) return toast('اختاري أولوية واحدة على الأقل', 1); }
     if (cfg.pre) cfg.pre(r, f);
     const err = cfg.check ? cfg.check(r) : ''; if (err) return toast(err, 1);
     if (!r.date || r.date < p.from || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن ' + p.name, 1);
@@ -144,7 +153,7 @@ function pvCheer(n) {
 }
 function T_pv(el) {
   T_page(el, {
-    item: 'TPV', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الزميلة التي زرتِها، وسبب اختياركِ لها، وما استفدتِه، وما ستطبّقينه. المطلوب زيارة واحدة على الأقل في الشهر، وإن زدتِ فلكل مجتهدٍ نصيب.',
+    item: 'TPV', fixP: 1, vis: 1, title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الزميلة التي زرتِها، وسبب اختياركِ لها، وما استفدتِه، وما ستطبّقينه. المطلوب زيارة واحدة على الأقل في الشهر، وإن زدتِ فلكل مجتهدٍ نصيب.',
     blank: { why: TPV_WHY[1], pick: [], saw: [], apply: [], how: '' },
     form: d => fld('المعلمة المزورة', staffSel('v', d.v)) + fld('الصف', `<input data-n="s" value="${esc(d.s || '')}" placeholder="مثل 11-3">`) +
       fld('سبب الزيارة', fRadio('why', TPV_WHY, d.why), 1) + fld('لماذا اخترتِ هذه المعلمة؟', fMulti('pick', TPV_PICK, d.pick), 1) +
@@ -182,7 +191,7 @@ async function T_pvPaper(el) {
 /* ================================================================== الورش وتطوير الزملاء */
 function T_ws(el) {
   T_page(el, {
-    item: 'TWS', title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري: ورشة حضرتِها (داخلية أو خارجية)، أو ما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
+    item: 'TWS', fixP: 1, vis: 1, title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري: ورشة حضرتِها (داخلية أو خارجية)، أو ما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
     blank: { role: TWS_ROLE[0] }, files: ['att', 'file'],
     form: d => fld('نوع التسجيل', fRadio('role', TWS_ROLE, d.role), 1) +
       `<div class="fld" style="grid-column:1/-1" data-show="${TWS_ROLE[2]}"><label>ماذا قدّمتِ؟</label>${fSel('type', TWS_TYPE, d.type)}</div>` +
@@ -245,7 +254,7 @@ function paCopy(src) {
 function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
-    item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الشعبة والطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. أما التواصل مع ولي أمر طالبة مستهدفة فيُسجَّل في سبع سنابل فقط، ويصل هنا تلقائياً.',
+    item: 'TPA', fixP: 3, vis: 1, title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الشعبة والطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. أما التواصل مع ولي أمر طالبة مستهدفة فيُسجَّل في سبع سنابل فقط، ويصل هنا تلقائياً.',
     form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبة ورقم ولي أمرها', '<div id="stuBox"></div><div id="phBox" style="margin-top:6px"></div>', 1) +
       fld('الغرض من التواصل', fRadio('cat', TPA_CAT, d.cat), 1) +
       fld('الموضوع', `<select data-n="topic" id="paTop"></select><input data-n="topicx" placeholder="اكتبي الموضوع" style="margin-top:6px;display:none">`) + fld('وسيلة التواصل', selX('way', TPA_WAY, d.way)) +
@@ -288,7 +297,7 @@ function T_pa(el) {
 /* ================================================================== الإنجازات والمشاركات */
 function T_ach(el) {
   T_page(el, {
-    item: 'TACH', title: 'الإنجازات والمشاركات', one: 'إنجاز أو مشاركة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم سجّلي مشاركة طالباتكِ في مسابقة أو فعالية، ومراكزهن إن وُجدت.', blank: { kind: TACH_KIND[0] },
+    item: 'TACH', prioMulti: 1, vis: 1, title: 'الإنجازات والمشاركات', one: 'إنجاز أو مشاركة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم سجّلي مشاركة طالباتكِ في مسابقة أو فعالية، ومراكزهن إن وُجدت.', blank: { kind: TACH_KIND[0] },
     form: d => fld('النوع', fRadio('kind', TACH_KIND, d.kind), 1) + fld('اسم المسابقة / الفعالية', `<input data-n="name" value="${esc(d.name || '')}" required>`, 1) + fld('الجهة المنظمة', `<input data-n="ent" value="${esc(d.ent || '')}">`) + fld('المستوى', fSel('lvl', TACH_LVL, d.lvl)) +
       fld('الطالبات المشاركات', `<input data-n="stu" value="${esc(d.stu || '')}" placeholder="الأسماء أو العدد">`, 1) + fld('النتيجة / المركز', `<input data-n="res" value="${esc(d.res || '')}">`),
     check: r => !r.name ? 'اكتبي اسم المسابقة أو الفعالية' : '',
@@ -380,7 +389,7 @@ function taCelebrate(n, kind) {
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
-    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري النوع بعد قراءة تعريفه، فتظهر لكِ خاناته فقط. كل عمل تسجّلينه يمنحكِ نجمة، وعند الخامس كأس التميز.', blank: {}, dateLbl: 'التاريخ',
+    item: 'TA', prioMulti: 1, vis: 1, top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري النوع بعد قراءة تعريفه، فتظهر لكِ خاناته فقط. كل عمل تسجّلينه يمنحكِ نجمة، وعند الخامس كأس التميز.', blank: {}, dateLbl: 'التاريخ',
     form: d => fld('النوع <small style="color:var(--muted)">(اقرئي التعريف قبل الاختيار، وستظهر لكِ خانات النوع الذي تختارينه فقط)</small>', taKindPick(d.kind), 1) +
       `<div id="taHint" class="tahint" style="grid-column:1/-1"></div>` +
       kf('مشروع نشاط', `<label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}`, 1, 'taPar') +
@@ -396,7 +405,6 @@ function T_act(el) {
       `<div class="fld" id="taTo"><label>تاريخ النهاية</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
       kf('مشروع نشاط مبادرة مسابقة', `<label id="taNL">عدد الطالبات المشاركات</label><input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) +
       kf('مسابقة', `<label>عدد الفائزات</label><input type="number" min="0" data-n="win" value="${esc(d.win || '')}">`) +
-      kf('*', `<label>الأولوية التي يخدمها <span style="color:#A33">*</span></label>${fSel('p', REF.PRIO || [], d.p, 'اختاري الأولوية')}`) +
       kf('مبادرة', `<label class="tkok"><input type="checkbox" data-n="own" ${d.own ? 'checked' : ''}> أؤكد أن الفكرة من مبادرتي الشخصية، وغير مكلّفة بها ضمن مهامي أو خطة المدرسة</label>`, 1) +
       kf('*', `<label>الأثر</label><select data-n="impact" id="taImp" class="smsel"></select><input id="taImpO" class="smsel" placeholder="اكتبي الأثر الذي تحقق في الطالبات" style="display:none;margin-top:6px">`, 1),
     bind: (el, d) => { const f = $('#tf'); if (!f) return;
@@ -412,19 +420,19 @@ function T_act(el) {
         const dur = k === 'مبادرة' ? (($('input[name="r_dur"]:checked', f) || {}).value || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
         $('#taTo', f).style.display = dur === 'ممتد' ? '' : 'none'; };
       $$('input[name="r_kind"],input[name="r_dur"]', f).forEach(i => i.onchange = () => { $$('.tk', f).forEach(l => l.classList.toggle('on', $('input', l).checked)); upd(); }); upd();
-      const imp = $('#taImp', f), oth = $('#taImpO', f), pSel = $('select[data-n="p"]', f); let cur = d.impact || d.desc || '';
+      const imp = $('#taImp', f), oth = $('#taImpO', f), pFirst = () => (($('[data-m="ps"] input:checked', f) || {}).value || ''); let cur = d.impact || d.desc || '';
       const all = TA_IMPACT.flat();
       if (cur && !all.includes(cur)) { oth.value = cur; cur = TA_OTHER; }
-      const fill = () => { const pi = (REF.PRIO || []).indexOf(pSel.value); const v = imp.value || cur;
+      const fill = () => { const pi = (REF.PRIO || []).indexOf(pFirst()); const v = imp.value || cur;
         const grp = (i) => `<optgroup label="${esc((REF.PRIO[i] || '').replace(/^الأولوية \d: /, ''))}">${TA_IMPACT[i].map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</optgroup>`;
         imp.innerHTML = `<option value="">اختاري الأثر…</option>` + (pi >= 0 ? grp(pi) + TA_IMPACT.map((_, i) => i === pi ? '' : grp(i)).join('') : TA_IMPACT.map((_, i) => grp(i)).join('')) + `<option ${v === TA_OTHER ? 'selected' : ''}>${TA_OTHER}</option>`;
         oth.style.display = imp.value === TA_OTHER ? '' : 'none'; };
-      pSel.addEventListener('change', fill); imp.onchange = () => { oth.style.display = imp.value === TA_OTHER ? '' : 'none'; if (imp.value === TA_OTHER) oth.focus(); }; fill(); },
+      $$('[data-m="ps"] input', f).forEach(c => c.addEventListener('change', fill)); imp.onchange = () => { oth.style.display = imp.value === TA_OTHER ? '' : 'none'; if (imp.value === TA_OTHER) oth.focus(); }; fill(); },
     pre: r => { const k = r.kind; const ow = $('#tf [data-n="own"]'); r.own = !!(ow && ow.checked); r.dur = k === 'مبادرة' ? (r.dur || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
       const keep = { 'برنامج': ['goal', 'term', 'tg'], 'مشروع': ['par', 'goal', 'stages', 'out', 'n'], 'نشاط': ['par', 'n'], 'مبادرة': ['need', 'tg', 'n', 'own'], 'مسابقة': ['lvl', 'n', 'win'] }[k] || [];
       ['par', 'goal', 'term', 'stages', 'out', 'need', 'tg', 'lvl', 'n', 'win', 'own'].forEach(x => { if (!keep.includes(x)) delete r[x]; });
       if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
-    check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' : !r.p ? 'اختاري الأولوية التي يخدمها'
+    check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' 
       : r.kind === 'برنامج' && !r.term ? 'حدّدي مدة البرنامج، فالبرنامج ممتد على فصل أو عام'
       : r.kind === 'مشروع' && !(+r.stages >= 2) ? 'المشروع يتكوّن من مرحلتين أو نشاطين على الأقل؛ إن كان فعالية واحدة فاختاري «نشاط»'
       : r.kind === 'مشروع' && !r.out ? 'اكتبي المُخرَج النهائي للمشروع'

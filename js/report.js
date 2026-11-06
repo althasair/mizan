@@ -284,13 +284,14 @@ function buildReport(ctx) {
   const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {
     const parts = [];
-    const ta = tTA.filter(r => r.d.p && REF.PRIO.indexOf(r.d.p) + 1 === p);
+    const ta = tTA.filter(r => (r.d.ps && r.d.ps.length ? r.d.ps : [r.d.p]).some(x => x && REF.PRIO.indexOf(x) + 1 === p));
     const ra = RAf.filter(r => (d(r).p ? REF.PRIO.indexOf(d(r).p) + 1 : 1) === p).map(r => d(r).item);
     const ac = ACf.filter(r => SEC.AC.prioFlag(d(r), p)).map(r => `«${d(r).name}»`);
     const ach = ACH.filter(r => d(r).p && REF.PRIO.indexOf(d(r).p) + 1 === p).length;
+    const tAch = TQ('TACH').filter(r => (r.d.ps || []).some(x => REF.PRIO.indexOf(x) + 1 === p)); if (tAch.length) parts.push('مشاركات طالبات المعلمات في ' + tAch.map(r => `«${String(r.d.name || '').trim()}»`).join('، '));
     if (ra.length) parts.push(ra.join('، ')); if (ac.length) parts.push(ac.join('، ')); if (ach) parts.push(`(${ach}) من الإنجازات والمشاركات`);
     if (ta.length) parts.push('وما نفّذته المعلمات من ' + ta.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}»`).join('، و'));
-    let n = ra.length + ac.length + ach + ta.length;
+    let n = ra.length + ac.length + ach + ta.length + tAch.length;
     if (p === 2) {
       if (tPV.length) parts.push(`(${tPV.length}) من الزيارات التبادلية التي نفّذتها المعلمات`);
       if (tWS.length) parts.push(`(${tWS.length}) من الورش والممارسات المتميزة في تطوير الزملاء`);
