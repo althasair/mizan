@@ -63,6 +63,18 @@ function T_home(el) {
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
 }
 
+/* ربط كل بند بمجال تقييم أداء المعلمة: n رقم المعيار (يُضاف من نموذج التقييم المعتمد)، d المجال */
+const TSTD = {
+  TPV: { n: '', d: 'التطوير المهني المستمر والتعلّم من الزميلات' },
+  TWS: { n: '', d: 'التطوير المهني ونقل الخبرات إلى الزميلات' },
+  TPA: { n: '', d: 'التواصل والشراكة مع أولياء الأمور' },
+  TACH: { n: '', d: 'رعاية الطالبات وتحقيق نواتج التعلّم' },
+  TA: { n: '', d: 'الإسهام في الحياة المدرسية والأنشطة' },
+  TAS: { n: '', d: 'المسؤوليات المهنية والإسهام في عمل القسم' },
+  TDS: { n: '', d: 'الالتزام المهني والانضباط الوظيفي' }
+};
+const stdLine = it => { const x = TSTD[it]; return x ? `<div class="tstd">${x.n ? `<b>المعيار ${esc(x.n)}</b> · ` : ''}<span>يغطي هذا البند في تقييم أدائكِ مجال: ${esc(x.d)}</span></div>` : ''; };
+
 /* ---------- محرك نماذج بسيط ---------- */
 const fSel = (n, opts, v, ph) => `<select data-n="${n}"><option value="">${esc(ph || 'اختاري…')}</option>${opts.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`;
 const fCombo = (n, opts, v, ph) => `<input data-n="${n}" list="dl_${n}" value="${esc(v || '')}" placeholder="${esc(ph || 'اختاري من القائمة أو اكتبي')}"><datalist id="dl_${n}">${opts.map(o => `<option value="${esc(o)}">`).join('')}</datalist>`;
@@ -90,7 +102,7 @@ function T_page(el, cfg) {
   const form = S.edit ? `<div class="card"><h2>${rec ? 'تعديل' : 'تسجيل'} — ${esc(cfg.one)}</h2><form class="form" id="tf" onsubmit="return false">${cfg.form(d)}
      ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
-  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
+  el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="tins">${esc(cfg.note || '')}<span class="tper">التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</span>${stdLine(cfg.item)}</div>${form}
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
   if (cfg.top) fillVps(el);
@@ -130,7 +142,7 @@ function pvCheer(n) {
 }
 function T_pv(el) {
   T_page(el, {
-    item: 'TPV', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'المطلوب زيارة تبادلية إلى زيارتين شهرياً. اختاري من القوائم أو اكتبي.',
+    item: 'TPV', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الزميلة التي زرتِها، وسبب اختياركِ لها، وما استفدتِه، وما ستطبّقينه. المطلوب زيارة واحدة على الأقل في الشهر، وإن زدتِ فلكل مجتهدٍ نصيب.',
     blank: { why: TPV_WHY[1], pick: [], saw: [], apply: [], how: '' },
     form: d => fld('المعلمة المزورة', staffSel('v', d.v)) + fld('الصف', `<input data-n="s" value="${esc(d.s || '')}" placeholder="مثل 11-3">`) +
       fld('سبب الزيارة', fRadio('why', TPV_WHY, d.why), 1) + fld('لماذا اخترتِ هذه المعلمة؟', fMulti('pick', TPV_PICK, d.pick), 1) +
@@ -168,7 +180,7 @@ async function T_pvPaper(el) {
 /* ================================================================== الورش وتطوير الزملاء */
 function T_ws(el) {
   T_page(el, {
-    item: 'TWS', title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'سجّلي ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
+    item: 'TWS', title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري: ورشة حضرتِها (داخلية أو خارجية)، أو ما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
     blank: { role: TWS_ROLE[0] }, files: ['att', 'file'],
     form: d => fld('نوع التسجيل', fRadio('role', TWS_ROLE, d.role), 1) +
       `<div class="fld" style="grid-column:1/-1" data-show="${TWS_ROLE[2]}"><label>ماذا قدّمتِ؟</label>${fSel('type', TWS_TYPE, d.type)}</div>` +
@@ -231,7 +243,7 @@ function paCopy(src) {
 function T_pa(el) {
   const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
   T_page(el, {
-    item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'اختاري الشعبة ثم الطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة. التاريخ يُسجَّل تلقائياً بتاريخ اليوم ويمكنكِ تعديله.',
+    item: 'TPA', title: 'التواصل مع أولياء الأمور', one: 'تواصل مع ولي أمر', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الشعبة والطالبة فيظهر رقم ولي أمرها، ثم الغرض من التواصل ووسيلته والنتيجة.',
     form: d => fld('الشعبة', fSel('s', secs, d.s, 'اختاري الشعبة')) + fld('عدد أولياء الأمور', `<input type="number" min="1" data-n="n" value="${esc(d.n || 1)}">`) + (S.tStu = d.stu || [], '') + fld('الطالبة ورقم ولي أمرها', '<div id="stuBox"></div><div id="phBox" style="margin-top:6px"></div>', 1) +
       fld('الغرض من التواصل', fRadio('cat', TPA_CAT, d.cat), 1) +
       fld('الموضوع', `<select data-n="topic" id="paTop"></select><input data-n="topicx" placeholder="اكتبي الموضوع" style="margin-top:6px;display:none">`) + fld('وسيلة التواصل', selX('way', TPA_WAY, d.way)) +
@@ -274,7 +286,7 @@ function T_pa(el) {
 /* ================================================================== الإنجازات والمشاركات */
 function T_ach(el) {
   T_page(el, {
-    item: 'TACH', title: 'الإنجازات والمشاركات', one: 'إنجاز أو مشاركة', note: 'مشاركات طالباتكِ في المسابقات والفعاليات، ومراكزهن إن وُجدت.', blank: { kind: TACH_KIND[0] },
+    item: 'TACH', title: 'الإنجازات والمشاركات', one: 'إنجاز أو مشاركة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم سجّلي مشاركة طالباتكِ في مسابقة أو فعالية، ومراكزهن إن وُجدت.', blank: { kind: TACH_KIND[0] },
     form: d => fld('النوع', fRadio('kind', TACH_KIND, d.kind), 1) + fld('اسم المسابقة / الفعالية', `<input data-n="name" value="${esc(d.name || '')}" required>`, 1) + fld('الجهة المنظمة', `<input data-n="ent" value="${esc(d.ent || '')}">`) + fld('المستوى', fSel('lvl', TACH_LVL, d.lvl)) +
       fld('الطالبات المشاركات', `<input data-n="stu" value="${esc(d.stu || '')}" placeholder="الأسماء أو العدد">`, 1) + fld('النتيجة / المركز', `<input data-n="res" value="${esc(d.res || '')}">`),
     check: r => !r.name ? 'اكتبي اسم المسابقة أو الفعالية' : '',
@@ -366,7 +378,7 @@ function taCelebrate(n, kind) {
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));
   T_page(el, {
-    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'البرنامج مظلة تنبثق منه المشاريع، ومن المشروع تنبثق الأنشطة. (الحذف للنائب الأكاديمي فقط)', blank: {}, dateLbl: 'التاريخ',
+    item: 'TA', top: () => taCheer(mine('TA').filter(inCur).length), title: 'الأنشطة والبرامج والمبادرات', one: 'برنامج أو مشروع أو نشاط أو مبادرة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري النوع بعد قراءة تعريفه، فتظهر لكِ خاناته فقط. كل عمل تسجّلينه يمنحكِ نجمة، وعند الخامس كأس التميز.', blank: {}, dateLbl: 'التاريخ',
     form: d => fld('النوع <small style="color:var(--muted)">(اقرئي التعريف قبل الاختيار، وستظهر لكِ خانات النوع الذي تختارينه فقط)</small>', taKindPick(d.kind), 1) +
       `<div id="taHint" class="tahint" style="grid-column:1/-1"></div>` +
       kf('مشروع نشاط', `<label>ينبثق من <small style="color:var(--muted)">(اختياري)</small></label>${fCombo('par', [], d.par, 'اختاري أو اكتبي')}`, 1, 'taPar') +
@@ -436,7 +448,7 @@ const TAS_BY = ['المنسقة', 'النائب الأكاديمي', 'مديرة
 function T_tas(el) {
   T_page(el, {
     item: 'TAS', title: 'التكليفات والأعباء الوظيفية', one: 'تكليف',
-    note: 'معلمتي الغالية، سجّلي كل ما كُلّفتِ به من ملفات ومهام وأعباء، ليُحتسب لكِ في تقرير القسم وفي تقرير أعمالكِ. يمكنكِ اختيار أكثر من بند، أو الكتابة بعباراتكِ.',
+    note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري كل ما كُلّفتِ به من ملفات ومهام (أكثر من بند)، أو اكتبيه بعباراتكِ، ليُحتسب لكِ في تقرير القسم وتقرير أعمالكِ.',
     blank: { scope: TAS_SCOPE[2], what: [] },
     form: d => fld('ما كُلّفتِ به <small style="color:#C98A8A;font-weight:400">يمكنكِ الاختيار من القائمة أو الكتابة بعباراتكِ التي تجدينها مناسبة</small>',
         `<div class="multi" data-m="what" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:240px;overflow:auto;font-size:12.5px;line-height:1.9">${TAS_LIST.map(([g, L]) => `<div style="font-weight:700;color:var(--maroon);margin-top:4px">${esc(g)}</div>${L.map(o => `<label style="display:block"><input type="checkbox" value="${esc(o)}" ${(d.what || []).includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}`).join('')}<input data-mx="what" placeholder="أو اكتبي تكليفاً آخر (افصلي بين التكليفات بفاصلة)" value="${esc((d.what || []).filter(x => !TAS_LIST.some(([, L]) => L.includes(x))).join('، '))}" style="margin-top:6px"></div>`, 1) +
@@ -473,7 +485,7 @@ function T_ds(el) {
   const rowsP = (n, L) => Array.from({ length: n }, (_, i) => { const a = L[i] || {}; return `<div class="row" style="gap:8px;margin:4px 0"><b style="width:22px">${i + 1}</b><input type="date" data-pd="${i}" value="${esc(a.date || '')}" min="${p.from}" max="${p.to}"><select data-ph="${i}">${TDS_H.map(o => `<option value="${o}" ${o === String(a.h || '1') ? 'selected' : ''}>${o} ${+o <= 2 && +o !== 1 ? 'ساعة' : +o === 1 ? 'ساعة' : 'ساعات'}</option>`).join('')}</select><select data-pt="${i}">${TDS_PERM.map(o => `<option ${o === a.type ? 'selected' : ''}>${o}</option>`).join('')}</select></div>`; }).join('');
   const grab = f => ({ abs: $$('[data-ad]', f).map((x, i) => ({ date: x.value, type: $(`[data-at="${i}"]`, f).value })), perm: $$('[data-pd]', f).map((x, i) => ({ date: x.value, h: +$(`[data-ph="${i}"]`, f).value, type: $(`[data-pt="${i}"]`, f).value })) });
   T_page(el, {
-    item: 'TDS', title: 'الانضباط الوظيفي', one: 'غياب أو استئذان', noDate: 1, note: 'اكتبي عدد أيام الغياب أو عدد الاستئذانات، فتظهر لكِ الخانات لتعبئتها. وإن لم يكن لديكِ غياب ولا استئذان فاتركي الرقمين صفراً واضغطي «حفظ». إذن العمل لا يُحسب من الساعات العشر الشهرية.',
+    item: 'TDS', title: 'الانضباط الوظيفي', one: 'غياب أو استئذان', noDate: 1, note: 'معلمتي الغالية، اكتبي عدد أيام الغياب أو الاستئذانات فتظهر خاناتها. وإن لم يكن لديكِ شيء فاتركي الرقمين صفراً واضغطي «حفظ». إذن العمل لا يُحسب من الساعات العشر الشهرية.',
     top: () => { const M = tdsMonths(); const ks = Object.keys(M).sort().reverse();
       return ks.length ? `<div class="card"><h2>ساعات الاستئذان الشخصي شهرياً</h2>${ks.map(k => { const o = M[k], g = tdsMsg(o.h);
         return `<div style="border-inline-start:4px solid ${g.c === 'bad' ? '#A33' : g.c === 'warn' ? 'var(--gold)' : 'var(--tiffany-d)'};padding:6px 12px;margin:8px 0;background:#FAFBFC;border-radius:8px"><b>${MONTHS[+k.slice(5, 7) - 1]} ${k.slice(0, 4)}</b> — شخصي: <b>${o.h}</b> من 10 ساعات${o.w ? ` · إذن عمل: ${o.w} (لا يُحسب)` : ''}${Object.keys(o.a).length ? ' · غياب: ' + Object.entries(o.a).map(([t, n]) => `${t} ${n}`).join('، ') : ''}<div style="margin-top:4px;font-weight:600;text-align:justify">${esc(g.t)}</div></div>`; }).join('')}</div>` : ''; },

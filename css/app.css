@@ -248,3 +248,8 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .tl{display:flex;gap:6px;align-items:baseline;text-align:justify;margin:2px 0}
 .tl .tls{color:#B08D57;font-size:11px;letter-spacing:1px;min-width:34px;flex:none}
 .tlh{font-weight:700;margin:4px 0 2px}
+
+/* تعليمات صفحات المعلمة: رمادي باهت، ثم سطر صغير جداً لمجال التقييم */
+.tins{font-size:13px;color:#8A8F99;line-height:1.9;text-align:justify;margin:0 0 14px;padding:0 2px}
+.tins .tper{display:block;font-size:11.5px;color:#A3A7AF}
+.tstd{font-size:10.5px;margin-top:2px;line-height:1.6}.tstd b{color:#C62828;font-weight:700}.tstd span{color:#2E7D32}
