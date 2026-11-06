@@ -544,7 +544,7 @@ function syncSanabil() {
   const find = n => { const k = normAr_(n); return T.find(x => normAr_(x[1]) === k || normAr_(x[2]) === k); };
   const full = n => { n = String(n || '').trim(); const t = find(n); return t ? String(t[2] || t[1]) : n; };
   const deptAll = d => T.filter(x => String(x[0]) === String(d)).map(x => String(x[2] || x[1]));
-  const list = [], abs = [], pa = [];
+  const list = [], abs = [], pa = [], cv = [];
   // strict: يُحتسب الاسم فقط إن طابق معلمة في جدول «المعلمات» (للخانات النصية الحرة)
   const ex = (r, names, k, ti, strict) => { const s = {}; names.filter(Boolean).forEach(n => { n = String(n).trim(); if (/جميع/.test(n)) deptAll(r.dept).forEach(x => s[x] = 1); else if (!strict || find(n)) s[full(n)] = 1; });
     Object.keys(s).forEach(n => list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '' })); };
@@ -562,15 +562,17 @@ function syncSanabil() {
       case 'PA': ex(r, [d.by], 'o', d.c || d.why, true); break;
       case 'TPA': ex(r, [d.t], 'o', d.topic || 'تواصل مع ولي أمر'); if (d.s && d.stu && d.stu.length) pa.push({ id: r.id, t: full(d.t), s: String(d.s), st: d.stu, d: r.date || '', c: d.cat || '', tp: d.topic || '', w: d.way || '' }); break;
       case 'LR': ex(r, [d.t], 'r', d.e || d.k); break;
+      // الحضور الصفي (أعداد فقط بلا ملاحظات) للوحة الأرقام في سبع سنابل: w = co المنسقة، vp النائب الأكاديمي، pr المديرة
+      case 'V': case 'VPV': case 'PRV': if (d.t) cv.push({ w: r.item === 'V' ? 'co' : r.item === 'VPV' ? 'vp' : 'pr', p: String(r.dept || ''), t: full(d.t), d: r.date || d.date || '', kj: d.kj || '' }); break;
       case 'TDS': (d.abs || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'غياب' })); (d.perm || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'استئذان' })); break;
     } });
-  const body = { fields: { t: { stringValue: JSON.stringify(list) }, abs: { stringValue: JSON.stringify(abs) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
+  const body = { fields: { t: { stringValue: JSON.stringify(list) }, cv: { stringValue: JSON.stringify(cv) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
   const res = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/shared/mizan', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, payload: JSON.stringify(body), muteHttpExceptions: true });
-  // تواصل المعلمات مع أولياء الأمور بأسماء الطالبات: في وثيقة لا يقرؤها إلا حساب النائب الأكاديمي، ومنها تمتلئ سنبلة «التواصل مع ولي الأمر» لكل طالبة
+  // تواصل المعلمات مع أولياء الأمور بأسماء الطالبات، والغياب والاستئذان: في وثيقة لا يقرؤها إلا حساب النائب الأكاديمي، ومنها تمتلئ سنبلة «التواصل مع ولي الأمر» لكل طالبة
   UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/adm/mizanpa', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-    payload: JSON.stringify({ fields: { t: { stringValue: JSON.stringify(pa) }, at: { stringValue: new Date().toISOString() } } }) });
+    payload: JSON.stringify({ fields: { t: { stringValue: JSON.stringify(pa) }, abs: { stringValue: JSON.stringify(abs) }, at: { stringValue: new Date().toISOString() } } }) });
   const msg = res.getResponseCode() === 200 ? 'تم إرسال ' + list.length + ' سجل و' + pa.length + ' تواصل مع أولياء الأمور إلى سبع سنابل' : 'تعذّر الإرسال: ' + res.getContentText().slice(0, 200);
   Logger.log(msg); return msg;
 }
