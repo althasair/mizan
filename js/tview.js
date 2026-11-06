@@ -39,6 +39,8 @@ function curPer() { const t = today(); return S.periods.find(p => t >= p.from &&
 const mine = it => S.records.filter(r => r.item === it && r.d && r.d.t === S.user.name).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 const inCur = r => inP(r.date, curPer());
 const yrFrom = () => ([...S.periods].sort((a, b) => a.from.localeCompare(b.from))[0] || {}).from || '';
+const perName = d => { const p = S.periods.find(x => inP(d, x)); return p ? p.name : ''; };
+const inPast = r => pastPers().some(pp => inP(r.date, pp)); // كل الأرباع حتى الحالي — ما زارها أو حضر ورشها في ربع سابق يبقى ظاهراً
 const pastPers = () => { const c = curPer(); return [...S.periods].sort((a, b) => a.from.localeCompare(b.from)).filter(x => x.from <= c.from); };
 const others = () => ((S.staffAll && S.staffAll.length) ? S.staffAll : (S.staff || [])).filter(s => s.name && s.name !== S.user.name);
 const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
@@ -167,11 +169,11 @@ function T_pv(el) {
     row: r => `<td>${dmy(r.date)}</td><td><b>${esc(r.d.v)}</b></td><td>${esc(r.d.vdept || '')}</td><td style="font-size:12px">${esc(listTxt(r.d.pick))}</td><td style="font-size:12px">${esc(listTxt(r.d.apply))}${r.d.how ? ` <span class="chip">${esc(r.d.how)}</span>` : ''}</td>`,
     actions: '<button class="btn sec" id="tprint">ورقة الزيارات: حفظ PDF أو طباعة</button>',
     bind: el => { if ($('#tprint')) $('#tprint').onclick = () => T_pvPaper(el); },
-    bottom: () => { const H = S.records.filter(r => r.item === 'TPV' && r.d.v === S.user.name && inCur(r)).sort((a, b) => a.date < b.date ? -1 : 1);
+    bottom: () => { const H = S.records.filter(r => r.item === 'TPV' && r.d.v === S.user.name && inPast(r)).sort((a, b) => a.date < b.date ? -1 : 1);
       return `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>زارتني — توظيف جوانب تميزي</h2>
       <p style="margin:0 0 8px;text-align:justify">نشكر لكِ سعة صدركِ واستضافتكِ للزميلات، توظيفاً لجوانب التميز والمهارات التي تتميزين بها.</p>
-      <div class="tbl"><table class="t"><tr><th>التاريخ</th><th>الزائرة</th><th>القسم</th><th>جانب التميز الذي حضرت لأجله</th><th>ما استفادته</th></tr>
-      ${H.map(r => `<tr><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td style="font-size:12px">${esc(listTxt(r.d.pick))}</td><td style="font-size:12px">${esc(listTxt(r.d.saw))}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">لم تُسجَّل زيارات لكِ في هذه الفترة بعد — تظهر هنا تلقائياً حين تسجّلها الزائرة</div></td></tr>'}</table></div></div>`; },
+      <div class="tbl"><table class="t"><tr><th>الفترة</th><th>التاريخ</th><th>الزائرة</th><th>القسم</th><th>جانب التميز الذي حضرت لأجله</th><th>ما استفادته</th></tr>
+      ${H.map(r => `<tr><td style="white-space:nowrap;font-size:12px">${esc(perName(r.date))}</td><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td style="font-size:12px">${esc(listTxt(r.d.pick))}</td><td style="font-size:12px">${esc(listTxt(r.d.saw))}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">لم تُسجَّل زيارات لكِ هذا العام بعد — تظهر هنا تلقائياً حين تسجّلها الزائرة</div></td></tr>'}</table></div></div>`; },
   });
 }
 async function T_pvPaper(el) {
@@ -210,7 +212,7 @@ function T_ws(el) {
     sum: r => (r.role === TWS_ROLE[2] ? 'قدّمتُ ' + (r.type || '') : r.role) + ': ' + r.title,
     head: '<tr><th>التاريخ</th><th>النوع</th><th>العنوان</th><th>المقدِّمة / الجهة</th><th>مرفقات</th><th></th></tr>',
     row: r => `<td>${dmy(r.date)}</td><td><span class="chip ${r.d.role === TWS_ROLE[2] ? 'tf' : ''}">${esc(r.d.role === TWS_ROLE[2] ? 'قدّمتُ: ' + (r.d.type || '') : r.d.role)}</span></td><td><b>${esc(r.d.title)}</b></td><td>${esc(r.d.role === TWS_ROLE[0] ? 'أ. ' + r.d.by : r.d.role === TWS_ROLE[1] ? [r.d.byx, r.d.place].filter(Boolean).join(' — ') : r.d.aud || '')}</td><td>${fileLink(r.d.att)} ${fileLink(r.d.file)} ${r.d.link ? `<a href="${esc(r.d.link)}" target="_blank" rel="noopener">رابط</a>` : ''}</td>`,
-    bottom: () => { const H = S.records.filter(r => r.item === 'TWS' && r.d.by === S.user.name && r.d.t !== S.user.name && inCur(r));
+    bottom: () => { const H = S.records.filter(r => r.item === 'TWS' && r.d.by === S.user.name && r.d.t !== S.user.name && inPast(r));
       return H.length ? `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>حضرن ورشكِ — توظيف جوانب تميزكِ</h2><div class="tbl"><table class="t"><tr><th>التاريخ</th><th>العنوان</th><th>الحاضرة</th><th>قسمها</th></tr>${H.map(r => `<tr><td>${dmy(r.date)}</td><td>${esc(r.d.title)}</td><td>أ. ${esc(r.d.t)}</td><td>${esc(r.dept)}</td></tr>`).join('')}</table></div></div>` : ''; },
   });
 }
