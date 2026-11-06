@@ -237,9 +237,9 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .tkok{display:flex;gap:8px;align-items:flex-start;font-weight:600;color:#B3261E;font-size:13px}
 
 @font-face{font-family:'RuqaaName';src:url('../fonts/ruqaa.ttf') format('truetype');font-display:swap}
-.vpsign{margin-top:8px;display:flex;flex-direction:column;align-items:flex-end;width:max-content;margin-inline-start:auto}
-.vpsign .vps img{height:78px;max-width:200px;filter:grayscale(1);opacity:.38;display:block;margin-bottom:-14px}
-.vpsign .vpn{font-family:'RuqaaName',serif;font-size:24px;color:#9A9EA6;line-height:1.3;text-align:center;align-self:center}
+.vpsign{margin-top:8px;position:relative;width:max-content;min-width:170px;min-height:40px;margin-inline-start:auto}
+.vpsign .vps img{height:84px;max-width:210px;filter:grayscale(1);opacity:.38;display:block}
+.vpsign .vpn{font-family:'RuqaaName',serif;font-size:24px;color:#8E929A;line-height:1;white-space:nowrap;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 
 /* عبارات التعزيز بخط الرقعة */
 .ta-cheer p,.ta-cheer h3,.pv-cheer p{font-family:'RuqaaName','Lusail',serif !important;font-weight:400 !important;font-size:18px;line-height:1.9}
