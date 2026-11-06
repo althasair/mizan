@@ -258,6 +258,9 @@ function buildReport(ctx) {
     if (AHw.length) add('ach', 'ومن إنجازات الطالبات بإشراف معلمات القسم: ' + AHw.map(ahTx).join('؛ ') + '.');
     if (AHp.length) add('part', 'وشاركت الطالبات بإشراف معلمات القسم في: ' + AHp.map(ahTx).join('؛ ') + '.');
     // الأنشطة والمبادرات التي سجّلتها المعلمات (عدا ما نُقل من تقارير الربع الأول)
+    { const TS = mineD('TAS'); const by = {}; TS.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      T.tas_lines = Object.entries(by).map(([t, L]) => { const it = uniq(L.flatMap(r => lst(r.d.what).map(w => w + (r.d.scope === 'طوال العام' && !/طوال العام/.test(w) ? ' (طوال العام)' : ''))));
+        return { st: Math.min(it.length, 3), n: it.length, tx: `أ. ${t}: تم تكليفها بـ ` + it.join('، ') + '.' }; }).sort((a, b) => b.n - a.n); }
     const TAt = mineD('TA').filter(r => !r.d.q1);
     if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
@@ -313,6 +316,7 @@ function buildReport(ctx) {
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],
     ['الإنجازات والمشاركات', [['الإنجازات (مراكز وجوائز)', [T.ach]], ['المشاركات', [T.part]]]],
+    ['تكليفات المعلمات والأعباء الوظيفية', [[null, [(T.tas_lines && T.tas_lines.length) ? { lines: T.tas_lines } : 'لم تُسجَّل تكليفات للمعلمات خلال الفترة.']]]],
     ['تحقيق أولويات المدرسة', REF.PRIO_FULL.map((p, i) => [p, [T.prio[i].txt], 1])],
     ['الاحتياط والتبديل', [['تغطية معلمات القسم للحصص', [T.sb_cov]], ['غياب معلمات القسم وتغطيته', [T.sb_abs]]]],
     ['التحديات والحلول المقترحة', [[null, [T.chal]]]],

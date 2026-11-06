@@ -47,7 +47,7 @@ function roleOf_(r) {
   if (k === 'توجيه') return 'viewer';                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
   return k === 'معلمة' ? 'teacher' : 'coord';
 }
-const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
+const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
   const t = rows_(SH.users);
@@ -163,7 +163,7 @@ function saveRecord_(u, rec) {
   if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند خاص بالنائب الأكاديمي');
   if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
   if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
-  const coordOwn = u.role === 'coord' && (rec.item === 'TPV' || rec.item === 'TWS');   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
+  const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
   if (u.role === 'teacher' || coordOwn) {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
@@ -220,7 +220,7 @@ function deleteRecord_(u, id) {
         if ((String(t.rows[i][2]) === 'VPV' && isPrincipal_(u)) || (String(t.rows[i][2]) === 'PRV' && !isPrincipal_(u))) fail_('هذا السجل للاطلاع فقط');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
         if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
-        else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('هذا السجل تسجّله المعلمة بنفسها');
+        else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (!(['TPV', 'TWS', 'TAS'].indexOf(String(t.rows[i][2])) >= 0 && od.t === u.name)) fail_('هذا السجل تسجّله المعلمة بنفسها'); }
         if (u.role !== 'admin') assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
         t.sh.deleteRow(i + 2); log_(u, 'حذف سجل', t.rows[i][1], t.rows[i][2] + ' — ' + String(t.rows[i][4]).slice(0, 80));
         return { id: id };

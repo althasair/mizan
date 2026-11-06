@@ -44,7 +44,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}`;
 }
 
 function T_home(el) {
@@ -59,7 +59,7 @@ function T_home(el) {
     ${kpi('التواصل مع أولياء الأمور', mine('TPA').filter(inCur).reduce((a, r) => a + (+r.d.n || 1), 0), 'ولي أمر في الفترة', 'var(--navy)')}
     ${kpi('أنشطتي ومبادراتي', mine('TA').filter(inCur).length, 'في الفترة', 'var(--gold)')}
   </div>
-  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_pa', 'التواصل مع أولياء الأمور', 'اختاري الطالبة فيظهر رقم ولي أمرها، ثم الغرض ووسيلة التواصل والنتيجة.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
+  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_pa', 'التواصل مع أولياء الأمور', 'اختاري الطالبة فيظهر رقم ولي أمرها، ثم الغرض ووسيلة التواصل والنتيجة.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_tas', 'التكليفات والأعباء الوظيفية', 'ما كُلّفتِ به من ملفات ومهام وأعباء: اختاري من القائمة أو اكتبي بعباراتكِ.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
 }
 
@@ -91,9 +91,9 @@ function T_page(el, cfg) {
      ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
   el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
-  if (cfg.top) fillVps(el);
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
+  if (cfg.top) fillVps(el);
   if ($('#tnew')) $('#tnew').onclick = () => { S.edit = 'new'; show(); };
   $$('[data-e]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.e; show(); window.scrollTo(0, 0); });
   if (cfg.bind) cfg.bind(el, d);
@@ -421,6 +421,31 @@ function T_act(el) {
     sum: r => r.kind + ': ' + r.name,
     head: '<tr><th>التاريخ</th><th>النوع</th><th>الاسم</th><th>الطالبات</th><th>الأولوية</th><th>الأثر</th><th></th></tr>',
     row: r => `<td style="white-space:nowrap">${dmy(r.date)}${r.d.to ? '<br><small>إلى ' + dmy(r.d.to) + '</small>' : ''}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : r.d.kind === 'برنامج' ? 'ok' : ''}">${esc(r.d.kind)}</span></td><td><b>${esc(r.d.name)}</b>${r.d.par ? `<div style="font-size:11px;color:var(--muted)">من: ${esc(r.d.par)}</div>` : ''}${(x => x ? `<div style="font-size:11px;color:var(--muted)">${esc(x)}</div>` : '')([r.d.term, r.d.need, r.d.lvl, r.d.out ? 'المُخرَج: ' + r.d.out : '', r.d.win ? 'الفائزات: ' + r.d.win : ''].filter(Boolean).join(' · '))}</td><td>${esc(r.d.n || '')}</td><td style="font-size:12px">${esc(r.d.p || '')}</td><td style="font-size:12px">${esc(r.d.impact || r.d.desc || '')}</td>`,
+  });
+}
+
+/* ================================================================== التكليفات والأعباء الوظيفية */
+const TAS_LIST = [
+  ['الملفات', ['ملف التطوير المهني للقسم', 'ملف الموهوبات والمتفوقات', 'ملف الطالبات المتعثرات ورفع التحصيل', 'ملف الأنشطة والمبادرات', 'ملف التواصل مع أولياء الأمور', 'ملف الاختبارات والتقييمات', 'ملف الخطط الفصلية', 'ملف الجودة والاعتماد', 'ملف مصادر التعلم', 'ملف التعلم الإلكتروني', 'ملف البحث العلمي', 'ملف الإنجازات والمشاركات']],
+  ['التخويل والتمثيل', ['مخوّلة عن المنسقة طوال العام', 'مخوّلة عن المنسقة أثناء غيابها', 'حضور اجتماع بدلاً من المنسقة', 'تمثيل القسم في لجنة مدرسية', 'تمثيل المدرسة في جهة خارجية']],
+  ['الإعداد', ['إعداد اختبار', 'إعداد تقييم قصير', 'إعداد تقييم صفي', 'إعداد خطط دروس', 'إعداد خطة علاجية', 'إعداد خطة إثرائية', 'إعداد أوراق عمل', 'إعداد أنشطة', 'إعداد مسابقة', 'إعداد إذاعة مدرسية', 'إعداد ورشة للزميلات']],
+  ['التنفيذ والمتابعة', ['تدريب طالبات لمسابقة', 'الإشراف على مسابقة', 'المشاركة في مسابقة', 'تصحيح ومراجعة اختبارات', 'تدقيق رصد الدرجات', 'متابعة طالبات متعثرات', 'الإشراف على نادٍ طلابي', 'المشاركة في لجنة الاختبارات', 'المشاركة في فعالية مدرسية', 'حصص الاحتياط']]
+];
+const TAS_SCOPE = ['طوال العام', 'خلال الفصل الدراسي', 'مهمة محددة'];
+const TAS_BY = ['المنسقة', 'النائب الأكاديمي', 'مديرة المدرسة', 'الموجهة التربوية', 'النائبة الإدارية'];
+function T_tas(el) {
+  T_page(el, {
+    item: 'TAS', title: 'التكليفات والأعباء الوظيفية', one: 'تكليف',
+    note: 'معلمتي الغالية، سجّلي كل ما كُلّفتِ به من ملفات ومهام وأعباء، ليُحتسب لكِ في تقرير القسم وفي تقرير أعمالكِ. يمكنكِ اختيار أكثر من بند، أو الكتابة بعباراتكِ.',
+    blank: { scope: TAS_SCOPE[2], what: [] },
+    form: d => fld('ما كُلّفتِ به <small style="color:#C98A8A;font-weight:400">يمكنكِ الاختيار من القائمة أو الكتابة بعباراتكِ التي تجدينها مناسبة</small>',
+        `<div class="multi" data-m="what" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:240px;overflow:auto;font-size:12.5px;line-height:1.9">${TAS_LIST.map(([g, L]) => `<div style="font-weight:700;color:var(--maroon);margin-top:4px">${esc(g)}</div>${L.map(o => `<label style="display:block"><input type="checkbox" value="${esc(o)}" ${(d.what || []).includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}`).join('')}<input data-mx="what" placeholder="أو اكتبي تكليفاً آخر (افصلي بين التكليفات بفاصلة)" value="${esc((d.what || []).filter(x => !TAS_LIST.some(([, L]) => L.includes(x))).join('، '))}" style="margin-top:6px"></div>`, 1) +
+      fld('المدة', fRadio('scope', TAS_SCOPE, d.scope || TAS_SCOPE[2])) + fld('جهة التكليف', fSel('by', TAS_BY, d.by, 'اختاري الجهة')) +
+      fld('ملاحظة <small style="color:var(--muted)">(اختياري)</small>', `<input data-n="note" value="${esc(d.note || '')}" placeholder="مثل: اختبار منتصف الفصل للصف العاشر">`, 1),
+    check: r => !(r.what || []).length ? 'اختاري تكليفاً واحداً على الأقل أو اكتبيه' : '',
+    sum: r => 'تكليف: ' + (r.what || []).join('، '),
+    head: '<tr><th>التاريخ</th><th>التكليف</th><th>المدة</th><th>الجهة</th><th></th></tr>',
+    row: r => `<td style="white-space:nowrap">${dmy(r.date)}</td><td><b>${esc((r.d.what || []).join('، '))}</b>${r.d.note ? `<div style="font-size:11px;color:var(--muted)">${esc(r.d.note)}</div>` : ''}</td><td>${esc(r.d.scope || '')}</td><td>${esc(r.d.by || '')}</td>`,
   });
 }
 
