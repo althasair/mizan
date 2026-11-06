@@ -238,9 +238,13 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 
 @font-face{font-family:'RuqaaName';src:url('../fonts/ruqaa.ttf') format('truetype');font-display:swap}
 .vpsign{margin-top:8px;position:relative;width:max-content;min-width:170px;min-height:40px;margin-inline-start:auto}
-.vpsign .vps img{height:84px;max-width:210px;filter:grayscale(1);opacity:.38;display:block;transform:translateX(-45px)}
+.vpsign .vps img{height:84px;max-width:210px;filter:grayscale(1);opacity:.2;display:block;transform:translateX(-45px)}
 .vpsign .vpn{font-family:'RuqaaName',serif;font-size:24px;color:#8E929A;line-height:1;white-space:nowrap;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)}
 
 /* عبارات التعزيز بخط الرقعة */
 .ta-cheer p,.ta-cheer h3,.pv-cheer p{font-family:'RuqaaName','Lusail',serif !important;font-weight:400 !important;font-size:18px;line-height:1.9}
 .ta-cheer h3{font-size:22px}
+
+.tl{display:flex;gap:6px;align-items:baseline;text-align:justify;margin:2px 0}
+.tl .tls{color:#B08D57;font-size:11px;letter-spacing:1px;min-width:34px;flex:none}
+.tlh{font-weight:700;margin:4px 0 2px}

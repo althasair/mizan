@@ -124,8 +124,8 @@ const monthOf = d => String(d || '').slice(0, 7);
 function pvCheer(n) {
   const nm = 'أ. ' + esc(S.user.name);
   if (n >= 3) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:22px;color:var(--gold);letter-spacing:4px">★★★ 💛</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، حرصكِ المتجدد على التعلّم من زميلاتكِ شاهدٌ على همّةٍ لا ترضى بما دون الكمال، وهذا ديدنكِ. فخورةٌ بكِ.</p>${vpSignLine()}</div>`;
-  if (n === 2) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)"><div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، زيارتكِ الثانية تنبئ عن شغفٍ صادقٍ بالتعلّم المستمر؛ ومن جعل التعلّم دأبه ارتقى وارتقت به طالباته.</p>${vpSignLine()}</div>`;
-  if (n === 1) return `<div class="card pv-cheer" style="border-inline-start:4px solid var(--maroon)"><div style="font-size:18px;color:var(--maroon)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة.</p>${vpSignLine()}</div>`;
+  if (n === 2) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:20px;color:var(--gold);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، زيارتكِ الثانية تنبئ عن شغفٍ صادقٍ بالتعلّم المستمر؛ ومن جعل التعلّم دأبه ارتقى وارتقت به طالباته.</p>${vpSignLine()}</div>`;
+  if (n === 1) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:18px;color:var(--gold)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة.</p>${vpSignLine()}</div>`;
   return '';
 }
 function T_pv(el) {
@@ -329,8 +329,8 @@ function taCheer(n, kind) {
   if (n >= 3) return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:5px solid var(--gold)">
     <div style="font-size:24px;color:var(--gold);letter-spacing:5px">${taStars(n)} 💛</div>
     <p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، ${n} أعمالٍ نوعيةٍ في ${per}، شاهدةٌ على شغفٍ أصيلٍ بالمهنة، وعطاؤكِ محلّ تقديرٍ واعتزاز؛ ${n === 3 ? 'وبقي عملان لتنالي كأس التميز 🏆.' : 'وبقي عملٌ واحد لتنالي كأس التميز 🏆.'}</p>${vpSignLine()}</div>`;
-  return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)">
-    <div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">${taStars(n)}</div>
+  return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)">
+    <div style="font-size:20px;color:var(--gold);letter-spacing:4px">${taStars(n)}</div>
     <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `${nm}، شكرٌ موصولٌ لكِ على ${({ 'برنامج': 'هذا البرنامج', 'مشروع': 'هذا المشروع', 'نشاط': 'هذا النشاط', 'مبادرة': 'هذه المبادرة', 'مسابقة': 'هذه المسابقة' })[kind] || 'هذا العمل'}؛ بدايةٌ مباركة، والبدايات الحسنة تُنبئ بالخواتيم الحسنة.` : `${nm}، عملكِ الثاني دليلٌ على حرصكِ على إثراء تعلّم طالباتكِ، والثالث يضاعف لكِ النجوم ⭐.`}</p>${vpSignLine()}</div>`;
 }
 /* سطر التوقيع تحت عبارات الشكر: توقيع النائب باهت، ثم المسمى والاسم */

@@ -218,6 +218,9 @@ function buildReport(ctx) {
     // الزيارات التبادلية التي سجّلتها معلمات القسم
     const PVt = mineD('TPV');
     // تُعرض في جدول داخل خانة «الزملاء (الزيارات التبادلية)»
+    { const by = {}; PVt.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      T.ov_peer_lines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => { const saw = uniq(L.flatMap(r => lst(r.d.saw))), ap = uniq(L.flatMap(r => lst(r.d.apply)));
+        return { st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): زارت ` + L.map(r => `أ. ${r.d.v}${r.d.vdept && r.d.vdept !== dept ? ' (' + r.d.vdept + ')' : ''}` + dateTxt(r.date)).join('، و') + (saw.length ? `؛ واستفادت: ${saw.join('، ')}` : '') + (ap.length ? `؛ وستطبّق: ${ap.join('، ')}` : '') + '.' }; }); }
     T.ov_peer_tbl = PVt.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).map(r => ({
       t: r.d.t || '', v: r.d.v || '', vd: r.d.vdept && r.d.vdept !== dept ? r.d.vdept : '', date: r.date || '',
       pick: lst(r.d.pick).join('، '), saw: lst(r.d.saw).join('، '), apply: lst(r.d.apply).join('، ') + (lst(r.d.apply).length && r.d.how === 'بعد تكييفه' ? ' (بعد التكييف)' : '') }));
@@ -256,7 +259,8 @@ function buildReport(ctx) {
     if (AHp.length) add('part', 'وشاركت الطالبات بإشراف معلمات القسم في: ' + AHp.map(ahTx).join('؛ ') + '.');
     // الأنشطة والمبادرات التي سجّلتها المعلمات (عدا ما نُقل من تقارير الربع الأول)
     const TAt = mineD('TA').filter(r => !r.d.q1);
-    if (TAt.length) add('ac_int', 'وسجّلت المعلمات: ' + TAt.map(r => `${r.d.kind} «${nz(r.d.name)}» — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
+    if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
   }
   /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
   const TQ = it => ctx.recs.filter(r => r.item === it && r.d && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
@@ -303,8 +307,8 @@ function buildReport(ctx) {
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
-      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_tbl && T.ov_peer_tbl.length) ? [{ peer: T.ov_peer_tbl }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
-    ['الأنشطة المدرسية', [['داخلية', [T.ac_int]], ['خارجية', [T.ac_ext]]]],
+      ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
+    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],
