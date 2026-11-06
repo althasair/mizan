@@ -44,7 +44,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي الشهري', 'chart')}`;
 }
 
 function T_home(el) {
