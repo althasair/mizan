@@ -222,7 +222,7 @@ function buildReport(ctx) {
 
   /* ---------- ما تسجّله المعلمات بأنفسهن (الميزان برقم المعلمة) ---------- */
   {
-    const TT = it => ctx.recs.filter(r => r.item === it && inP(r.date, P) && r.d);
+    const TT = it => ctx.recs.filter(r => r.item === it && inP(r.date, P) && r.d && !r.d.q1); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
     const mineD = it => TT(it).filter(r => r.dept === dept || (extraT.includes(r.d.t)));
     const lst = a => (Array.isArray(a) ? a : [a]).filter(Boolean).map(x => String(x).replace(/[.،؛\s]+$/, ''));
     const add = (k, txt) => { if (!txt) return; T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt : (T[k] ? T[k] + ' ' + txt : txt); };
@@ -279,7 +279,7 @@ function buildReport(ctx) {
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
   }
   /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
-  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
+  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !r.d.q1 && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
   const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA');
   const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {

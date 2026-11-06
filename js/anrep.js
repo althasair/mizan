@@ -16,7 +16,7 @@ const arMonth = k => MONTHS[+k.slice(5, 7) - 1] + ' ' + k.slice(0, 4);
 const AR_TYPES = {
   pa: {
     t: 'التواصل مع أولياء الأمور', unit: ['تواصل', 'تواصلاً'], catH: 'الغرض من التواصل', sub2: 'وسيلة التواصل', stuLine: 1,
-    rows: () => S.records.filter(r => (r.item === 'TPA' || r.item === 'PA') && r.d).map(r => {
+    rows: () => S.records.filter(r => ((r.item === 'TPA' && r.d && !r.d.q1) || r.item === 'PA') && r.d).map(r => {
       const d = r.d; const stu = arList(d.stu);
       return { dept: r.dept, date: r.date, t: d.t || (r.item === 'PA' ? 'منسقة القسم' : ''), stu, n: stu.length || +d.n || 1,
         cat: d.cat || d.topic || d.c || d.why || 'غير محدد', sub: d.way || '', res: d.res || d.act || '', det: [d.s, d.topic || d.why, d.res].filter(Boolean).join(' — ') };
