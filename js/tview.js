@@ -91,6 +91,7 @@ function T_page(el, cfg) {
      ${cfg.noDate ? `<input type="hidden" data-n="date" value="${esc(d.date || today())}">` : fld(cfg.dateLbl || 'التاريخ', `<input type="date" data-n="date" value="${esc(d.date || today())}" min="${p.from}" max="${p.to}" required>`)}
      <div class="actions" style="grid-column:1/-1"><button class="btn" id="tsave">حفظ</button>${cfg.copyBtn ? `<button class="btn sec" type="button" id="tsavec">${esc(cfg.copyBtn)}</button>` : ''}${rec && cfg.item !== 'TA' ? '<button class="btn ghost" type="button" id="tdel">حذف</button>' : ''}<button class="btn sec" type="button" id="tcx">إلغاء</button></div></form></div>` : '';
   el.innerHTML = `${cfg.top ? cfg.top() : ''}<div class="note">${esc(cfg.note || '')} التسجيل متاح في الفترة الحالية فقط: ${esc(p.name)} (${dmy(p.from)} – ${dmy(p.to)}).</div>${form}
+  if (cfg.top) fillVps(el);
   <div class="card"><div class="row"><h2 style="margin:0">${esc(cfg.title)} — ${esc(p.name)} (${cur.length})</h2><span class="sp"></span>${cfg.actions || ''}${S.edit ? '' : '<button class="btn" id="tnew">+ تسجيل جديد</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t">${cfg.head}${cur.map(r => `<tr>${cfg.row(r)}<td style="white-space:nowrap"><button class="btn sm sec" data-e="${r.id}">فتح</button>${cfg.item !== 'TA' ? ` <button class="btn sm ghost" data-del="${r.id}" title="حذف" style="color:#A33">🗑 حذف</button>` : ''}</td></tr>`).join('') || `<tr><td colspan="9"><div class="empty">لا توجد سجلات في هذه الفترة بعد</div></td></tr>`}</table></div></div>${cfg.bottom ? cfg.bottom() : ''}`;
   if ($('#tnew')) $('#tnew').onclick = () => { S.edit = 'new'; show(); };
@@ -110,7 +111,7 @@ function T_page(el, cfg) {
     if (copy) { S.edit = null; refresh(); paCopy(r); return; }
     S.edit = null; toast('تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
     if (cfg.item === 'TA' && !rec) taCelebrate(mine('TA').filter(inCur).length, r.kind);
-    if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove(); } }
+    if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); fillVps(m); chime(n >= 3); $('#cOk', m).onclick = () => m.remove(); } }
   };
   if ($('#tsave')) $('#tsave').onclick = () => doSave(false);
   if ($('#tsavec')) $('#tsavec').onclick = () => doSave(true);
@@ -122,9 +123,9 @@ document.addEventListener('click', async e => { const b = e.target.closest && e.
 const monthOf = d => String(d || '').slice(0, 7);
 function pvCheer(n) {
   const nm = 'أ. ' + esc(S.user.name);
-  if (n >= 3) return `<div class="card" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:22px;color:var(--gold);letter-spacing:4px">★★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، أنتِ فعلاً حريصة على تطوير ذاتكِ، ونحن نفتخر بكِ معلمةً منفتحة على التغيير، تبحث عن الأفضل لطالباتها وتجدّد أساليبها بحب. بارك الله جهودكِ وجعلها في ميزان حسناتكِ.</p></div>`;
-  if (n === 2) return `<div class="card" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)"><div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">ما أجمل حرصكِ يا ${nm}! زيارتكِ الثانية هذا الشهر دليل على شغفكِ بالتعلّم المستمر وتقديركِ لخبرات زميلاتكِ. وزيارة ثالثة تضعكِ في مصافّ المعلمات المبادِرات إلى تطوير ذواتهن.</p></div>`;
-  if (n === 1) return `<div class="card" style="border-inline-start:4px solid var(--maroon)"><div style="font-size:18px;color:var(--maroon)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">شكراً لكِ ${nm} على زيارتكِ التبادلية هذا الشهر؛ خطوة جميلة في تبادل الخبرات، يعود أثرها على طالباتكِ.</p></div>`;
+  if (n >= 3) return `<div class="card" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:22px;color:var(--gold);letter-spacing:4px">★★★ 💛</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، إنّ حرصكِ على أن تشهدي تجارب زميلاتكِ مرةً بعد مرة لَشاهدٌ على نفسٍ تواقةٍ إلى الكمال، لا ترضى بما بلغت، وتنشد الأفضل لطالباتها؛ وهذا ديدنكِ الذي عهدناه منكِ. فخورةٌ بكِ، وبارك الله في علمكِ وعملكِ، وجعله في ميزان حسناتكِ.</p>${vpSignLine()}</div>`;
+  if (n === 2) return `<div class="card" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)"><div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">★★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، زيارتكِ الثانية في هذا الشهر تنبئ عن شغفٍ صادق بالتعلّم المستمر، وتقديرٍ رفيع لخبرات زميلاتكِ؛ ومن جعل التعلّم دأبه ارتقى وارتقت به طالباته. ماضيةٌ أنتِ في دربٍ مباركٍ، والزيارة الثالثة تُتوِّج هذا الدرب.</p>${vpSignLine()}</div>`;
+  if (n === 1) return `<div class="card" style="border-inline-start:4px solid var(--maroon)"><div style="font-size:18px;color:var(--maroon)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ على زيارتكِ التبادلية؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة، وأثره يتجلّى في تعلّم طالباتكِ.</p>${vpSignLine()}</div>`;
   return '';
 }
 function T_pv(el) {
@@ -323,14 +324,27 @@ function taCheer(n, kind) {
   const nm = 'أ. ' + esc(S.user.name), kd = esc(kind || 'نشاط'), per = esc(curPer().name);
   if (n >= 5) return `<div class="card ta-cheer" style="background:linear-gradient(135deg,#FFF6DD,#FFFDF6);border:1px solid #E9D3A8;border-inline-start:5px solid var(--gold);text-align:center">
     <div style="font-size:54px;line-height:1">🏆</div><div style="font-size:26px;color:var(--gold);letter-spacing:5px;margin:6px 0">${taStars(n, 7)}</div>
-    <h3 style="margin:2px 0 6px;color:var(--maroon)">معلمة متميزة في المبادرة والعطاء</h3>
-    <p style="margin:0;text-align:justify;font-weight:600">${nm}، بلغتِ ${n} من الأنشطة والمبادرات والمشاريع في ${per}، وهذا يدل على روح مبادِرة وعطاء متجدد لا ينقطع، وعلى حرصكِ على أن تتعلم طالباتكِ بالتجربة والمشاركة لا بالتلقين وحده. فخورون بكِ وبما تصنعينه في مدرسة الشيماء، وقد قال تعالى: ﴿إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا﴾. بارك الله في جهودكِ وجعلها في ميزان حسناتكِ.</p></div>`;
+    <h3 style="margin:2px 0 6px;color:var(--maroon)">معلمةٌ متميزةٌ في المبادرة والعطاء</h3>
+    <p style="margin:0;text-align:justify;font-weight:600">${nm}، بلغتِ ${n} من البرامج والمشاريع والأنشطة والمبادرات في ${per}، وما هذا إلا ثمرة همّةٍ عالية لا تعرف الفتور، وروحٍ مبادِرةٍ تجعل من كل يومٍ دراسيٍّ فرصةً لصناعة الأثر. لقد جعلتِ التميّز ديدنكِ، والإتقانَ عنوانكِ، وهذا هو المعهود منكِ. إنني فخورةٌ بكِ أيّما فخر، وقد قال تعالى: ﴿إِنَّا لَا نُضِيعُ أَجْرَ مَنْ أَحْسَنَ عَمَلًا﴾. بارك الله في جهودكِ، وجعلها في ميزان حسناتكِ.</p>${vpSignLine()}</div>`;
   if (n >= 3) return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:5px solid var(--gold)">
-    <div style="font-size:24px;color:var(--gold);letter-spacing:5px">${taStars(n)}</div>
-    <p style="margin:4px 0 0;text-align:justify;font-weight:600">ما شاء الله يا ${nm}! ${n} أنشطة ومبادرات في ${per}، وهذا يدل على شغفكِ بمهنتكِ وحرصكِ على إثراء تعلّم طالباتكِ خارج حدود الكتاب. عطاؤكِ محل تقدير واعتزاز، ${n === 3 ? 'وبقيت خطوتان لتنالي كأس التميز 🏆.' : 'وبقيت خطوة واحدة لتنالي كأس التميز 🏆.'}</p></div>`;
+    <div style="font-size:24px;color:var(--gold);letter-spacing:5px">${taStars(n)} 💛</div>
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، ${n} أعمالٍ نوعيةٍ في ${per}، شاهدةٌ على شغفٍ أصيلٍ بالمهنة، وحرصٍ على أن تتعلّم طالباتكِ بالتجربة والمشاركة لا بالتلقين وحده. عطاؤكِ محلّ تقديرٍ واعتزاز، وما أنتِ إلا على طريق التميّز ماضية؛ ${n === 3 ? 'وبقي عملان لتنالي كأس التميز 🏆.' : 'وبقي عملٌ واحد لتنالي كأس التميز 🏆.'}</p>${vpSignLine()}</div>`;
   return `<div class="card ta-cheer" style="background:linear-gradient(90deg,#F2FBFA,#fff);border-inline-start:4px solid var(--tiffany-d)">
     <div style="font-size:20px;color:var(--tiffany-d);letter-spacing:4px">${taStars(n)}</div>
-    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `شكراً لكِ ${nm} على تسجيل ${kd}؛ بداية جميلة في ${per}، يعود أثرها على طالباتكِ.` : `أحسنتِ يا ${nm}! هذا ثاني نشاط تسجّلينه في ${per}، وهذا يدل على حرصكِ على التنويع في أساليب التعلم. نشاط ثالث يضاعف لكِ النجوم ⭐.`}</p></div>`;
+    <p style="margin:4px 0 0;text-align:justify;font-weight:600">${n === 1 ? `${nm}، شكرٌ موصولٌ لكِ على ${({ 'برنامج': 'هذا البرنامج', 'مشروع': 'هذا المشروع', 'نشاط': 'هذا النشاط', 'مبادرة': 'هذه المبادرة', 'مسابقة': 'هذه المسابقة' })[kind] || 'هذا العمل'}؛ بدايةٌ مباركةٌ في ${per}، يمتدّ أثرها إلى طالباتكِ، والبدايات الحسنة تُنبئ بالخواتيم الحسنة.` : `${nm}، عملكِ الثاني في ${per} دليلٌ على حرصكِ على تنويع مصادر التعلّم وإثراء بيئة طالباتكِ؛ ماضيةٌ أنتِ بثبات، والعمل الثالث يضاعف لكِ النجوم ⭐.`}</p>${vpSignLine()}</div>`;
+}
+/* سطر التوقيع تحت عبارات الشكر: توقيع النائب باهت، ثم المسمى والاسم */
+let VPS_CHEER = null;
+const vpSignLine = () => `<div class="vpsign"><span class="vps">${VPS_CHEER ? `<img src="${VPS_CHEER}" alt="">` : ''}</span><div>نائب المديرة للشؤون الأكاديمية<span style="display:inline-block;width:18px"></span>أ. آسيا الذبياني</div></div>`;
+async function fillVps(root) {
+  if (VPS_CHEER === null) { try { VPS_CHEER = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) { VPS_CHEER = ''; } }
+  if (VPS_CHEER) $$('.vps', root || document).forEach(x => { if (!x.firstChild) x.innerHTML = `<img src="${VPS_CHEER}" alt="">`; });
+}
+function chime(big) {   // نغمة احتفال خفيفة بلا ملفات خارجية
+  try { const C = new (window.AudioContext || window.webkitAudioContext)(); const notes = big ? [523, 659, 784, 1047, 784, 1047] : [659, 784, 1047];
+    notes.forEach((f, i) => { const o = C.createOscillator(), g = C.createGain(); o.type = 'triangle'; o.frequency.value = f; o.connect(g); g.connect(C.destination);
+      const t = C.currentTime + i * 0.13; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.12, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.35); o.start(t); o.stop(t + 0.4); });
+  } catch (e) {}
 }
 function confetti(ms) {
   const c = document.createElement('canvas'); c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:60';
@@ -346,8 +360,8 @@ function confetti(ms) {
 function taCelebrate(n, kind) {
   const h = taCheer(n, kind); if (!h) return;
   const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:${n >= 5 ? 560 : 520}px">${h}<div class="row" style="margin-top:10px;justify-content:center"><button class="btn" id="cOk">${n >= 5 ? 'الحمد لله 🌸' : 'شكراً'}</button></div></div>`;
-  document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove();
-  if (n >= 5) confetti(5000); else if (n >= 3) confetti(1800);
+  document.body.appendChild(m); $('#cOk', m).onclick = () => m.remove(); fillVps(m);
+  if (n >= 5) { confetti(5000); chime(1); } else if (n >= 3) { confetti(1800); chime(); } else chime();
 }
 function T_act(el) {
   const parents = k => uniqA(mine('TA').filter(r => r.d.kind === k).map(r => r.d.name).filter(Boolean));

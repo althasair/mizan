@@ -307,6 +307,7 @@ function setSig_(u, p) {
 }
 function signature_(u, p) {
   if (p.who) return coordSig_(u, p);
+  if (p.cheer) return { data: sigData_(SIG_FILE) };   // توقيع النائب الباهت تحت عبارات الشكر للمعلمات
   // توقيع النائب على استمارة حضور المنسقة: يُعطى فقط بعد كتابة النائب ملاحظتها عليها
   if (p.visit) {
     const r = rows_(SH.rec).rows.find(x => String(x[0]) === String(p.visit));

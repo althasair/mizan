@@ -235,3 +235,8 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .tahint{font-size:12.5px;color:var(--muted);background:#F7F7F9;border-radius:10px;padding:8px 12px;text-align:justify}
 .tahint.on{color:#1F4E79;background:#EEF4FB;border-inline-start:4px solid #1F4E79}
 .tkok{display:flex;gap:8px;align-items:flex-start;font-weight:600;color:#B3261E;font-size:13px}
+
+.vpsign{margin-top:10px;text-align:left;color:#8A8F99;font-size:12.5px;font-weight:400}
+.vpsign .vps img{height:44px;max-width:170px;filter:grayscale(1);opacity:.42;display:block;margin:0 0 -4px auto;margin-inline-start:auto;margin-inline-end:0}
+.vpsign .vps{display:block;min-height:6px;direction:ltr;text-align:left}
+.vpsign .vps img{margin:0 0 -4px 8px}
