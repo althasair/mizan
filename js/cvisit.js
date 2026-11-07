@@ -39,6 +39,62 @@ function carryOf(prev) {
   const pend = (prev.d.fu || []).filter(x => x.st && x.st !== 'تم التنفيذ').map(x => x.r);
   return uniqA([...recsOf(prev), ...pend]);
 }
+
+/* ================================================================== تحصيل شعب المعلمة (من سنابل)
+   كل شعب المعلمة في المادة بألوان الفئات، والصف المُزار مظلّل بالرمادي، وفئات طالبات الصف المُزار في مربع منفصل.
+   تُحفظ نسخة من الأرقام مع الزيارة (achD) لتظهر في المعاينة والطباعة على أي جهاز. */
+const BANDS = [['ممتاز', '90% فأعلى', '#17734A', '#E4F3EA'], ['جيد جداً', '80 – 89%', '#1F5F99', '#E6EEF8'], ['جيد', '70 – 79%', '#946410', '#FBF1DB'], ['مقبول', '50 – 69%', '#B8521A', '#FCEADB'], ['ضعيف', 'دون 50%', '#A3202F', '#F9E3E6']];
+const bandI = m => m >= 90 ? 0 : m >= 80 ? 1 : m >= 70 ? 2 : m >= 50 ? 3 : 4;
+const secK = s => { const m = String(s || '').match(/(1[0-2])\s*[\/\-]\s*(\d+)/); return m ? m[1] + '-' + m[2] : String(s || '').trim(); };
+function cvAchData(t, subj, sec) {
+  if (!t || !subj || typeof sanabilClass !== 'function') return null;
+  const secs = uniqA([...String(staffBy(t).secs || '').split(/[،,]/).map(x => x.trim()), sec || ''].map(secK)).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
+  let key = '', per = '';
+  const rows = secs.map(sc => { const c = sanabilClass(sc, subj); if (!c) return { s: sc };
+    key = key || c.key; per = per || c.per;
+    return { s: c.sec, m: +c.me.mean.toFixed(1), n: c.me.n, pass: Math.round(c.me.pass), lv: c.lv ? +c.lv.mean.toFixed(1) : null, rk: c.rank, of: c.of, b: c.me.b || null }; });
+  if (!rows.some(r => r.m != null)) return null;
+  return { key, per, rows };
+}
+function cvAchBox(A, sec, t, print) {
+  if (!A || !A.rows) return '';
+  const cur = secK(sec), fs = print ? 9.5 : 12.5, fsS = print ? 8.5 : 11;
+  const R = A.rows.find(r => r.s === cur && r.m != null);
+  const row = r => { const bi = r.m == null ? -1 : bandI(r.m), B = BANDS[bi] || [], on = r.s === cur;
+    return `<tr style="${on ? 'background:#E9EAEC' : ''}"><td style="border:0;border-bottom:1px solid #EEF0F3;white-space:nowrap;font-weight:700;width:${print ? 52 : 70}px;padding:3px 6px;font-size:${fs}px;color:#1B2A4E">${esc(r.s)}${on ? `<div style="font-weight:400;font-size:${fsS - 1}px;color:#555">الصف المُزار</div>` : ''}</td>
+      <td style="border:0;border-bottom:1px solid #EEF0F3;padding:3px 6px">${r.m == null ? `<span style="font-size:${fsS}px;color:#888">لا توجد نتائج في سنابل</span>` : `<div style="height:${print ? 7 : 10}px;background:#EEF0F3;border-radius:6px;overflow:hidden;-webkit-print-color-adjust:exact;print-color-adjust:exact"><i style="display:block;height:100%;width:${Math.min(100, r.m)}%;background:${B[2]}"></i></div>`}</td>
+      <td style="border:0;border-bottom:1px solid #EEF0F3;white-space:nowrap;padding:3px 6px;font-size:${fs}px;width:1%">${r.m == null ? '' : `<b>${r.m}%</b> <span style="display:inline-block;font-size:${fsS}px;padding:0 7px;border-radius:9px;background:${B[3]};color:${B[2]};border:1px solid ${B[2]}33;-webkit-print-color-adjust:exact;print-color-adjust:exact">${B[0]}</span>`}</td>
+      <td style="border:0;border-bottom:1px solid #EEF0F3;white-space:nowrap;padding:3px 6px;font-size:${fsS}px;color:#555;width:1%">${r.m == null ? '' : `النجاح ${r.pass}%${r.lv != null ? ` · المستوى ${r.lv}%` : ''}${r.of > 1 ? ` · الترتيب ${r.rk} من ${r.of}` : ''}`}</td></tr>`; };
+  const cats = R && R.b ? `<div style="margin-top:${print ? 4 : 8}px;border:1px solid #DADDE3;border-radius:10px;padding:${print ? '4px 6px' : '7px 10px'}">
+      <div style="font-size:${fsS}px;color:#1B2A4E;font-weight:700;margin-bottom:4px">فئات طالبات الصف ${esc(R.s)} (${R.n} طالبة)</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:${print ? 4 : 6}px">${BANDS.map((B, i) => `<div style="background:${B[3]};border:1px solid ${B[2]}40;border-inline-start:3px solid ${B[2]};border-radius:8px;padding:${print ? '2px 5px' : '4px 8px'};-webkit-print-color-adjust:exact;print-color-adjust:exact">
+        <div style="font-size:${fsS}px;color:${B[2]};font-weight:700">${B[0]} <span style="font-weight:400;color:#666">${B[1]}</span></div><div style="font-size:${print ? 12 : 16}px;font-weight:700;color:#1B2A4E">${R.b[i]} <span style="font-size:${fsS}px;font-weight:400;color:#666">طالبة</span></div></div>`).join('')}</div></div>` : '';
+  return `<div style="margin-top:${print ? 3 : 10}px;border:1px solid #DADDE3;border-radius:12px;padding:${print ? '4px 6px' : '8px 10px'};background:#fff">
+    <div style="font-size:${fsS}px;color:#1F8F88;margin-bottom:3px;font-weight:700">تحصيل طالبات أ. ${esc(t || '')} في ${esc(A.key || '')} — حسب شعبها (من سنابل${A.per ? '، الفترة ' + esc(A.per) : ''})</div>
+    <table style="width:100%;border-collapse:collapse;border:0">${A.rows.map(row).join('')}</table>${cats}</div>`;
+}
+
+/* ================================================================== أثر الورش التدريبية في الحضور الصفي
+   الورش التي حضرتها المعلمة منذ بداية العام حتى تاريخ الزيارة: من سجلاتها، ومن التقرير الشهري للقسم (التطوير الخارجي وورش القسم) */
+const WSI_ST = ['لم يُقَس بعد', 'تم القياس ولوحظ التطبيق', 'تم القياس ولم يُلاحظ التطبيق'];
+const WSI_VIA = ['التخطيط', 'التمهيد', 'تنفيذ الحصة', 'الأنشطة', 'الغلق البنائي', 'الغلق النهائي'];
+const wsKey = (t, d) => nrm(String(t || '').replace(/\(.*?\)/g, '')) + '|' + (d || '');
+function cvWorkshops(t, upTo) {
+  if (!t) return [];
+  const y0 = (S.periods.map(p => p.from).sort()[0]) || '2026-08-01', end = upTo || today();
+  const inY = d => d && d >= y0 && d <= end; const L = [], seen = new Set();
+  const add = o => { const k = wsKey(o.title, o.date); if (!o.title || seen.has(k)) return; seen.add(k); o.k = k; L.push(o); };
+  S.records.forEach(r => { const d = r.d || {};
+    if (r.item === 'TWS' && d.t === t && /^حضرت/.test(d.role || '') && inY(r.date)) add({ title: d.title, date: r.date, src: /داخلية/.test(d.role) ? 'داخلية' : 'خارجية', by: d.by || d.byx || '' });
+    if (r.item === 'EX' && r.dept === S.dept && (d.t === t || /جميع/.test(d.t || '')) && inY(d.date || r.date)) add({ title: d.name, date: d.date || r.date, src: 'خارجية', by: d.ent || '' });
+  });
+  const WSD = SECTIONS.find(x => x.k === 'WS');
+  S.records.filter(r => r.item === 'WS' && r.dept === S.dept && r.d && (r.d.g || '').startsWith('تمت')).forEach(r => { const d = r.d, dt = WSD.when(d);
+    if (!inY(dt) || String(d.pres || '').includes(t)) return; add({ title: WSD.title_(d), date: dt, src: 'ورشة القسم', by: d.pres || '', mon: d.o || '' }); });
+  return L.sort((a, b) => a.date.localeCompare(b.date));
+}
+/* عبارات الشكر — قائمة مستقلة عن نقاط القوة */
+const CV_THX = ['خالص الشكر والتقدير للأستاذة {name} على الإعداد الجيد للدرس.', 'خالص الشكر والتقدير للأستاذة {name} على الإعداد المتقن للدرس والتفاعل الإيجابي مع الطالبات.', 'خالص الشكر والتقدير للأستاذة {name} على حرصها على تحقيق أهداف الدرس وتنويع استراتيجيات التعلم.', 'خالص الشكر والتقدير للأستاذة {name} على إدارتها الصفية الهادئة وبيئة التعلم المحفّزة.', 'خالص الشكر والتقدير للأستاذة {name} على توظيفها الفاعل للتقنيات ومصادر التعلم.', 'خالص الشكر والتقدير للأستاذة {name} على عنايتها بالفروق الفردية ومتابعة تعلّم الطالبات.', 'خالص الشكر والتقدير للأستاذة {name} على جهودها المخلصة وروحها المهنية العالية.'];
 /* حالة المعلمة في الربع */
 function cvStatus(t, mk) {
   const per = S.periods.find(p => p.name === mk);
@@ -135,6 +191,9 @@ function cvForm(el, rec) {
   const F = FORMS.visit;
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.cvT || '', date: today(), mode: 'ميدانية', kj: S.cvK || 'كلية', rt: {}, rc: {}, fu: [], str: ['', ''], imp: ['', ''], pre: '', form: 1 };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.fu = d.fu || []; d.str = d.str || (d.f1 ? [d.f1, d.f2].filter(Boolean) : ['', '']); d.imp = d.imp || recsOf({ d }); if (!d.imp.length) d.imp = ['', ''];
+  if (d.strW == null) { d.strP = ''; d.strW = d.str.filter(Boolean).join('\n'); }
+  if (d.impW == null) { const a = d.imp.filter(Boolean); d.impP = ''; d.impW = a[0] || ''; d.impX = a.slice(1); }
+  d.impX = d.impX || []; d.wsi = d.wsi || {};
   const T = cvTeachers();
   const prevOf = () => cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && (r.date < d.date || (r.date === d.date && rec && String(r.id) < String(rec.id)))).slice(-1)[0];
   const syncFU = () => {   // متابعة توصيات الزيارة السابقة — ثابتة في كل زيارة
@@ -150,6 +209,12 @@ function cvForm(el, rec) {
     if (!d.subj && subs.length === 1) d.subj = subs[0];
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
+    { const AD = cvAchData(d.t, d.subj, d.s); if (AD) d.achD = AD; }
+    const WS = cvWorkshops(d.t, d.date); const prevW = {}; cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && r.date <= d.date).forEach(r => Object.entries(r.d.wsi || {}).forEach(([k, v]) => { if (v && v.st) prevW[k] = Object.assign({ from: r.date }, v); }));
+    WS.forEach(w => { if (!d.wsi[w.k] && prevW[w.k]) d.wsi[w.k] = { st: prevW[w.k].st, via: (prevW[w.k].via || []).slice(), note: prevW[w.k].note || '', from: prevW[w.k].from }; });
+    const strong = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1), weak = F.items.map((x, i) => i).filter(i => d.rt[i] === 3 || d.rt[i] === 4);
+    const doms = uniqA(F.items.map(x => x.d));
+    const optG = (pick, key, curV) => { const top = uniqA(pick.flatMap(i => key === 'r' ? [d.rc[i], ...F.items[i].r] : F.items[i].s)); const all = new Set(); return `<option value="">${key === 'r' ? 'اختاري توصية واحدة من القائمة…' : 'اختاري نقطة قوة واحدة من القائمة…'}</option>` + (curV && !F.items.some(x => x[key].includes(curV)) && !top.includes(curV) ? `<option selected>${esc(curV)}</option>` : '') + (top.length ? `<optgroup label="${key === 'r' ? 'من المعايير التي تحتاج إلى تحسين' : 'من المعايير التي قدّرتِها مرتفعة'}">${top.map(o => { all.add(o); return `<option ${o === curV ? 'selected' : ''}>${esc(o)}</option>`; }).join('')}</optgroup>` : '') + doms.map(dm0 => `<optgroup label="${esc(dm0)}">${uniqA(F.items.filter(x => x.d === dm0).flatMap(x => x[key])).filter(o => !all.has(o)).map(o => `<option ${o === curV ? 'selected' : ''}>${esc(o)}</option>`).join('')}</optgroup>`).join(''); };
     const P = planOf(d.t, perOfDate(d.date)); const prev = prevOf(); const gap = prev ? daysBtw(prev.date, d.date) : null;
     const inM = cvVisits(d.t).filter(r => perKey(r.date) === perKey(d.date) && (!rec || r.id !== rec.id) && r.date <= d.date);
     const expK = P.seq[inM.length % P.seq.length];
@@ -167,12 +232,11 @@ function cvForm(el, rec) {
       <div class="fld"><label>كلية / جزئية <small style="color:var(--muted)">· المتوقع وفق الخطة: ${esc(expK)}</small></label><select id="cKj">${['كلية', 'جزئية'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>نوع المتابعة</label><select id="cMode">${['ميدانية', 'عن بُعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="cLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-      <div class="fld" style="grid-column:1/-1"><label>تحصيل الصف في المادة ${cls ? '<small style="color:var(--tiffany-d)">· محسوب تلقائياً من سنابل</small>' : ''}</label><textarea id="cAch" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px;line-height:1.8">${esc(d.ach || '')}</textarea></div>
     </form>
     ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات في الربع (${esc(P.lbl)})</span><span class="chip">زيارات الربع قبل هذه: ${inM.length}</span>
       ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المقترح (تنبيه لكِ فقط)' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
-    ${achMini(d.t, d.subj)}</div>
+    ${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
 
     <div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>متابعة توصيات الزيارة السابقة <span class="sub">بند ثابت في كل زيارة — كلية أو جزئية</span></h2>
     ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !prev ? '<div class="empty">هذه أول زيارة للمعلمة؛ تظهر توصياتها هنا للمتابعة في الزيارة القادمة.</div>'
@@ -190,22 +254,41 @@ function cvForm(el, rec) {
         <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
           <select data-add="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ توصية مقترحة (${x.r.length})…</option>${x.r.map(t => `<option>${esc(t)}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div></div>
 
-    <div class="card"><h2>ملاحظات وتوصيات عامّة <span class="sub">تكتبها المنسقة بصياغتها</span></h2>
-      <div class="fld"><label>عبارة الشكر للمعلمة</label><textarea id="cPre" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="اكتبي عبارة الشكر والتقدير للمعلمة">${esc(d.pre || '')}</textarea></div>
-      <div class="grid g2" style="margin-top:8px">
-        <div><b style="color:var(--ok)">نقاط القوة</b>${d.str.map((v, j) => `<textarea data-str="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="نقطة قوة ${j + 1}">${esc(v)}</textarea>`).join('')}<button class="btn sm ghost" id="addStr" type="button" style="margin-top:6px">+ نقطة</button></div>
-        <div><b style="color:var(--maroon)">النقاط التي تحتاج إلى تحسين (التوصيات)</b>${d.imp.map((v, j) => `<textarea data-imp="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="نقطة ${j + 1} — تُتابَع في الزيارة القادمة">${esc(v)}</textarea>`).join('')}<button class="btn sm ghost" id="addImp" type="button" style="margin-top:6px">+ نقطة</button></div>
-      </div></div>`;
+    <div class="card" style="border-inline-start:4px solid var(--navy)"><h2>أثر الورش التدريبية <span class="sub">الورش التي حضرتها المعلمة منذ بداية العام حتى تاريخ الزيارة — من سجلاتها ومن التقرير الشهري للقسم</span></h2>
+    ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !WS.length ? '<div class="empty">لا توجد ورش مسجّلة للمعلمة حتى تاريخ الزيارة.</div>' : `<div style="font-size:12px;color:#8A8F99;margin-bottom:6px">لكل ورشة: حدّدي هل قِستِ أثرها في هذه الحصة، فإن لوحظ التطبيق فاختاري أين لوحظ.</div>
+      <div class="tbl"><table class="t"><tr><th>الورشة</th><th style="width:96px">التاريخ</th><th style="width:190px">قياس الأثر</th><th>لوحظ من خلال</th></tr>
+      ${WS.map((w, i) => { const v = d.wsi[w.k] || {}; const st = v.st || WSI_ST[0]; return `<tr><td style="font-size:12.5px"><b>${esc(w.title)}</b><div style="font-size:11px;color:var(--muted)">${esc(w.src)}${w.by ? ' · ' + esc(w.by) : ''}${w.mon ? ' · الأثر في التقرير الشهري: ' + esc(w.mon) : ''}</div></td>
+        <td style="font-size:12px;white-space:nowrap">${dmy(w.date)}<div style="font-size:10.5px;color:var(--muted)">${esc(perKey(w.date))}</div></td>
+        <td><select data-wst="${i}" style="width:100%">${WSI_ST.map(o => `<option ${o === st ? 'selected' : ''}>${o}</option>`).join('')}</select>${v.from && v.from !== d.date ? `<div style="font-size:10.5px;color:var(--muted)">من زيارة ${dm(v.from)}</div>` : ''}</td>
+        <td>${st === WSI_ST[1] ? `<div style="display:flex;flex-wrap:wrap;gap:2px 10px;font-size:12px">${WSI_VIA.map(o => `<label style="white-space:nowrap"><input type="checkbox" data-wv="${i}" value="${o}" ${(v.via || []).includes(o) ? 'checked' : ''}> ${o}</label>`).join('')}</div>` : ''}<input data-wn="${i}" value="${esc(v.note || '')}" placeholder="ملاحظة (اختياري)" style="width:100%;margin-top:3px;font-size:12px"></td></tr>`; }).join('')}</table></div>`}</div>
+
+    <div class="card"><h2>ملاحظات وتوصيات عامّة</h2>
+      <div style="font-size:12.5px;color:#8A8F99;line-height:1.9;margin-bottom:8px">عزيزتي المنسقة، يسعدكِ الاستعانة بالقوائم المقترحة لاختيار عبارة شكر ونقطة قوة وتوصية واحدة، غير أن معلمتكِ لا تستغني عن عباراتكِ الثمينة؛ فأنتِ قائدتها وخير مطوّرة لها، وكلماتكِ النابعة من عمق المادة هي ما يصنع أثراً حقيقياً في أدائها. فلا تحرميها منها: اكتبي نقطة القوة والتوصية بعباراتكِ، وأضيفي من التوصيات ما ترينه.</div>
+      <div class="fld"><label>عبارة الشكر للمعلمة</label><select id="cThx" style="width:100%;margin-bottom:4px"><option value="">اختاري عبارة شكر من القائمة…</option>${uniqA([...(F.pre_opts || []), ...CV_THX]).map(x => x.replace('{name}', d.t || '...')).map(x => `<option>${esc(x)}</option>`).join('')}</select><textarea id="cPre" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="اختاري من القائمة أعلاه أو اكتبي عبارة الشكر بأسلوبكِ">${esc(d.pre || '')}</textarea></div>
+      <div class="grid g2" style="margin-top:10px">
+        <div><b style="color:var(--ok)">نقاط القوة</b>
+          <select id="cStrP" style="width:100%;margin-top:6px;font-size:12.5px">${optG(strong, 's', d.strP)}</select>
+          <textarea id="cStrW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): ما الذي لفتكِ في أداء المعلمة، وما أثره على تعلّم الطالبات؟">${esc(d.strW || '')}</textarea></div>
+        <div><b style="color:var(--maroon)">التوصيات (النقاط التي تحتاج إلى تحسين)</b>
+          <select id="cImpP" style="width:100%;margin-top:6px;font-size:12.5px">${optG(weak, 'r', d.impP)}</select>
+          <textarea id="cImpW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): توصية بنّاءة محددة تُتابَع في الزيارة القادمة">${esc(d.impW || '')}</textarea>
+          ${d.impX.map((v, j) => `<textarea data-imx="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="توصية إضافية بعباراتكِ">${esc(v)}</textarea>`).join('')}
+          <button class="btn sm ghost" id="addImp" type="button" style="margin-top:6px">++ توصية إضافية بعباراتكِ</button></div>
+      </div></div></div>`;
     bind();
   };
   const grab = () => {
     if (!$('#cT')) return;
     d.t = $('#cT').value.trim(); d.subj = $('#cSub').value.trim(); d.s = $('#cSec').value.trim(); d.date = $('#cD').value; d.topic = $('#cTop').value.trim();
-    d.kj = $('#cKj').value; d.mode = $('#cMode').value; d.live = $('#cLive').value; { const v = $('#cAch').value.trim(); if (v !== d.ach) d.achAuto = 0; d.ach = v; }
+    d.kj = $('#cKj').value; d.mode = $('#cMode').value; d.live = $('#cLive').value;
     d.pre = $('#cPre').value.trim();
     $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
     $$('[data-fs]', el).forEach(s => d.fu[s.dataset.fs].st = s.value); $$('[data-fn]', el).forEach(s => d.fu[s.dataset.fn].note = s.value.trim());
-    d.str = $$('[data-str]', el).map(i => i.value.trim()); d.imp = $$('[data-imp]', el).map(i => i.value.trim());
+    d.strP = $('#cStrP').value; d.strW = $('#cStrW').value.trim(); d.impP = $('#cImpP').value; d.impW = $('#cImpW').value.trim(); d.impX = $$('[data-imx]', el).map(i => i.value.trim());
+    const WS = cvWorkshops(d.t, d.date);
+    $$('[data-wst]', el).forEach(sl => { const w = WS[+sl.dataset.wst]; if (!w) return; const v = d.wsi[w.k] = d.wsi[w.k] || {}; if (v.st && v.st !== sl.value) delete v.from; v.st = sl.value; v.title = w.title; v.date = w.date; v.src = w.src; });
+    $$('[data-wn]', el).forEach(i => { const w = WS[+i.dataset.wn]; if (w && d.wsi[w.k]) d.wsi[w.k].note = i.value.trim(); });
+    WS.forEach((w, i) => { const v = d.wsi[w.k]; if (!v) return; if (v.st === WSI_ST[1]) { const c = $$(`[data-wv="${i}"]`, el); if (c.length) v.via = c.filter(x => x.checked).map(x => x.value); } else v.via = []; });
   };
   const bind = () => {
     $('#cT').onchange = () => { grab(); d.subj = ''; d.s = ''; d.ach = ''; d.achAuto = 1; syncFU(); draw(); };
@@ -214,8 +297,9 @@ function cvForm(el, rec) {
     $('#cSec').onchange = $('#cSub').onchange = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else d.rt[i] = k; draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
-    $('#addStr').onclick = () => { grab(); d.str.push(''); draw(); };
-    $('#addImp').onclick = () => { grab(); d.imp.push(''); draw(); };
+    $('#addImp').onclick = () => { grab(); d.impX.push(''); draw(); };
+    $('#cThx').onchange = () => { const v = $('#cThx').value; if (v) { $('#cPre').value = v; } };
+    $$('[data-wst]', el).forEach(sl => sl.addEventListener('change', () => { grab(); draw(); }));
     $('#cb').onclick = () => { S.cvv = null; show(); };
     $('#csave').onclick = async () => { if (await save()) { toast('تم الحفظ ✓ — وانعكست الزيارة على تقرير القسم'); show(); } };
     if ($('#cprev')) $('#cprev').onclick = async () => { const r = await save(); if (r) cvPreview(el, r); };
@@ -229,7 +313,12 @@ function cvForm(el, rec) {
     if (miss.length) { toast(`حدّدي مدى تنفيذ توصيات الزيارة السابقة (${miss.length}) — بند ثابت في كل زيارة`, 1); return null; }
     const P = planOf(d.t); const prev = prevOf();
     if (prev && daysBtw(prev.date, d.date) < P.min && !confirm(`تنبيه خاص بكِ لتنظيم الوقت: الفاصل بين هذه الزيارة والسابقة (${dm(prev.date)}) ${daysBtw(prev.date, d.date)} أيام، والمقترح ${P.min} أيام على الأقل ليتسنى للمعلمة تطبيق التوصيات.\n\nإن كنتِ ترغبين بالحضور لها أكثر من المطلوب فاضغطي «موافق» وتجاهلي هذا التنبيه، ولن يظهر في التقرير.`)) return null;
-    d.str = d.str.filter(Boolean); d.imp = d.imp.filter(Boolean);
+    if (!d.pre) { toast('اكتبي عبارة الشكر للمعلمة أو اختاريها من القائمة', 1); return null; }
+    if (!d.strW) { toast('اكتبي نقطة القوة بعباراتكِ — معلمتكِ تنتظر كلماتكِ', 1); $('#cStrW') && $('#cStrW').focus(); return null; }
+    if (!d.impW) { toast('اكتبي التوصية بعباراتكِ — فهي ما يصنع الأثر', 1); $('#cImpW') && $('#cImpW').focus(); return null; }
+    d.impX = d.impX.filter(Boolean);
+    d.str = uniqA([d.strP, d.strW]); d.imp = uniqA([d.impP, d.impW, ...d.impX]);
+    { const keys = new Set(cvWorkshops(d.t, d.date).map(w => w.k)); Object.keys(d.wsi).forEach(k => { if (!keys.has(k)) delete d.wsi[k]; }); }
     // حقول التقرير الشهري (بند الحضور الصفي)
     const before = cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && r.date <= d.date && r.d.kj === 'كلية').length;
     d.ty = d.kj === 'كلية' ? 'الزيارة ' + (ORD[before] || before + 1) : 'متابعة الزيارة ' + (ORD[Math.max(0, before - 1)] || before);
@@ -253,12 +342,15 @@ function cvInner(r) {
   const fuTxt = (d.fu || []).length ? `\n\nمتابعة توصيات الزيارة السابقة (${dmy(d.prevDate)}):\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '';
   return `<h1>${esc(F.title)}</h1><div class="sub">${esc(SCHOOL())} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
-    <tr><td class="k">تحصيل الشعبة في المادة</td><td colspan="3"><b>${esc(achT)}</b></td></tr>
+    ${!d.achD && achT ? `<tr><td class="k">تحصيل الشعبة في المادة</td><td colspan="3"><b>${esc(achT)}</b></td></tr>` : ''}
     <tr><td class="k">المــدرسة</td><td>${esc(SCHOOL())}</td><td class="k">اليوم/التاريخ</td><td>${esc(dayOf(d.date))} ${dmy(d.date)}</td></tr>
     <tr><td class="k">المادّة</td><td>${esc(d.subj || '')}</td><td class="k">الصّف</td><td>${esc(d.s || '')}</td></tr>
     <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">منسق المادة</td><td>أ. ${esc(cN)}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانية')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئية')} جزئيّة &nbsp; ${ys(d.kj, 'كلية')} كليّة</td></tr>
     <tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
+  ${d.achD ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
+  ${(() => { const L = Object.values(d.wsi || {}).filter(v => v && v.title).sort((a, b) => (a.date || '').localeCompare(b.date || '')); return L.length ? `<table style="margin-top:3px"><tr><th colspan="4">أثر الورش التدريبية التي حضرتها المعلمة (منذ بداية العام حتى تاريخ الزيارة)</th></tr><tr><th>الورشة</th><th style="width:13%">التاريخ</th><th style="width:24%">قياس الأثر</th><th style="width:30%">لوحظ من خلال</th></tr>
+    ${L.map(v => `<tr><td style="font-size:9.5px">${esc(v.title)}${v.src ? ` <span style="color:#777">(${esc(v.src)})</span>` : ''}</td><td class="c" style="font-size:9.5px">${dmy(v.date)}</td><td style="font-size:9.5px">${esc(v.st || WSI_ST[0])}</td><td style="font-size:9.5px">${esc((v.via || []).join('، '))}${v.note ? ((v.via || []).length ? ' — ' : '') + esc(v.note) : ''}</td></tr>`).join('')}</table>` : ''; })()}
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>

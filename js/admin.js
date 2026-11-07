@@ -263,7 +263,7 @@ function sanabilClass(sec0, subj) {
   let toks = String(subj).replace(/\(.*?\)/g, '').split(/\+|،| و(?=ال)/).map(x => x.trim()).filter(Boolean);
   const key = (() => { for (const t of toks) { const k = keys.find(k => nrm(k) === nrm(t)) || keys.find(k => nrm(k).includes(nrm(t)) || nrm(t).includes(nrm(k))); if (k) return k; } return null; })();
   if (!key) return null;
-  const st = L => { const v = L.map(g => g[key]).filter(x => typeof x === 'number'); return v.length ? { mean: v.reduce((a, b) => a + b, 0) / v.length, n: v.length, pass: v.filter(x => x >= 50).length / v.length * 100, low: v.filter(x => x < 70).length, top: v.filter(x => x >= 90).length } : null; };
+  const st = L => { const v = L.map(g => g[key]).filter(x => typeof x === 'number'); return v.length ? { mean: v.reduce((a, b) => a + b, 0) / v.length, n: v.length, pass: v.filter(x => x >= 50).length / v.length * 100, low: v.filter(x => x < 70).length, top: v.filter(x => x >= 90).length, b: [v.filter(x => x >= 90).length, v.filter(x => x >= 80 && x < 90).length, v.filter(x => x >= 70 && x < 80).length, v.filter(x => x >= 50 && x < 70).length, v.filter(x => x < 50).length] } : null; };
   const me = st(rows); if (!me) return null;
   const lvl = sec.split('-')[0];
   const sibs = Object.keys(bySec).filter(k => k.split('-')[0] === lvl).map(k => ({ k, s: st(bySec[k]) })).filter(x => x.s).sort((a, b) => b.s.mean - a.s.mean);
