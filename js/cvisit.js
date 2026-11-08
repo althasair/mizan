@@ -32,12 +32,24 @@ const monthKey = d => String(d || '').slice(0, 7);
 const cvTeachers = () => S.staff.filter(s => s.dept === S.dept && s.role !== 'منسقة' && s.name !== S.user.name).map(s => s.name).sort((a, b) => a.localeCompare(b, 'ar'));
 const cvVisits = t => S.records.filter(r => r.item === 'V' && r.dept === S.dept && (!t || r.d.t === t)).sort((a, b) => (a.date || '').localeCompare(b.date || '') || String(a.id).localeCompare(String(b.id)));
 /* توصيات الزيارة: النقاط التي تحتاج إلى تحسين (أو التوصيات في السجلات القديمة) */
-const recsOf = r => { const d = r.d || {}; const L = (d.imp && d.imp.length) ? d.imp : [d.r1, d.r2, d.r3]; return uniqA(L.map(cleanEnd)); };
+const recsOf = r => { const d = r.d || {}; const L = (d.imp && d.imp.length) ? d.imp : (d.im && d.im.length) ? d.im : [d.r1, d.r2, d.r3]; return uniqA(L.map(cleanEnd)); };
 /* ما يُتابَع في الزيارة الجديدة: توصيات الزيارة السابقة + ما لم يُنفَّذ كلياً من متابعاتها */
 function carryOf(prev) {
   if (!prev) return [];
   const pend = (prev.d.fu || []).filter(x => x.st && x.st !== 'تم التنفيذ').map(x => x.r);
   return uniqA([...recsOf(prev), ...pend]);
+}
+
+/* متابعة توصيات الزيارة السابقة — مشتركة بين استمارة المنسقة والنائب الأكاديمي ومديرة المدرسة */
+const VK_NAME = { V: 'منسقة المادة', VPV: 'النائب الأكاديمي', PRV: 'مديرة المدرسة' };
+function cvFuCard(d, prev) {
+  return `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>متابعة توصيات الزيارة السابقة <span class="sub">بند ثابت في كل زيارة — كلية أو جزئية</span></h2>
+    ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !prev ? '<div class="empty">هذه أول زيارة للمعلمة؛ تظهر توصياتها هنا للمتابعة في الزيارة القادمة.</div>'
+      : !d.fu.length ? `<div class="empty">لم تُدوَّن توصيات في زيارة ${dmy(prev.date)}.</div>`
+      : `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">الزيارة السابقة بتاريخ <b>${dmy(prev.date)}</b> (${esc(prev.d.kj || '')}${VK_NAME[prev.item] ? ' — زيارة ' + VK_NAME[prev.item] : ''}) — كان من أبرز توصياتها:</div>
+      <div class="tbl"><table class="t"><tr><th>التوصية</th><th style="width:170px">مدى التنفيذ</th><th>ملاحظة</th></tr>
+      ${d.fu.map((x, i) => `<tr><td style="font-size:13px">${esc(x.r)}</td><td><select data-fs="${i}" style="width:100%">${['', ...FU_ST].map(o => `<option ${x.st === o ? 'selected' : ''} value="${o}">${o || 'اختاري…'}</option>`).join('')}</select></td><td><input data-fn="${i}" value="${esc(x.note || '')}" style="width:100%" placeholder="اختياري"></td></tr>`).join('')}</table></div>`}
+    </div>`;
 }
 
 /* ================================================================== تحصيل شعب المعلمة (من سنابل)
@@ -303,13 +315,7 @@ function cvForm(el, rec) {
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
     ${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
 
-    <div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>متابعة توصيات الزيارة السابقة <span class="sub">بند ثابت في كل زيارة — كلية أو جزئية</span></h2>
-    ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !prev ? '<div class="empty">هذه أول زيارة للمعلمة؛ تظهر توصياتها هنا للمتابعة في الزيارة القادمة.</div>'
-      : !d.fu.length ? `<div class="empty">لم تُدوَّن توصيات في زيارة ${dmy(prev.date)}.</div>`
-      : `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">الزيارة السابقة بتاريخ <b>${dmy(prev.date)}</b> (${esc(prev.d.kj || '')}) — كان من أبرز توصياتها:</div>
-      <div class="tbl"><table class="t"><tr><th>التوصية</th><th style="width:170px">مدى التنفيذ</th><th>ملاحظة</th></tr>
-      ${d.fu.map((x, i) => `<tr><td style="font-size:13px">${esc(x.r)}</td><td><select data-fs="${i}" style="width:100%">${['', ...FU_ST].map(o => `<option ${x.st === o ? 'selected' : ''} value="${o}">${o || 'اختاري…'}</option>`).join('')}</select></td><td><input data-fn="${i}" value="${esc(x.note || '')}" style="width:100%" placeholder="اختياري"></td></tr>`).join('')}</table></div>`}
-    </div>
+    ${cvFuCard(d, prev)}
 
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة مقترحة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
@@ -391,7 +397,7 @@ function cvInner(r) {
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '') + fuTxt + ((d.str || []).length ? '\n\nنقاط القوة:\n' + d.str.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '') + ((d.imp || []).length ? '\n\nالنقاط التي تحتاج إلى تحسين:\n' + d.imp.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '')).trim()}</div></div>
   ${d.vpfb ? `<div class="gen"><div class="h">ملاحظات النائب الأكاديمي${d.vpfbAt ? ' (' + dmy(d.vpfbAt) + ')' : ''}</div><div class="b">${esc(d.vpfb)}</div></div>` : ''}
-  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(cN)}{{SIG}}</td>${d.vpfb ? `<td>توقيع النائب الأكاديمي<br><span class="vpn">أ. ${esc(typeof VP_NAME !== 'undefined' ? VP_NAME : '')}{{VPSIG}}</span></td>` : ''}</tr></table>`;
+  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(cN)}{{SIG}}</td>${d.vpfb ? `<td>توقيع النائب الأكاديمي<br>أ. ${esc(typeof VP_NAME !== 'undefined' ? VP_NAME : '')}</td>` : ''}</tr></table>`;
 }
 let CSIG = null;
 async function cvSig() { if (CSIG !== null) return CSIG; try { CSIG = (await API.call('signature', { who: S.user.id })).data || ''; } catch (e) { CSIG = ''; } return CSIG; }

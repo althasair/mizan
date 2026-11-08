@@ -85,7 +85,7 @@ const DEMO = {
       const i = d.recs.findIndex(x => x.id === o.id); if (i >= 0) d.recs[i] = o; else d.recs.push(o); this.save(d); return { ok: 1, record: o };
     }
     if (a === 'saveMany') { const saved = [], skipped = []; for (const rec of p.list) { try { saved.push((await this.call('save', { rec })).record); } catch (e) { skipped.push(e.message); } } return { ok: 1, saved, skipped }; }
-    if (a === 'delete' && me.role !== 'admin' && ['AC', 'TA'].includes((d.recs.find(x => x.id === p.id) || {}).item)) throw new Error('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
+    if (a === 'delete' && me.role !== 'admin' && ['AC'].includes((d.recs.find(x => x.id === p.id) || {}).item)) throw new Error('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
     if (a === 'delete') { d.recs = d.recs.filter(x => x.id !== p.id); this.save(d); return { ok: 1 }; }
     const fr = () => d.reps.findIndex(x => x.dept === p.dept && x.period === p.period);
     if (a === 'sign') { if (String(p.pin) !== me.pin) throw new Error('الرقم السري غير صحيح — التوقيع يتم برقمك السري فقط'); const o = { id: 'p' + Date.now(), dept: p.dept, period: p.period, from: p.from, to: p.to, status: 'موقّع من المنسقة', coordSig: me.name, coordAt: new Date().toLocaleString('en-GB'), snap: p.snap, feedback: '' }; const i = fr(); if (i >= 0) { o.feedback = d.reps[i].feedback; d.reps[i] = o; } else d.reps.push(o); this.save(d); return { ok: 1, report: o }; }

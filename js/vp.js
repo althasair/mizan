@@ -132,7 +132,12 @@ function sanabilFor(name) {
 function vpVisitForm(el, rec) {
   const F = FORMS.visit; const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.vpvT || '', date: today(), mode: 'ميدانيّة', kj: 'كليّة', rt: {}, rc: {}, st: ['', '', ''], im: ['', '', ''] };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.st = d.st || ['', '', '']; d.im = d.im || ['', '', ''];
-  cvNotesInit(d, d.st, d.im); d.wsi = d.wsi || {}; if (!d.pre) d.pre = F.preamble.replace('{name}', d.t || '...');
+  cvNotesInit(d, d.st, d.im); d.wsi = d.wsi || {}; d.fu = d.fu || []; if (!d.pre) d.pre = F.preamble.replace('{name}', d.t || '...');
+  const KND = S.vkind === 'PRV' ? 'PRV' : 'VPV';
+  // الزيارة السابقة: آخر زيارة لها هي (النائب/المديرة) للمعلمة، وإن لم توجد فآخر زيارة لأي زائرة (المنسقة غالباً)
+  const prevOf = () => { const all = S.records.filter(r => ['V', 'VPV', 'PRV'].includes(r.item) && r.d && r.d.t === d.t && (!rec || r.id !== rec.id) && r.date <= d.date).sort((a, b) => (a.date || '').localeCompare(b.date || '') || String(a.id).localeCompare(String(b.id)));
+    return all.filter(r => r.item === KND).slice(-1)[0] || all.slice(-1)[0]; };
+  const syncFU = () => { const prev = prevOf(); d.prevId = prev ? prev.id : ''; d.prevDate = prev ? prev.date : ''; const want = carryOf(prev); const old = {}; d.fu.forEach(x => old[x.r] = x); d.fu = want.map(r => old[r] || { r, st: '', note: '' }); };
   const subjToks = st => String(st.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\/| و(?=ال)/).map(x => x.trim()).filter(Boolean);
   const allSubj = uniqA([...S.staff.flatMap(subjToks), ...(REF.L.subject_all || [])]);
   const teaches = (st, sub) => !sub || subjToks(st).some(x => nrm(x) === nrm(sub) || nrm(x).includes(nrm(sub)) || nrm(sub).includes(nrm(x))) || nrm(st.dept || '') === nrm(sub);
@@ -144,7 +149,7 @@ function vpVisitForm(el, rec) {
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
     { const AD = cvAchData(d.t, d.subj, d.s); if (AD) d.achD = AD; }
-    const WS = cvWsPrep(d, d.t, d.date, staffBy(d.t).dept, rec && rec.id);
+    const WS = cvWsPrep(d, d.t, d.date, staffBy(d.t).dept, rec && rec.id); syncFU(); const prev = prevOf();
     const strongI = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1);
     const weakI = F.items.map((x, i) => i).filter(i => d.rt[i] === 3 || d.rt[i] === 4);
     const stOpts = [...strongI.flatMap(i => F.items[i].s), ...F.items.flatMap(x => x.s)];
@@ -164,6 +169,8 @@ function vpVisitForm(el, rec) {
       <div class="fld"><label>كليّة / جزئيّة</label><select id="fKj">${['كليّة', 'جزئيّة'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="fLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
     </form>${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
+    ${cvFuCard(d, prev)}
+
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
@@ -174,6 +181,7 @@ function vpVisitForm(el, rec) {
     ${cvWsCard(d, WS)}
     ${cvNotesCard(d, F, '')}`;
     const grab = () => {
+      $$('[data-fs]', el).forEach(s => d.fu[s.dataset.fs].st = s.value); $$('[data-fn]', el).forEach(s => d.fu[s.dataset.fn].note = s.value.trim());
       d.t = $('#fT').value.trim(); d.date = $('#fD').value; d.subj = $('#fSub').value.trim(); d.s = $('#fSec').value.trim(); d.topic = $('#fTop').value.trim();
       d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; cvNotesGrab(d, el); if (d.t) d.pre = d.pre.replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`); cvWsGrab(d, el, cvWorkshops(d.t, d.date, staffBy(d.t).dept));
       $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
@@ -196,6 +204,7 @@ function vpVisitForm(el, rec) {
     const save = async () => {
       grab(); if (!d.t || !d.date) { toast('اختاري المعلمة والتاريخ', 1); return null; }
       const st = staffBy(d.t); if (!st.dept) { toast('اسم المعلمة غير موجود في قائمة المعلمات', 1); return null; }
+      { const miss = d.fu.filter(x => !x.st); if (miss.length) { toast(`حدّدي مدى تنفيذ توصيات الزيارة السابقة (${miss.length})`, 1); return null; } }
       { const N = cvNotesCheck(d); if (!N) return null; d.st = N.str; d.im = N.imp; } cvWsKeep(d, st.dept); d.note = d.topic || d.note || '';
       const K = S.vkind === 'PRV' ? 'PRV' : 'VPV';
       if (K === 'PRV' && !(rec && rec.d && rec.d.by)) { const w = prWho(); d.byT = w[0]; d.by = w[1]; }
@@ -240,8 +249,8 @@ function visitInner(r) {
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
-  <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
-  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع ' + esc(d.byT || 'مديرة المدرسة') + '<br>أ. ' + esc(d.by || PR_NAME) : 'توقيع نائب المدير للشؤون الأكاديمية<br><span class="vpn">أ. ' + VP_NAME + '{{SIG}}</span>'}</td></tr></table>`;
+  <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${esc((d.fu || []).length ? `\n\nمتابعة توصيات الزيارة السابقة (${dmy(d.prevDate)}):\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '')}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
+  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع ' + esc(d.byT || 'مديرة المدرسة') + '<br>أ. ' + esc(d.by || PR_NAME) : 'توقيع نائب المدير للشؤون الأكاديمية<br>أ. ' + VP_NAME}</td></tr></table>`;
 }
 async function previewVisit(el, r) {
   await showPaper(el, 'استمارة الإشراف — ' + r.d.t, visitInner(r), '<button class="btn tf" id="pSend">إرسال للمعلمة</button>');

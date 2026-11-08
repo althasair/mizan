@@ -12,7 +12,7 @@ const PRIVATE_FOLDER = '1KMmGu5jsd8DP791YzeFv1Tz3Tu01Y8U6';   // «الميزا�
 const SIG_FILE = 'signature-vp.png';
 const INDIBAT_ID = '1VwCK6BZ5eCEFEpQbKTowzgn-dNyHCrhFLoDQLM7Juw0';   // منصة «انضباط»: الاحتياط والتبديل (قراءة فقط)
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
-const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
+const PROTECTED_ITEMS = ['AC'];                                       // لا يحذفها إلا النائب الأكاديمي (أنشطة المعلمة تحذفها صاحبتها)
 const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST', 'SEN'];   // SEN: الحصص الإثرائية من سبع سنابل (للتقارير التحليلية)
 const PRINCIPAL_MAIL = 's.al-rumaihi0105@education.qa';   // نسخة (CC) من رسائل النائب الأكاديمي للمعلمات
 function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }
