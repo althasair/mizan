@@ -550,9 +550,14 @@ function syncSanabil() {
   const deptAll = d => T.filter(x => String(x[0]) === String(d)).map(x => String(x[2] || x[1]));
   const list = [], abs = [], pa = [], cv = [];
   // strict: يُحتسب الاسم فقط إن طابق معلمة في جدول «المعلمات» (للخانات النصية الحرة)
+  // منع العدّ المزدوج: سجل المعلمة المنقول من تقرير المنسقة (q1) يُحتسب مرة واحدة، فلا يُعدّ معه السجل الأصلي للشخص نفسه في السنبلة نفسها
+  const cover = {}, grp = k => (k === 'a' || k === 'i') ? 'ai' : k;
   const ex = (r, names, k, ti, strict) => { const s = {}; names.filter(Boolean).forEach(n => { n = String(n).trim(); if (/جميع/.test(n)) deptAll(r.dept).forEach(x => s[x] = 1); else if (!strict || find(n)) s[full(n)] = 1; });
-    Object.keys(s).forEach(n => list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '' })); };
-  rows_(SH.rec).rows.filter(r => r[0]).map(recObj_).forEach(r => { const d = r.d || {};
+    const q = r.d && r.d.q1 ? ((String(r.d.q1).match(/\(([^)]+)\)\s*$/) || [])[1] || '') : '';
+    Object.keys(s).forEach(n => { if (!q && cover[r.id + '|' + n + '|' + grp(k)]) return; if (q) cover[q + '|' + n + '|' + grp(k)] = 1;
+      list.push({ n: n, k: k, t: String(ti || '').slice(0, 120), d: r.date || '' }); }); };
+  const all = rows_(SH.rec).rows.filter(r => r[0]).map(recObj_);
+  all.filter(r => r.d && r.d.q1).concat(all.filter(r => !(r.d && r.d.q1))).forEach(r => { const d = r.d || {};
     switch (r.item) {
       case 'AC': ex(r, [d.e1, d.e2, d.e3], /مبادر/.test(d.ty || '') ? 'i' : 'a', d.name || d.ty); break;
       case 'TA': ex(r, [d.t], d.kind === 'مبادرة' ? 'i' : 'a', d.name); break;
