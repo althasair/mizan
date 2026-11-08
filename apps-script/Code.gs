@@ -676,3 +676,14 @@ function setup() {
   Logger.log('عدد المعلمات: ' + (rows_(SH.teachers).rows.length));
   Logger.log('حصة البريد المتبقية اليوم: ' + MailApp.getRemainingDailyQuota());
 }
+
+/* ------------------------------------------------------------------ المزامنة التلقائية مع سبع سنابل
+   تُشغَّل مرة واحدة من المحرّر (اختاري startSanabilAutoSync ثم Run): بعدها تُرسَل أعمال المعلمات إلى سبع سنابل
+   كل 10 دقائق تلقائياً، حتى لو لم يحفظ أحد شيئاً في الميزان. */
+function startSanabilAutoSync() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'sanabilAutoSync').forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('sanabilAutoSync').timeBased().everyMinutes(10).create();
+  const msg = syncSanabil(); Logger.log('تم تشغيل المزامنة التلقائية كل 10 دقائق — ' + msg); return msg;
+}
+function sanabilAutoSync() { try { syncSanabil(); } catch (e) { Logger.log(e); } }
+
