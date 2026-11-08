@@ -118,6 +118,11 @@ function students_(secs) {
   const L = pv.filter(r => r[1] && S[sec(r[0])]).map(r => ({ s: sec(r[0]), n: String(r[1]).trim(), ph: String(r[2] || '').trim(), rel: String(r[3] || '').trim() }));
   return L.length ? L : base;
 }
+/* أسماء طالبات شُعب صاحبة الحساب نفسها (معلمة أو منسقة) — لرصد التقرير الأكاديمي السلوكي في سبع سنابل */
+function myStudents_(u) {
+  const secs = []; rows_(SH.teachers).rows.filter(r => String(r[1]).trim() === String(u.name).trim()).forEach(r => String(r[5]).split(/[،,]/).forEach(x => { x = x.trim(); if (x) secs.push(x); }));
+  return students_(secs).map(x => ({ s: x.s, n: x.n }));
+}
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
   const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
@@ -652,6 +657,7 @@ function route_(req) {
     case 'vpFeedback': return vpFeedback_(u, req);
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
+    case 'myStudents': return { students: myStudents_(u) };
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
