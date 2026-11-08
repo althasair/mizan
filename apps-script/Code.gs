@@ -15,7 +15,9 @@ const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجل
 const PROTECTED_ITEMS = ['AC', 'TA'];                                 // لا يحذفها إلا النائب الأكاديمي
 const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST', 'SEN'];   // SEN: الحصص الإثرائية من سبع سنابل (للتقارير التحليلية)
 const PRINCIPAL_MAIL = 's.al-rumaihi0105@education.qa';   // نسخة (CC) من رسائل النائب الأكاديمي للمعلمات
-function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }                 // بنود خاصة بالنائب لا تراها المنسقات
+function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }
+// النائب الأكاديمي وحده: المديرة والنائبة الإدارية والمستشارة (حسابات الإدارة الأخرى) للاطلاع وتسجيل حضورهن الصفي فقط
+function isVP_(u) { return !!u && u.role === 'admin' && u.id === 'admin'; }                 // بنود خاصة بالنائب لا تراها المنسقات
 
 const SH = {
   users: 'المستخدمون', teachers: 'المعلمات', periods: 'الفترات', prio: 'الأولويات',
@@ -160,7 +162,8 @@ function listReports_(u) {
 function saveRecord_(u, rec) {
   if (!rec || !rec.item || !rec.dept) fail_('بيانات ناقصة');
   if (!canDept_(u, rec.dept)) fail_('لا تملكين صلاحية على هذا القسم');
-  if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && u.role !== 'admin') fail_('هذا البند خاص بالنائب الأكاديمي');
+  if (ADMIN_ITEMS.indexOf(rec.item) >= 0 && !(isVP_(u) || (rec.item === 'PRV' && isPrincipal_(u)))) fail_('هذا البند خاص بالنائب الأكاديمي');
+  if (isPrincipal_(u) && rec.item !== 'PRV') fail_('حسابكِ للاطلاع، ويسجّل حضوركِ الصفي فقط');
   if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
   if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
   const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
@@ -218,6 +221,7 @@ function deleteRecord_(u, id) {
       if (String(t.rows[i][0]) === String(id)) {
         if (!canDept_(u, t.rows[i][1])) fail_('لا تملكين صلاحية على هذا السجل');
         if ((String(t.rows[i][2]) === 'VPV' && isPrincipal_(u)) || (String(t.rows[i][2]) === 'PRV' && !isPrincipal_(u))) fail_('هذا السجل للاطلاع فقط');
+        if (isPrincipal_(u) && String(t.rows[i][2]) !== 'PRV') fail_('حسابكِ للاطلاع، ولا يحذف إلا حضوركِ الصفي');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
         if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
         else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (!(['TPV', 'TWS', 'TAS'].indexOf(String(t.rows[i][2])) >= 0 && od.t === u.name)) fail_('هذا السجل تسجّله المعلمة بنفسها'); }
@@ -256,7 +260,7 @@ function signReport_(u, p) {
   } finally { lock.releaseLock(); }
 }
 function approveReport_(u, p) {
-  if (u.role !== 'admin') fail_('الاعتماد للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('الاعتماد للنائب الأكاديمي فقط');
   checkPin_(u, p.pin);
   const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
   if (i < 0) fail_('لم توقّع المنسقة على هذا التقرير بعد');
@@ -267,7 +271,7 @@ function approveReport_(u, p) {
   return repObj_(r);
 }
 function returnReport_(u, p) {
-  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('للنائب الأكاديمي فقط');
   const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
   if (i < 0) fail_('التقرير غير موجود');
   const r = t.rows[i]; r[5] = 'معاد للتعديل'; r[8] = ''; r[9] = ''; r[10] = p.feedback || r[10] || '';
@@ -276,7 +280,7 @@ function returnReport_(u, p) {
   return repObj_(r);
 }
 function feedback_(u, p) {
-  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('للنائب الأكاديمي فقط');
   const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
   if (i < 0) { const row = ['p' + new Date().getTime().toString(36), p.dept, p.period, p.from, p.to, 'مسودة', '', '', '', '', p.feedback || '', '']; t.sh.appendRow(row); return repObj_(row); }
   t.sh.getRange(i + 2, 11).setValue(p.feedback || ''); t.rows[i][10] = p.feedback || '';
@@ -291,11 +295,11 @@ function sigData_(name) {
 }
 // توقيع المنسقة: للنائب، أو للمنسقة نفسها فقط
 function coordSig_(u, p) {
-  if (u.role !== 'admin' && u.id !== p.who) fail_('التوقيع غير متاح');
+  if (!isVP_(u) && u.id !== p.who) fail_('التوقيع غير متاح');
   return { data: sigData_('sig-' + p.who + '.png') };
 }
 function setSig_(u, p) {
-  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('للنائب الأكاديمي فقط');
   if (!/^c\d+$/.test(String(p.id))) fail_('حساب غير صالح');
   const m = String(p.data || '').match(/^data:(image\/(png|jpeg));base64,(.+)$/);
   if (!m) fail_('صيغة الصورة غير مدعومة (PNG أو JPG)');
@@ -316,7 +320,7 @@ function signature_(u, p) {
     return { data: sigData_(SIG_FILE) };
   }
   // توقيع النائب لا يُعطى إلا للنائب نفسها، أو لتقرير معتمد يخص قسم المنسقة
-  if (u.role !== 'admin') {
+  if (!isVP_(u)) {
     const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
     if (i < 0 || (t.rows[i][5] !== 'معتمد' && !String(t.rows[i][10] || '').trim()) || !canDept_(u, p.dept)) fail_('التوقيع غير متاح');   // بعد الاعتماد أو بعد كتابة النائب تغذيتها الراجعة
   }
@@ -350,7 +354,7 @@ function vpFeedback_(u, p) {
 
 /* ------------------------------------------------------------------ إدارة (النائب) */
 function setPin_(u, p) {
-  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('للنائب الأكاديمي فقط');
   if (!/^\d{4,8}$/.test(String(p.newPin))) fail_('الرقم السري من 4 إلى 8 أرقام');
   const t = rows_(SH.users);
   if (t.rows.some(r => String(r[4]) === String(p.newPin) && r[0] !== p.id)) fail_('هذا الرقم مستخدم لحساب آخر');
@@ -360,7 +364,7 @@ function setPin_(u, p) {
 
 /* قائمة الأرقام السرية: للإدارة فقط، وبعد إعادة إدخال رقمها السري. لا تُعرض أرقام الإدارة والمديرة */
 function pinList_(u, p) {
-  if (u.role !== 'admin') fail_('للإدارة فقط');
+  if (!isVP_(u)) fail_('للإدارة فقط');
   checkPin_(u, p.pin);
   const t = rows_(SH.users); const role = { 'منسقة': 'منسقة', 'معلمة': 'معلمة', 'توجيه': 'موجهة' };
   const list = t.rows.filter(r => role[String(r[1]).trim()]).map(r => ({ id: String(r[0]), role: role[String(r[1]).trim()], dept: String(r[2]).split('|').join(' / '), name: String(r[3]), pin: String(r[4]), on: String(r[5]).trim() !== 'لا' }));
@@ -444,7 +448,7 @@ function getFile_(u, p) {
 
 /* أسماء الطالبات (الشعبة والاسم فقط) — يرسلها النائب الأكاديمي من «سبع سنابل» */
 function setStudents_(u, p) {
-  if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط');
+  if (!isVP_(u)) fail_('للنائب الأكاديمي فقط');
   const L = (p.list || []).filter(x => x && x.n && /^1[0-2]-\d+$/.test(String(x.s))).map(x => [String(x.s), String(x.n).slice(0, 120)]);
   if (!L.length) fail_('القائمة فارغة');
   let sh = sheet_(SH.stu); if (!sh) sh = ss_().insertSheet(SH.stu);
@@ -630,7 +634,7 @@ function route_(req) {
     case 'save': { const r = { record: saveRecord_(u, req.rec) }; sabSoon_(req.rec && req.rec.item); return r; }
     case 'saveMany': { const r = saveMany_(u, req.list); sabSoon_('*'); return r; }
     case 'delete': { const r = deleteRecord_(u, req.id); sabSoon_('*'); return r; }
-    case 'syncSanabil': if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط'); return { result: syncSanabil() };
+    case 'syncSanabil': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); return { result: syncSanabil() };
     case 'sign': return { report: signReport_(u, req) };
     case 'approve': return { report: approveReport_(u, req) };
     case 'return': return { report: returnReport_(u, req) };
@@ -645,7 +649,7 @@ function route_(req) {
     case 'setStudents': return setStudents_(u, req);
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
-    case 'syncIndibat': if (u.role !== 'admin') fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
+    case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');

@@ -83,11 +83,11 @@ function navHTML() {
     const PR = typeof isPrincipal === 'function' && isPrincipal();
     return `<div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}${it('a_anrep', 'التقارير التحليلية المطبوعة', 'chart')}
-      ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور مديرة المدرسة', 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
+      ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور ' + (typeof prWho === 'function' ? prWho()[0] : 'مديرة المدرسة'), 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
         : `<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
       <div class="grp">المعلمات</div>${it('a_tacts', 'مبادرات المعلمات وأنشطتهن', 'star')}${it('c_trep', 'تقارير أعمال المعلمات', 'doc')}
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
-      <div class="grp">الإعدادات</div>${it('a_accounts', 'الحسابات والأرقام السرية', 'user')}`;
+      ${PR ? '' : `<div class="grp">الإعدادات</div>${it('a_accounts', 'الحسابات والأرقام السرية', 'user')}`}`;
   }
   let h = `<a class="it ${S.view === 'home' ? 'on' : ''}" data-v="home">${ICON.home}<span>الرئيسية</span></a>`;
   GROUPS.forEach(g => {

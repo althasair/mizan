@@ -11,6 +11,8 @@ const semRange = sem => { const L = S.periods.filter(p => p.sem === sem); return
 const curSem = () => { const t = today(); const p = S.periods.find(x => t >= x.from && t <= x.to) || [...S.periods].reverse().find(x => x.from <= t); return (p && p.sem) || SEMS[0]; };
 const VP_NAME = 'آسيا الذبياني';
 const PR_NAME = 'شيخة الرميحي';
+/* صاحبة حساب الإدارة الذي يسجّل الحضور: المديرة أو النائبة الإدارية أو المستشارة — تُكتب صفتها واسمها في الاستمارة بدل «مديرة المدرسة» دائمًا */
+function prWho(n) { n = String(n || (S.user && S.user.name) || ''); return /وداد/.test(n) ? ['النائبة الإدارية', 'وداد الكربي'] : /عائشة|عايشة/.test(n) ? ['مستشارة المدرسة', 'عائشة المحمود'] : ['مديرة المدرسة', PR_NAME]; }
 const staffBy = n => S.staff.find(s => s.name === n) || {};
 const uniqA = a => [...new Set(a.filter(Boolean))];
 const SCHOOL = () => REF.SCHOOL || 'مدرسة الشيماء الثانوية للبنات';
@@ -62,7 +64,7 @@ const emailBody = (name, what) => `<div dir="rtl" style="font-family:Lusail,'IBM
   <p style="margin:0 0 10px">فخورة لكونكِ ضمن فريق الشيماء، وأقدّر ما تبذلينه من جهد مخلص في سبيل تعلّم طالباتنا.</p>
   <p style="margin:0 0 10px">أرفق لكِ غاليتي ${esc(what)}، آملةً التكرّم بالاطلاع عليها والتوقيع، ثم إعادة إرسالها.</p>
   <p style="margin:0 0 10px">سائلةً المولى لكِ دوام التوفيق والسداد.</p>
-  <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>${typeof isPrincipal === 'function' && isPrincipal() ? PR_NAME : 'آسيا الذبياني'}</b><br>${typeof isPrincipal === 'function' && isPrincipal() ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}<br>${esc(SCHOOL())}</p></div>`;
+  <p style="margin:16px 0 0;font-size:11pt;text-align:right">مع خالص التقدير والاحترام،<br><b>${typeof isPrincipal === 'function' && isPrincipal() ? prWho()[1] : 'آسيا الذبياني'}</b><br>${typeof isPrincipal === 'function' && isPrincipal() ? prWho()[0] : 'نائب المدير للشؤون الأكاديمية'}<br>${esc(SCHOOL())}</p></div>`;
 async function sendForm({ to, name, subject, what, inner, file }) {
   if (!to) { toast('لا يوجد بريد إلكتروني مسجّل لهذه الموظفة', 1); return false; }
   const imgs = await lhImgs(); const sig = await vpSig();
@@ -150,7 +152,7 @@ function vpVisitForm(el, rec) {
     let lastD = '';
     el.innerHTML = `
     <div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="vb">رجوع للقائمة</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="vdel">حذف</button>' : ''}<button class="btn sec" id="vauto">اقتراح نقاط القوة والتحسين من التقديرات</button><button class="btn" id="vsave">حفظ</button>${rec ? '<button class="btn sec" id="vprev">معاينة الاستمارة</button><button class="btn tf" id="vsend">إرسال للمعلمة</button>' : ''}</div>
-    <div class="card"><h2>${esc(F.title)} <span class="sub">نموذج (9) من الدليل الإرشادي — تُعبَّأ من قِبل ${S.vkind === 'PRV' ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}</span></h2>
+    <div class="card"><h2>${esc(F.title)} <span class="sub">نموذج (9) من الدليل الإرشادي — تُعبَّأ من قِبل ${S.vkind === 'PRV' ? (d.byT || prWho()[0]) : 'نائب المدير للشؤون الأكاديمية'}</span></h2>
     <form class="form" id="vh" onsubmit="return false">
       <div class="fld"><label>المادّة <small style="color:var(--muted)">· اختاريها أولاً</small></label><select id="fSub"><option value="">اختاري المادة…</option>${allSubj.map(x => `<option ${nrm(x) === nrm(d.subj || '') ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
       <div class="fld"><label>المعلّمة ${d.subj ? `<small style="color:var(--muted)">· معلمات ${esc(d.subj)} (${tch.length})</small>` : ''}</label><select id="fT"><option value="">${d.subj ? 'اختاري المعلمة…' : 'اختاري المادة أولاً'}</option>${tch.map(x => `<option ${x.name === d.t ? 'selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
@@ -196,7 +198,8 @@ function vpVisitForm(el, rec) {
       const st = staffBy(d.t); if (!st.dept) { toast('اسم المعلمة غير موجود في قائمة المعلمات', 1); return null; }
       { const N = cvNotesCheck(d); if (!N) return null; d.st = N.str; d.im = N.imp; } cvWsKeep(d, st.dept); d.note = d.topic || d.note || '';
       const K = S.vkind === 'PRV' ? 'PRV' : 'VPV';
-      const j = await call('save', { rec: { id: rec && rec.id, dept: st.dept, item: K, date: d.date, sum: (K === 'PRV' ? 'زيارة مديرة المدرسة: ' : 'زيارة النائب الأكاديمي: ') + d.t, d, key: d.t + '|' + d.date } });
+      if (K === 'PRV' && !(rec && rec.d && rec.d.by)) { const w = prWho(); d.byT = w[0]; d.by = w[1]; }
+      const j = await call('save', { rec: { id: rec && rec.id, dept: st.dept, item: K, date: d.date, sum: (K === 'PRV' ? 'زيارة ' + (d.byT || 'مديرة المدرسة') + ': ' : 'زيارة النائب الأكاديمي: ') + d.t, d, key: d.t + '|' + d.date } });
       const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
       S.vpv = j.record.id; return j.record;
     };
@@ -229,7 +232,7 @@ function visitInner(r) {
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     <tr><td class="k">المــدرسة</td><td>${esc(SCHOOL())}</td><td class="k">اليوم/التاريخ</td><td>${esc(dayOf(d.date))} ${dmy(d.date)}</td></tr>
     <tr><td class="k">المادّة</td><td>${esc(d.subj || '')}</td><td class="k">الصّف</td><td>${esc(d.s || '')}</td></tr>
-    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">${r.item === 'PRV' ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية'}</td><td>أ. ${r.item === 'PRV' ? PR_NAME : VP_NAME}</td></tr>
+    <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">${r.item === 'PRV' ? esc(d.byT || 'مديرة المدرسة') : 'نائب المدير للشؤون الأكاديمية'}</td><td>أ. ${r.item === 'PRV' ? esc(d.by || PR_NAME) : VP_NAME}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانيّة')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئيّة')} جزئيّة &nbsp; ${ys(d.kj, 'كليّة')} كليّة</td></tr>
     ${d.achD ? `<tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>` : `<tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>`}</table>
   ${d.achD && typeof cvAchBox === 'function' ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
@@ -238,7 +241,7 @@ function visitInner(r) {
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
-  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع مديرة المدرسة<br>أ. ' + PR_NAME : 'توقيع نائب المدير للشؤون الأكاديمية<br><span class="vpn">أ. ' + VP_NAME + '{{SIG}}</span>'}</td></tr></table>`;
+  <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع ' + esc(d.byT || 'مديرة المدرسة') + '<br>أ. ' + esc(d.by || PR_NAME) : 'توقيع نائب المدير للشؤون الأكاديمية<br><span class="vpn">أ. ' + VP_NAME + '{{SIG}}</span>'}</td></tr></table>`;
 }
 async function previewVisit(el, r) {
   await showPaper(el, 'استمارة الإشراف — ' + r.d.t, visitInner(r), '<button class="btn tf" id="pSend">إرسال للمعلمة</button>');

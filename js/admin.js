@@ -201,6 +201,7 @@ function bindAdminRep(rp, dept, p) {
 /* ------------------------------------------------------------------ حسابات المنسقات */
 function A_accounts(el) {
   setTitle('الحسابات والأرقام السرية');
+  if (typeof isPrincipal === 'function' && isPrincipal()) { el.innerHTML = '<div class="empty">هذه الصفحة للنائب الأكاديمي فقط.</div>'; return; }
   el.innerHTML = `<div class="card"><div class="row"><h2 style="margin:0">الأرقام السرية</h2><span class="sp"></span><button class="btn" id="pinShow">عرض الأرقام السرية</button></div>
   <div class="note" style="margin-top:8px">للمنسقات والمعلمات والموجهات. لا تظهر إلا بعد إدخال رقمكِ السري، وتختفي عند مغادرة الصفحة.</div><div id="pinBox"></div></div>
   <div class="note">يمكنكِ تعيين رقم جديد لأي منسقة عند الحاجة.</div>
