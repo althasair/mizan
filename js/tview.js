@@ -158,7 +158,7 @@ function pvCheer(n) {
 }
 function T_pv(el) {
   T_page(el, {
-    item: 'TPV', fixP: 1, vis: 1, title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الزميلة التي زرتِها، وسبب اختياركِ لها، وما استفدتِه، وما ستطبّقينه. المطلوب زيارة واحدة على الأقل في الشهر، وإن زدتِ فلكل مجتهدٍ نصيب.',
+    item: 'TPV', fixP: 1, vis: 1, dateLbl: 'تاريخ الزيارة الفعلي (لا تاريخ اليوم إن كانت الزيارة سابقة)', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length), note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري الزميلة التي زرتِها، وسبب اختياركِ لها، وما استفدتِه، وما ستطبّقينه. المطلوب زيارة واحدة على الأقل في الشهر، وإن زدتِ فلكل مجتهدٍ نصيب.',
     blank: { why: TPV_WHY[1], pick: [], saw: [], apply: [], how: '' },
     form: d => fld('المعلمة المزورة', staffSel('v', d.v)) + fld('الصف', `<input data-n="s" value="${esc(d.s || '')}" placeholder="مثل 11-3">`) +
       fld('سبب الزيارة', fRadio('why', TPV_WHY, d.why), 1) + fld('لماذا اخترتِ هذه المعلمة؟', fMulti('pick', TPV_PICK, d.pick), 1) +
