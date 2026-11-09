@@ -53,7 +53,18 @@ function buildReport(ctx) {
 
   /* رفع التحصيل */
   const RA = Rp('RA');
-  T.ra = sec(RA, r => SEC.RA.tx(d(r)), 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.', 'نفّذ القسم الإجراءات الآتية لرفع التحصيل: ');
+  /* إجراءات المعلمات المسجّلة في سبع سنابل تنعكس هنا تلقائياً، والمنسقة تضيف في «RA» ما لم تسجّله المعلمات فقط */
+  const SB = ctx.recs.filter(r => r.dept === dept && ['SEN', 'SFB', 'SAC'].includes(r.item) && r.d && inP(r.date, P));
+  let sbTxt = '';
+  if (SB.length) {
+    const ind = SB.filter(r => r.item === 'SEN' && !r.d.whole), grp = SB.filter(r => r.item === 'SEN' && r.d.whole), fb = SB.filter(r => r.item === 'SFB'), ac = SB.filter(r => r.item === 'SAC');
+    const nStu = L => new Set(L.flatMap(r => (r.d.stu || []).map(n => n + '|' + r.d.s))).size;
+    const parts = [ind.length ? `(${ind.length}) من الحصص الإثرائية الفردية لـ(${nStu(ind)}) من الطالبات` : '', grp.length ? `(${grp.length}) من الحصص الإثرائية الجماعية` : '',
+      fb.length ? `(${fb.length}) من التغذية الراجعة والتقييمات القصيرة لـ(${nStu(fb)}) من الطالبات` : '', ac.length ? `(${ac.length}) من الأنشطة وتعلّم الأقران` : ''].filter(Boolean);
+    const by = {}; SB.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+    sbTxt = `سجّلت معلمات القسم في منصة سبع سنابل ${parts.join('، و')}، كالآتي: ` + Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length})`).join('، ') + '.';
+  }
+  T.ra = (sbTxt ? sbTxt + (RA.length ? ' ' : '') : '') + (RA.length ? (sbTxt ? 'كما نفّذ القسم إجراءات أخرى لرفع التحصيل: ' : 'نفّذ القسم الإجراءات الآتية لرفع التحصيل: ') + RA.map(r => SEC.RA.tx(d(r))).join('؛ ') + '.' : '') || 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.';
   /* تعزيز الطالبات بالشهادات من سبع سنابل: من عزّزت، وكم طالبة، وعلى ماذا */
   { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
     if (RF.length) { const by = {}; RF.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));

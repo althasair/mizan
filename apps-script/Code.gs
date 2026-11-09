@@ -13,7 +13,7 @@ const SIG_FILE = 'signature-vp.png';
 const INDIBAT_ID = '1VwCK6BZ5eCEFEpQbKTowzgn-dNyHCrhFLoDQLM7Juw0';   // منصة «انضباط»: الاحتياط والتبديل (قراءة فقط)
 const SESSION_SECONDS = 6 * 60 * 60;                          // مدة الجلسة: 6 ساعات
 const PROTECTED_ITEMS = ['AC'];                                       // لا يحذفها إلا النائب الأكاديمي (أنشطة المعلمة تحذفها صاحبتها)
-const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST', 'SEN'];   // SEN: الحصص الإثرائية من سبع سنابل (للتقارير التحليلية)
+const ADMIN_ITEMS = ['VPV', 'PRV', 'FILES', 'NOTE', 'CF', 'AF', 'AST'];   // إجراءات سبع سنابل (SEN حصص إثرائية، SFB تغذية راجعة، SAC أنشطة، SRF تعزيز) تصل للمنسقة لقسمها فتنعكس في «إجراءات رفع التحصيل»
 const PRINCIPAL_MAIL = 's.al-rumaihi0105@education.qa';   // نسخة (CC) من رسائل النائب الأكاديمي للمعلمات
 function isPrincipal_(u) { return u && u.role === 'admin' && u.id !== 'admin'; }
 // النائب الأكاديمي وحده: المديرة والنائبة الإدارية والمستشارة (حسابات الإدارة الأخرى) للاطلاع وتسجيل حضورهن الصفي فقط
@@ -508,13 +508,13 @@ function sabAccess_() {
   const tok = JSON.parse(r.getContentText()).access_token; if (tok) c.put('sabTok', tok, 3000); return tok || null;
 }
 function sabPA_() {
-  const c = CacheService.getScriptCache(); const hit = c.get('sabPA3'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  const c = CacheService.getScriptCache(); const hit = c.get('sabPA4'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
   let out = [];
   try {
     const tok = sabAccess_(); if (!tok) return [];
     const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
       method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }, { integerValue: '6' }] } } } } } }) });
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }, { integerValue: '6' }, { integerValue: '4' }, { integerValue: '7' }] } } } } } }) });
     const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
     const T = rows_(SH.teachers).rows.filter(x => x[1]);
     const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
@@ -528,6 +528,11 @@ function sabPA_() {
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
+      if (Number(g('type')) === 4 || Number(g('type')) === 7) {   // التغذية الراجعة، والأنشطة وتعلّم الأقران: تنعكس في «إجراءات رفع التحصيل» بتقرير المنسقة
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: Number(g('type')) === 4 ? 'SFB' : 'SAC', date: String(g('date')), sum: (Number(g('type')) === 4 ? 'تغذية راجعة' : 'نشاط وتعلّم أقران') + ' — سبع سنابل',
+          d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), link: String(g('link') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
+        return;
+      }
       if (Number(g('type')) === 3) {   // حصة إثرائية
         out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
@@ -537,7 +542,7 @@ function sabPA_() {
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA3', txt, 600);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 600);
   return out;
 }
 

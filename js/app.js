@@ -12,6 +12,15 @@ const isViewer = () => S.user && S.user.role === 'viewer';
 const P = () => S.periods.find(p => p.name === S.period) || S.periods[0];
 const fmtPct = v => v == null ? '—' : Math.round(v * 100) + '%';
 
+/* ما وصل من سبع سنابل لقسم المنسقة في الفترة: يظهر في أيقونة «إجراءات رفع التحصيل» للاطلاع، وينعكس في التقرير تلقائياً */
+function raSabHTML(p) {
+  const L = S.records.filter(r => r.dept === S.dept && ['SEN', 'SFB', 'SAC', 'SRF'].includes(r.item) && r.d && inP(r.date, p));
+  const K = { SEN: 'حصص إثرائية', SFB: 'تغذية راجعة', SAC: 'أنشطة وتعلّم أقران', SRF: 'تعزيز وشهادات' };
+  if (!L.length) return '<div class="note">لم يصل من سبع سنابل إجراءات لمعلمات القسم في هذه الفترة بعد.</div>';
+  const by = {}; L.forEach(r => { const t = r.d.t || '—'; by[t] = by[t] || {}; by[t][r.item] = (by[t][r.item] || 0) + 1; });
+  return `<div class="card"><h2>وصل تلقائياً من سبع سنابل <span class="sub">${L.length} إجراء في هذه الفترة · يظهر في التقرير دون إعادة كتابته</span></h2><div class="tbl"><table class="t"><thead><tr><th>المعلمة</th>${Object.values(K).map(k => `<th>${k}</th>`).join('')}</tr></thead><tbody>${Object.entries(by).map(([t, c]) => `<tr><td>${esc(t)}</td>${Object.keys(K).map(k => `<td style="text-align:center">${c[k] || '—'}</td>`).join('')}</tr>`).join('')}</tbody></table></div></div>`;
+}
+
 function toast(msg, bad) { const t = document.createElement('div'); t.className = 'toast' + (bad ? ' bad' : ''); t.textContent = msg; document.body.appendChild(t); setTimeout(() => t.remove(), bad ? 4500 : 2600); }
 function busy(on) { let b = $('#busy'); if (on && !b) { b = document.createElement('div'); b.id = 'busy'; b.className = 'loading'; b.innerHTML = '<div class="spin"></div>'; document.body.appendChild(b); } if (!on && b) b.remove(); }
 async function call(a, p) { busy(true); try { return await API.call(a, p); } catch (e) { toast(e.message, 1); throw e; } finally { busy(false); } }
@@ -225,7 +234,7 @@ function C_section(sec, el) {
   el.innerHTML = `
     <div class="note">${esc(sec.note)}</div>
     ${locked ? '<div class="note warn">تقرير هذه الفترة موقّع ومقفل؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
-    ${sec.k === 'WS' ? wsPlanHTML() : ''}
+    ${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
     <div class="card" id="fc"><h2>${editing ? 'تعديل سجل' : 'إضافة سجل جديد'} <span class="sub">الحقول المعلَّمة بـ * مطلوبة</span></h2>
       <form class="form" id="frm" autocomplete="off">${sec.f.map(f => fieldHTML(f, base)).join('')}
         <div class="preview"><b>هكذا ستظهر في التقرير</b><span id="pv"></span></div>
