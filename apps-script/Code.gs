@@ -120,6 +120,10 @@ function students_(secs) {
 }
 /* أسماء طالبات شُعب صاحبة الحساب نفسها (معلمة أو منسقة) — لرصد التقرير الأكاديمي السلوكي في سبع سنابل */
 function myStudents_(u) {
+  if (u.role === 'admin') {   // حساب النائب: كل الشعب (لاستكمال سجل القيد في سبع سنابل، مثل الثاني عشر)
+    const sh = sheet_(SH.stu); const all = {}; if (sh) { const v = sh.getDataRange().getValues(); v.shift(); v.forEach(r => { if (r[1]) all[r[0] instanceof Date ? (r[0].getMonth() + 1) + '-' + r[0].getDate() : String(r[0]).trim()] = 1; }); }
+    return students_(Object.keys(all)).map(x => ({ s: x.s, n: x.n }));
+  }
   const secs = []; rows_(SH.teachers).rows.filter(r => String(r[1]).trim() === String(u.name).trim()).forEach(r => String(r[5]).split(/[،,]/).forEach(x => { x = x.trim(); if (x) secs.push(x); }));
   return students_(secs).map(x => ({ s: x.s, n: x.n }));
 }
