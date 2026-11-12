@@ -735,7 +735,7 @@ function coordsOf_(dept) {
 }
 function isCoordName_(n) { return rows_(SH.users).rows.some(r => roleOf_(r) === 'coord' && String(r[3]).trim() === String(n).trim()); }
 function mailOf_(name) { const r = rows_(SH.teachers).rows.find(x => String(x[1]).trim() === String(name).trim()); const m = r && String(r[7] || '').trim(); return m && /@/.test(m) ? m : ''; }
-function vpMail_() { return PropertiesService.getScriptProperties().getProperty('VP_MAIL') || mailOf_('آسيا الذبياني') || Session.getEffectiveUser().getEmail(); }
+function vpMail_() { let m = PropertiesService.getScriptProperties().getProperty('VP_MAIL') || mailOf_('آسيا الذبياني'); if (!m) { try { m = Session.getEffectiveUser().getEmail(); } catch (e) { m = ''; } } return m; }
 function prqFirst_(dept, t) { return (!isCoordName_(t) && coordsOf_(dept).some(c => c.name !== t)) ? 'coord' : 'vp'; }
 function prqNext_(st) { return st === 'coord' ? 'vp' : st === 'vp' ? 'pr' : 'ok'; }
 
@@ -744,7 +744,8 @@ function platMail_(to, subject, html) {
   if (!to) return false;
   try {
     const opt = { htmlBody: html, name: 'مدرسة الشيماء — الميزان' };
-    if (String(Session.getEffectiveUser().getEmail()).toLowerCase() === PLATFORM_MAIL) { opt.to = to; opt.subject = subject; MailApp.sendEmail(opt); return true; }
+    let me = ''; try { me = String(Session.getEffectiveUser().getEmail()).toLowerCase(); } catch (e) {}
+    if (me === PLATFORM_MAIL) { opt.to = to; opt.subject = subject; MailApp.sendEmail(opt); return true; }
     if (GmailApp.getAliases().map(a => String(a).toLowerCase()).indexOf(PLATFORM_MAIL) < 0) { log_(null, 'بريد لم يُرسل', '', 'لم يُضبط عنوان المنصات بعد ← ' + to); return false; }
     opt.from = PLATFORM_MAIL; GmailApp.sendEmail(to, subject, 'افتحي الرسالة في تطبيق بريد يدعم التنسيق', opt); return true;
   } catch (e) { Logger.log(e); log_(null, 'بريد لم يُرسل', '', String(e).slice(0, 120)); return false; }
@@ -761,7 +762,8 @@ function prqKey_() { const P = PropertiesService.getScriptProperties(); let k = 
 function prqSig_(id, st, uid) { return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(id + '|' + st + '|' + uid, prqKey_())).slice(0, 24); }
 function prqDesc_(d, date) { return '<b>' + d.t + '</b> — ' + (d.kind || '') + '<br>اليوم: <b>' + date + '</b> · من ' + d.from + ' إلى ' + d.to + ' (' + d.h + ' ساعة)<br>السبب: ' + (d.reason || '') + (d.note ? ' — ' + d.note : ''); }
 /* إشعار من عليها الاعتماد الآن */
-function prqNotify_(rec) {
+function prqNotify_(rec) { try { prqNotifyX_(rec); } catch (e) { log_(null, 'بريد لم يُرسل', rec.dept, String(e.message || e).slice(0, 120)); } }
+function prqNotifyX_(rec) {
   const d = rec.d, st = d.st; let to = [];
   if (st === 'coord') to = coordsOf_(rec.dept).filter(c => c.name !== d.t).map(c => ({ id: c.id, m: mailOf_(c.name) }));
   if (st === 'vp') to = [{ id: 'admin', m: vpMail_() }];
@@ -832,7 +834,8 @@ function prqApply_(u, t, i, act, phrase, note) {
   log_(u, act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
   return recObj_(row);
 }
-function prqAfter_(rec) {
+function prqAfter_(rec) { try { return prqAfterX_(rec); } catch (e) { log_(null, 'تنبيه', rec.dept, String(e.message || e).slice(0, 120)); return [rec]; } }
+function prqAfterX_(rec) {
   const d = rec.d; const tm = mailOf_(d.t);
   if (d.st === 'ret') { platMail_(tm, 'طلب إذنكِ يحتاج تعديلاً', mailBox_('إذنٌ مُيسَّر', 'معلمتي الغالية أ. ' + d.t + '،<br>أُعيد طلب إذنكِ ليوم ' + rec.date + ' للتعديل' + (d.ret.note ? ': <b>' + d.ret.note + '</b>' : '') + '.<br>افتحي «إذنٌ مُيسَّر» في الميزان لتعديله وإرساله.')); return [rec]; }
   if (d.st !== 'ok') { prqNotify_(rec); return [rec]; }
