@@ -98,11 +98,13 @@ const fMulti = (n, opts, v) => { const cur = Array.isArray(v) ? v : (v ? [v] : [
 const fRadio = (n, opts, v) => `<div class="row tradio" style="gap:14px;font-size:13px">${opts.map(o => `<label><input type="radio" name="r_${n}" value="${esc(o)}" ${o === v ? 'checked' : ''}> ${esc(o)}</label>`).join('')}</div>`;
 const staffSel = (n, v) => { const by = {}, co = {}; others().forEach(s => { by[s.dept] = by[s.dept] || []; if (!by[s.dept].includes(s.name)) by[s.dept].push(s.name); if (s.role === 'منسقة') co[s.name] = 1; });
   const ord = L => L.sort((a, b) => (co[b] ? 1 : 0) - (co[a] ? 1 : 0) || a.localeCompare(b, 'ar'));
-  return `<select data-n="${n}"><option value="">اختاري المعلمة أو المنسقة…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, 'ar')).map(dp => `<optgroup label="${esc(dp)}">${ord(by[dp]).map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(x)}${co[x] ? ' (منسقة القسم)' : ''}</option>`).join('')}</optgroup>`).join('')}</select>`; };
+  const all = Object.values(by).flat(), ext = v && !all.includes(v) ? v : '';
+  return `<select data-n="${n}"><option value="">اختاري المعلمة أو المنسقة…</option>${Object.keys(by).sort((a, b) => a.localeCompare(b, 'ar')).map(dp => `<optgroup label="${esc(dp)}">${ord(by[dp]).map(x => `<option value="${esc(x)}" ${x === v ? 'selected' : ''}>${esc(x)}${co[x] ? ' (منسقة القسم)' : ''}</option>`).join('')}</optgroup>`).join('')}</select><input data-sx="${n}" value="${esc(ext)}" placeholder="أو اكتبي الاسم إن لم يكن في القائمة (مثل: أخصائية، أو من الإدارة)" style="margin-top:6px;font-size:12.5px">`; };
 function readT(form) {
   const r = readForm(form);
   $$('[data-m]', form).forEach(m => { const L = $$('input[type=checkbox]', m).filter(c => c.checked).map(c => c.value); const x = ($(`[data-mx="${m.dataset.m}"]`, m).value || '').split(/[،,]/).map(s => s.trim()).filter(Boolean); r[m.dataset.m] = [...L, ...x]; });
   $$('input[type=radio]:checked', form).forEach(i => r[i.name.slice(2)] = i.value);
+  $$('[data-sx]', form).forEach(i => { const v = (i.value || '').trim(); if (v) r[i.dataset.sx] = v; });
   return r;
 }
 const fld = (h, inner, w) => `<div class="fld${w ? '" style="grid-column:1/-1' : ''}"><label>${h}</label>${inner}</div>`;
