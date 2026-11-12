@@ -41,7 +41,7 @@ async function boot() {
   S.view = S.view || 'home';
   renderApp();
   if (/[?&#]prq=/.test(location.href) && typeof prqLvl === 'function' && prqLvl()) { S.view = 'a_prq'; refresh(); }
-  setTimeout(() => { try { prqCelebrate(); } catch (e) {} }, 600);
+  setTimeout(() => { try { prqCelebrate(); } catch (e) {} try { prqAlert(); } catch (e) {} }, 600);
 }
 
 /* ------------------------------------------------------------------ الدخول */
@@ -92,11 +92,10 @@ function navHTML() {
   if (isAdmin()) {
     const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
     const PR = typeof isPrincipal === 'function' && isPrincipal();
-    return `<div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
+    return `<div class="grp">إذنٌ مُيسَّر</div><a class="it ${S.view === 'a_prq' ? 'on' : ''}" data-v="a_prq">${ICON.prq}<span>إذنٌ مُيسَّر — الاعتماد</span>${prqPendN() ? `<span class="n">${prqPendN()}</span>` : ''}</a><a class="it ${S.view === 'c_tcert' ? 'on' : ''}" data-v="c_tcert">${ICON.cert}<span>شهادات تعزيز المعلمات</span></a><div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}${it('a_anrep', 'التقارير التحليلية المطبوعة', 'chart')}
       ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور ' + (typeof prWho === 'function' ? prWho()[0] : 'مديرة المدرسة'), 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
         : `<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
-      <div class="grp">إذنٌ مُيسَّر</div><a class="it ${S.view === 'a_prq' ? 'on' : ''}" data-v="a_prq">${ICON.prq}<span>اعتماد الأذونات</span>${prqPendN() ? `<span class="n">${prqPendN()}</span>` : ''}</a><a class="it ${S.view === 'c_tcert' ? 'on' : ''}" data-v="c_tcert">${ICON.cert}<span>شهادات تعزيز المعلمات</span></a>
       <div class="grp">المعلمات</div>${it('a_tacts', 'مبادرات المعلمات وأنشطتهن', 'star')}${it('c_trep', 'تقارير أعمال المعلمات', 'doc')}
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       ${PR ? '' : `<div class="grp">الإعدادات</div>${it('a_accounts', 'الحسابات والأرقام السرية', 'user')}`}`;

@@ -178,7 +178,7 @@ function A_prq(el) {
   <div class="prq-top"><div class="prq-v">﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا﴾</div><small>النساء 58</small></div>
   <div class="card"><h2>عبارة الاعتماد <span class="sub">تظهر للمعلمة مع رسالة الموافقة</span></h2>
     <div class="row" style="flex-wrap:wrap;gap:8px">${PRQ_PH.map(x => `<label class="chip" style="cursor:pointer;padding:6px 12px;${x === ph ? 'background:var(--maroon);color:#fff' : ''}"><input type="radio" name="pph" value="${esc(x)}" ${x === ph ? 'checked' : ''} style="display:none"> ${esc(x)}</label>`).join('')}</div>
-    <label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label></div>
+    ${'Notification' in window && Notification.permission !== 'granted' ? '<button class="btn sec sm" id="pNot" style="float:left">🔔 تفعيل إشعارات هذا الجهاز</button>' : ''}<label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label></div>
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
@@ -187,6 +187,7 @@ function A_prq(el) {
     ${Object.entries(byT).sort((a, b) => b[1].p - a[1].p).map(([t, o]) => `<tr><td><b>${esc(t)}</b></td><td>${esc(o.dept)}</td><td>${o.n}</td><td><b style="color:${o.p > PRQ_LIMIT ? '#A3202F' : o.p >= 8 ? '#B8521A' : 'inherit'}">${prqNum(o.p)}</b></td><td>${prqNum(o.w)}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">لا أذونات معتمدة في هذا الشهر</div></td></tr>'}</table></div></div>` : ''}`;
   const curPh = () => ($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0];
   $$('input[name="pph"]', el).forEach(i => i.onchange = () => { S.prqPh = i.value; if ($('#pfix').checked) prqPhSet(i.value); show(); });
+  if ($('#pNot')) $('#pNot').onclick = () => { try { Notification.requestPermission().then(p => { toast(p === 'granted' ? 'تم تفعيل الإشعارات على هذا الجهاز ✓' : 'لم يُسمح بالإشعارات من المتصفح', p !== 'granted'); if (p === 'granted') { prqBell(); show(); } }); } catch (e) { toast('هذا المتصفح لا يدعم الإشعارات', 1); } };
   $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
   const run = async (ids, act, note) => {
@@ -201,4 +202,44 @@ function A_prq(el) {
   $$('[data-pa]', el).forEach(b => b.onclick = () => run([b.dataset.pa], 'ok'));
   $$('[data-pr]', el).forEach(b => b.onclick = () => { const n = prompt('سبب الإعادة للتعديل (يصل للمعلمة):', ''); if (n === null) return; run([b.dataset.pr], 'ret', n); });
   if ($('#pAll')) $('#pAll').onclick = () => { const ids = $$('[data-pk]', el).filter(c => c.checked).map(c => c.dataset.pk); if (!ids.length) return toast('حدّدي طلباً واحداً على الأقل', 1); run(ids, 'ok'); };
+}
+
+/* تنبيه فوري عند الدخول: طلبات إذن بانتظار اعتمادكِ */
+function prqBell() {   // جرس تنبيه واضح (ثلاث نغمات) بلا ملفات خارجية
+  try { const C = new (window.AudioContext || window.webkitAudioContext)();
+    [[880, 0], [1175, .22], [1568, .44], [880, .9], [1175, 1.12], [1568, 1.34]].forEach(([f, d]) => { const o = C.createOscillator(), g = C.createGain(); o.type = 'sine'; o.frequency.value = f; o.connect(g); g.connect(C.destination);
+      const t = C.currentTime + d; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.25, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.5); o.start(t); o.stop(t + 0.55); });
+  } catch (e) {}
+}
+function prqSysNote(n) {   // إشعار على شاشة الجهاز (عند السماح بالإشعارات)
+  try { if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    const t = 'إذنٌ مُيسَّر', b = 'لديكِ ' + n + ' طلب إذن بانتظار اعتمادكِ';
+    if (navigator.serviceWorker && navigator.serviceWorker.ready) navigator.serviceWorker.getRegistration().then(r => r ? r.showNotification(t, { body: b, icon: 'icons/192.png', tag: 'prq', renotify: true }) : new Notification(t, { body: b, tag: 'prq' })).catch(() => new Notification(t, { body: b, tag: 'prq' }));
+    else new Notification(t, { body: b, tag: 'prq' });
+  } catch (e) {}
+}
+/* متابعة تلقائية كل 3 دقائق ما دام الميزان مفتوحاً: أي طلب جديد يُنبَّه له بالصوت والرسالة وإشعار الجهاز */
+function prqWatch() {
+  if (S.prqWatching || !prqLvl()) return; S.prqWatching = 1;
+  S.prqKnown = new Set(prqForMe().filter(r => r._mine).map(r => r.id));
+  setInterval(async () => {
+    try { const j = await API.call('records', {}); if (!j || !j.records) return;
+      const P = j.records.filter(r => r.item === 'PRQ'); S.records = S.records.filter(r => r.item !== 'PRQ').concat(P);
+      const L = prqForMe().filter(r => r._mine), fresh = L.filter(r => !S.prqKnown.has(r.id)); L.forEach(r => S.prqKnown.add(r.id));
+      if (fresh.length) { S.prqAlerted = 0; $$('.modal.prq-al').forEach(x => x.remove()); prqAlert(); if (S.view === 'a_prq') show(); else { const nav = $('#nav'); if (nav && typeof navHTML === 'function') { nav.innerHTML = navHTML(); } } }
+    } catch (e) {}
+  }, 180000);
+}
+function prqAlert() {
+  if (!S.user || S.prqAlerted || !prqLvl()) return; prqWatch(); const n = prqPendN(); if (!n) return; S.prqAlerted = 1;
+  prqBell(); prqSysNote(n);
+  const L = prqForMe().filter(r => r._mine);
+  const m = document.createElement('div'); m.className = 'modal prq-al';
+  m.innerHTML = `<div class="box" style="max-width:520px;text-align:center"><div style="font-size:42px;color:var(--maroon)">${ICON.prq.replace(/width="18" height="18"/, 'width="54" height="54"')}</div>
+    <h2 style="margin:6px 0">إذنٌ مُيسَّر</h2><p style="font-size:17px;margin:4px 0 10px">لديكِ <b style="color:var(--maroon)">${n}</b> ${n === 1 ? 'طلب إذن' : n === 2 ? 'طلبا إذن' : 'طلبات إذن'} بانتظار اعتمادكِ</p>
+    <div style="text-align:right;max-height:220px;overflow:auto;font-size:14px;line-height:2;background:#FAFBFC;border-radius:10px;padding:8px 12px">${L.map(r => `• <b>${esc(r.d.t)}</b> — ${prqDay(r.date)} ${dmy(r.date)} · ${prqT12(r.d.from)}–${prqT12(r.d.to)} · ${esc(r.d.reason)}`).join('<br>')}</div>
+    <div class="row" style="justify-content:center;margin-top:12px;gap:8px"><button class="btn" id="paGo">افتحي الاعتماد</button><button class="btn sec" id="paLater">لاحقاً</button></div></div>`;
+  document.body.appendChild(m);
+  $('#paLater', m).onclick = () => m.remove();
+  $('#paGo', m).onclick = () => { m.remove(); S.view = 'a_prq'; S.edit = null; refresh(); };
 }
