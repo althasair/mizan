@@ -99,6 +99,9 @@ function bootTeacher_(u) {
   const recs = all.filter(r => TEACHER_ITEMS.indexOf(r[2]) >= 0).map(recObj_).filter(x => x.d && (x.d.t === u.name || (x.item === 'TPV' && x.d.v === u.name) || (x.item === 'TWS' && x.d.by === u.name)));
   const secs = []; me.forEach(m => String(m.secs).split(/[،,]/).forEach(x => { x = x.trim(); if (x) secs.push(x); }));
   const students = students_(secs);
+  // طلبات الإذن الخاصة بها، وتواصلها مع أولياء الأمور المسجَّل في سبع سنابل (للعرض فقط)
+  rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).filter(x => x.d.t === u.name).forEach(x => recs.push(x));
+  try { const me1 = normAr_(u.name); sabPA_().filter(x => x.item === 'TPA' && normAr_(x.d.t) === me1).forEach(x => recs.push(x)); } catch (e) {}
   const staffAll = rows_(SH.teachers).rows.filter(r => r[1] && r[8] !== 'لا').map(r => ({ dept: r[0], name: r[1], role: r[3] }));
   // أسماء الأنشطة القائمة في المدرسة (للاختيار منها)
   const acts = {};
@@ -155,8 +158,8 @@ function listRecords_(u) {
   const lead = u.role === 'admin' ? [] : all.filter(x => (x.item === 'VPV' || x.item === 'PRV') && u.dept.indexOf(x.dept) >= 0).map(x => ({
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
     d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
-  return all.concat(sabPA_()).concat(indibat_())
-    .filter(x => u.role === 'admin' || (ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
+  return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(indibat_())
+    .filter(x => u.role === 'admin' || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
 }
 function repObj_(r) {
@@ -232,15 +235,24 @@ function deleteRecord_(u, id) {
         if ((String(t.rows[i][2]) === 'VPV' && isPrincipal_(u)) || (String(t.rows[i][2]) === 'PRV' && !isPrincipal_(u))) fail_('هذا السجل للاطلاع فقط');
         if (isPrincipal_(u) && String(t.rows[i][2]) !== 'PRV') fail_('حسابكِ للاطلاع، ولا يحذف إلا حضوركِ الصفي');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
-        if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
+        if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if ((TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 && String(t.rows[i][2]) !== 'PRQ') || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
         else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (!(['TPV', 'TWS', 'TAS'].indexOf(String(t.rows[i][2])) >= 0 && od.t === u.name)) fail_('هذا السجل تسجّله المعلمة بنفسها'); }
-        if (u.role !== 'admin') assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
+        if (String(t.rows[i][2]) === 'PRQ' || String(t.rows[i][2]) === 'TDS') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {}
+          if (!isVP_(u) && (od.prq || (String(t.rows[i][2]) === 'PRQ' && (od.t !== u.name || od.st === 'ok')))) fail_('الإذن المعتمد يُلغى عن طريق النائب الأكاديمي'); }
+        if (u.role !== 'admin' && ['PRQ'].indexOf(String(t.rows[i][2])) < 0) assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
+        archive_(u, t.rows[i]);
         t.sh.deleteRow(i + 2); log_(u, 'حذف سجل', t.rows[i][1], t.rows[i][2] + ' — ' + String(t.rows[i][4]).slice(0, 80));
         return { id: id };
       }
     }
     fail_('السجل غير موجود');
   } finally { lock.releaseLock(); }
+}
+/* لا يضيع شيء: كل سجل يُحذف يُنسخ أولاً كما هو إلى ورقة «المحذوفات» (ويمكن استرجاعه منها) */
+function archive_(u, row) {
+  try { const ss = ss_(); const sh = ss.getSheetByName('المحذوفات') || ss.insertSheet('المحذوفات');
+    if (sh.getLastRow() === 0) sh.appendRow(['وقت الحذف', 'حذفته', 'المعرّف', 'القسم', 'البند', 'التاريخ', 'الملخص', 'البيانات', 'أدخلته', 'أُنشئ', 'عُدّل']);
+    sh.appendRow([now_(), u ? u.name : '—'].concat(row.slice(0, 9).map(iso_))); } catch (e) {}
 }
 // بعد توقيع المنسقة على تقرير فترة ما، تُقفل سجلات تلك الفترة لقسمها (ما لم تُعِده النائب للتعديل)
 function assertNotLocked_(dept, date) {
@@ -670,6 +682,9 @@ function route_(req) {
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
+    case 'prqSubmit': return prqSubmit_(u, req);
+    case 'prqAct': return prqAct_(u, req);
+    case 'prqSeen': return prqSeen_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');
@@ -678,7 +693,7 @@ function doPost(e) {
   try { const req = JSON.parse(e.postData.contents); return out_(Object.assign({ ok: true }, route_(req))); }
   catch (err) { return out_({ ok: false, error: String(err && err.message || err) }); }
 }
-function doGet() { return out_({ ok: true, name: 'الميزان — ميزان تربوي' }); }
+function doGet(e) { if (e && e.parameter && e.parameter.prq) return prqMailPage_(e.parameter); return out_({ ok: true, name: 'الميزان — ميزان تربوي' }); }
 
 /* ------------------------------------------------------------------ تهيئة لمرة واحدة */
 function setup() {
@@ -690,6 +705,7 @@ function setup() {
   Logger.log(it.hasNext() ? 'التوقيع موجود ✓' : 'لم يُعثر على ملف التوقيع');
   Logger.log('عدد المعلمات: ' + (rows_(SH.teachers).rows.length));
   Logger.log('حصة البريد المتبقية اليوم: ' + MailApp.getRemainingDailyQuota());
+  Logger.log('عنوان المنصات للإرسال: ' + (GmailApp.getAliases().map(a => String(a).toLowerCase()).indexOf(PLATFORM_MAIL) >= 0 ? 'جاهز ✓' : 'لم يُضبط بعد'));
 }
 
 /* ------------------------------------------------------------------ المزامنة التلقائية مع سبع سنابل
@@ -702,3 +718,214 @@ function startSanabilAutoSync() {
 }
 function sanabilAutoSync() { try { syncSanabil(); } catch (e) { Logger.log(e); } }
 
+
+/* ================================================================== إذنٌ مُيسَّر — استئذان المعلمات
+   المعلمة تطلب ← منسقة القسم ← النائب الأكاديمي ← مديرة المدرسة ← يُسجَّل في رصيدها (الانضباط الوظيفي) وتصلها رسالة الموافقة.
+   الرصيد: 10 ساعات شخصية في الشهر (إذن العمل لا يُحسب). نهاية الدوام 2:00 ظهراً. */
+const PRQ_LIMIT = 10;
+const PLATFORM_MAIL = 'alshaimaa.platforms@gmail.com';    // كل رسائل المنصات تخرج من هذا العنوان فقط
+const PRQ_ST = { coord: 1, vp: 2, pr: 3, ok: 4 };
+const PRQ_WHO = { coord: 'منسقة القسم', vp: 'النائب الأكاديمي', pr: 'مديرة المدرسة' };
+const PRQ_DEF = 'في حفظ الله ورعايته';
+
+function prqLvl_(u) { if (!u) return 0; if (u.id === 'p1' || (isPrincipal_(u) && u.name === 'شيخة الرميحي')) return 3; if (isVP_(u)) return 2; if (u.role === 'coord') return 1; return 0; }
+function coordsOf_(dept) {
+  return rows_(SH.users).rows.filter(r => r[0] && roleOf_(r) === 'coord' && String(r[5]).trim() !== 'لا' && String(r[2]).split('|').map(s => s.trim()).indexOf(String(dept)) >= 0)
+    .map(r => ({ id: String(r[0]), name: String(r[3]).trim() }));
+}
+function isCoordName_(n) { return rows_(SH.users).rows.some(r => roleOf_(r) === 'coord' && String(r[3]).trim() === String(n).trim()); }
+function mailOf_(name) { const r = rows_(SH.teachers).rows.find(x => String(x[1]).trim() === String(name).trim()); const m = r && String(r[7] || '').trim(); return m && /@/.test(m) ? m : ''; }
+function vpMail_() { return PropertiesService.getScriptProperties().getProperty('VP_MAIL') || mailOf_('آسيا الذبياني') || Session.getEffectiveUser().getEmail(); }
+function prqFirst_(dept, t) { return (!isCoordName_(t) && coordsOf_(dept).some(c => c.name !== t)) ? 'coord' : 'vp'; }
+function prqNext_(st) { return st === 'coord' ? 'vp' : st === 'vp' ? 'pr' : 'ok'; }
+
+/* البريد: يخرج من عنوان المنصات فقط، ولا يُرسل أبداً من البريد الشخصي */
+function platMail_(to, subject, html) {
+  if (!to) return false;
+  try {
+    const opt = { htmlBody: html, name: 'مدرسة الشيماء — الميزان' };
+    if (String(Session.getEffectiveUser().getEmail()).toLowerCase() === PLATFORM_MAIL) { opt.to = to; opt.subject = subject; MailApp.sendEmail(opt); return true; }
+    if (GmailApp.getAliases().map(a => String(a).toLowerCase()).indexOf(PLATFORM_MAIL) < 0) { log_(null, 'بريد لم يُرسل', '', 'لم يُضبط عنوان المنصات بعد ← ' + to); return false; }
+    opt.from = PLATFORM_MAIL; GmailApp.sendEmail(to, subject, 'افتحي الرسالة في تطبيق بريد يدعم التنسيق', opt); return true;
+  } catch (e) { Logger.log(e); log_(null, 'بريد لم يُرسل', '', String(e).slice(0, 120)); return false; }
+}
+function mailBox_(title, body, btns) {
+  return '<div dir="rtl" style="font-family:Tahoma,Arial;max-width:560px;margin:auto;border:1px solid #E3D9C6;border-radius:14px;overflow:hidden">' +
+    '<div style="background:#7A1F3D;color:#fff;padding:14px 18px;font-size:18px;font-weight:bold">' + title + '</div>' +
+    '<div style="padding:16px 18px;line-height:2;font-size:15px;color:#222">' + body + '</div>' +
+    (btns ? '<div style="padding:0 18px 18px">' + btns + '</div>' : '') +
+    '<div style="background:#F7F2EA;color:#7a6a55;font-size:12px;padding:8px 18px">مدرسة الشيماء الثانوية للبنات — منصة الميزان</div></div>';
+}
+function mailBtn_(href, txt, c) { return '<a href="' + href + '" style="display:inline-block;background:' + (c || '#0A8F8A') + ';color:#fff;text-decoration:none;padding:10px 18px;border-radius:10px;margin:4px;font-weight:bold">' + txt + '</a>'; }
+function prqKey_() { const P = PropertiesService.getScriptProperties(); let k = P.getProperty('PRQ_KEY'); if (!k) { k = Utilities.getUuid() + Utilities.getUuid(); P.setProperty('PRQ_KEY', k); } return k; }
+function prqSig_(id, st, uid) { return Utilities.base64EncodeWebSafe(Utilities.computeHmacSha256Signature(id + '|' + st + '|' + uid, prqKey_())).slice(0, 24); }
+function prqDesc_(d, date) { return '<b>' + d.t + '</b> — ' + (d.kind || '') + '<br>اليوم: <b>' + date + '</b> · من ' + d.from + ' إلى ' + d.to + ' (' + d.h + ' ساعة)<br>السبب: ' + (d.reason || '') + (d.note ? ' — ' + d.note : ''); }
+/* إشعار من عليها الاعتماد الآن */
+function prqNotify_(rec) {
+  const d = rec.d, st = d.st; let to = [];
+  if (st === 'coord') to = coordsOf_(rec.dept).filter(c => c.name !== d.t).map(c => ({ id: c.id, m: mailOf_(c.name) }));
+  if (st === 'vp') to = [{ id: 'admin', m: vpMail_() }];
+  if (st === 'pr') to = [{ id: 'p1', m: PRINCIPAL_MAIL }];
+  let url = ''; try { url = ScriptApp.getService().getUrl(); } catch (e) {}
+  to.forEach(x => {
+    const btn = url ? mailBtn_(url + '?prq=' + encodeURIComponent(rec.id) + '&s=' + st + '&u=' + x.id + '&k=' + prqSig_(rec.id, st, x.id), '✓ اعتماد الإذن') : '';
+    platMail_(x.m, 'طلب إذن بانتظار اعتمادكِ — ' + d.t, mailBox_('إذنٌ مُيسَّر — طلب بانتظار اعتمادكِ', prqDesc_(d, rec.date) + '<br><br>يمكنكِ الاعتماد من هنا مباشرة، أو من صفحة «إذنٌ مُيسَّر» في الميزان (اعتماد الكل).', btn));
+  });
+}
+function prqFind_(t, id) { for (let i = 0; i < t.rows.length; i++) if (String(t.rows[i][0]) === String(id)) return i; return -1; }
+function prqPhrase_(uid) { try { const o = JSON.parse(PropertiesService.getScriptProperties().getProperty('phr_' + uid) || 'null'); if (o && o.until >= now_().slice(0, 10)) return o.p; } catch (e) {} return ''; }
+
+/* طلب المعلمة (جديد أو بعد إعادته للتعديل) */
+function prqSubmit_(u, p) {
+  const x = p.rec || {};
+  if (u.role !== 'teacher' && u.role !== 'coord') fail_('طلب الإذن للمعلمات والمنسقات');
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(String(x.date || ''))) fail_('حدّدي يوم الإذن');
+  if (!/^\d{2}:\d{2}$/.test(String(x.from || '')) || !/^\d{2}:\d{2}$/.test(String(x.to || ''))) fail_('حدّدي وقت الإذن');
+  const h = Math.round(((+x.to.slice(0, 2) * 60 + +x.to.slice(3)) - (+x.from.slice(0, 2) * 60 + +x.from.slice(3))) / 60 * 100) / 100;
+  if (!(h > 0 && h <= 7)) fail_('وقت النهاية يجب أن يكون بعد وقت البداية');
+  if (!String(x.reason || '').trim()) fail_('اختاري سبب الإذن');
+  const kind = x.kind === 'إذن عمل' ? 'إذن عمل' : 'شخصي';
+  const dept = u.dept[0];
+  const lock = LockService.getScriptLock(); lock.waitLock(20000);
+  let rec;
+  try {
+    const t = rows_(SH.rec);
+    const d = { t: u.name, from: x.from, to: x.to, h: h, kind: kind, reason: String(x.reason).slice(0, 120), note: String(x.note || '').slice(0, 300), steps: [], at: now_() };
+    d.st = prqFirst_(dept, u.name); d.first = d.st;
+    const sum = 'إذن ' + kind + ' — ' + h + ' ساعة — ' + d.reason;
+    if (x.id) {
+      const i = prqFind_(t, x.id); if (i < 0) fail_('الطلب غير موجود');
+      let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {}
+      if (t.rows[i][2] !== 'PRQ' || od.t !== u.name) fail_('لا تملكين صلاحية على هذا الطلب');
+      if (od.st === 'ok') fail_('هذا الإذن معتمد، ولا يُعدَّل');
+      d.hist = (od.hist || []).concat(od.steps || []).concat(od.ret ? [od.ret] : []).slice(-10);
+      const row = [x.id, dept, 'PRQ', x.date, sum, JSON.stringify(d), u.name, t.rows[i][7], now_()];
+      t.sh.getRange(i + 2, 1, 1, 9).setValues([row]); rec = recObj_(row);
+      log_(u, 'تعديل طلب إذن', dept, sum);
+    } else {
+      const id = 'q' + new Date().getTime().toString(36) + Math.floor(Math.random() * 1e4).toString(36);
+      const row = [id, dept, 'PRQ', x.date, sum, JSON.stringify(d), u.name, now_(), now_()];
+      t.sh.appendRow(row); rec = recObj_(row);
+      log_(u, 'طلب إذن', dept, sum);
+    }
+  } finally { lock.releaseLock(); }
+  prqNotify_(rec);
+  return { record: rec };
+}
+
+/* اعتماد أو إعادة (طلب واحد أو الكل) */
+function prqApply_(u, t, i, act, phrase, note) {
+  const row = t.rows[i]; if (row[2] !== 'PRQ') fail_('ليس طلب إذن');
+  const d = JSON.parse(row[5] || '{}'); const lv = prqLvl_(u);
+  if (d.st === 'ok' || d.st === 'ret') return null;
+  if (!lv || lv < PRQ_ST[d.st]) fail_('هذا الطلب بانتظار ' + PRQ_WHO[d.st]);
+  if (lv === 1 && (u.dept.indexOf(row[1]) < 0 || d.t === u.name)) fail_('هذا الطلب ليس لقسمكِ');
+  const who = lv === 3 ? 'pr' : lv === 2 ? 'vp' : 'coord';
+  if (act === 'ret') {
+    d.ret = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) }; d.st = 'ret'; d.seen = false;
+  } else {
+    d.steps = (d.steps || []).filter(s => PRQ_ST[s.w] < PRQ_ST[who]).concat([{ by: u.name, w: who, at: now_(), ph: String(phrase || PRQ_DEF).slice(0, 80) }]);
+    d.st = prqNext_(who); if (d.st === 'ok') { d.okAt = now_(); d.seen = false; }
+  }
+  row[5] = JSON.stringify(d); row[8] = now_();
+  t.sh.getRange(i + 2, 6).setValue(row[5]); t.sh.getRange(i + 2, 9).setValue(row[8]);
+  log_(u, act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
+  return recObj_(row);
+}
+function prqAfter_(rec) {
+  const d = rec.d; const tm = mailOf_(d.t);
+  if (d.st === 'ret') { platMail_(tm, 'طلب إذنكِ يحتاج تعديلاً', mailBox_('إذنٌ مُيسَّر', 'معلمتي الغالية أ. ' + d.t + '،<br>أُعيد طلب إذنكِ ليوم ' + rec.date + ' للتعديل' + (d.ret.note ? ': <b>' + d.ret.note + '</b>' : '') + '.<br>افتحي «إذنٌ مُيسَّر» في الميزان لتعديله وإرساله.')); return [rec]; }
+  if (d.st !== 'ok') { prqNotify_(rec); return [rec]; }
+  // الاعتماد النهائي: يُسجَّل في الانضباط الوظيفي تلقائياً (بلا إدخال ثالث)
+  const t = rows_(SH.rec); const has = t.rows.find(r => r[2] === 'TDS' && String(r[5]).indexOf('"prq":"' + rec.id + '"') >= 0);
+  let tds = null;
+  if (!has) {
+    const td = { t: d.t, abs: [], perm: [{ date: rec.date, h: d.h, type: d.kind === 'إذن عمل' ? 'إذن عمل' : 'شخصي' }], prq: rec.id, why: d.reason };
+    const row = ['r' + new Date().getTime().toString(36) + Math.floor(Math.random() * 1e4).toString(36), rec.dept, 'TDS', rec.date, 'استئذان 1 (إذنٌ مُيسَّر)', JSON.stringify(td), 'إذنٌ مُيسَّر', now_(), now_()];
+    t.sh.appendRow(row); tds = recObj_(row);
+  }
+  const ph = (d.steps || []).map(s => s.ph).filter((x, k, A) => x && A.indexOf(x) === k);
+  platMail_(tm, 'تمت الموافقة على إذنكِ 🤍', mailBox_('تمت الموافقة على إذنكِ', 'معلمتي الغالية أ. ' + d.t + '،<br><b style="font-size:18px;color:#7A1F3D">تمت الموافقة على إذنكِ، ' + (ph[0] || PRQ_DEF) + '، يومكِ سعيد 🤍</b><br>' + prqDesc_(d, rec.date) + (ph.length > 1 ? '<br>' + ph.slice(1).join(' · ') : '')));
+  return tds ? [rec, tds] : [rec];
+}
+function prqAct_(u, p) {
+  const ids = [].concat(p.ids || p.id || []); if (!ids.length) fail_('لا توجد طلبات');
+  if (p.fix && p.phrase) { const until = Utilities.formatDate(new Date(Date.now() + 6 * 864e5), 'Asia/Qatar', 'yyyy-MM-dd'); PropertiesService.getScriptProperties().setProperty('phr_' + u.id, JSON.stringify({ p: String(p.phrase).slice(0, 80), until: until })); }
+  const out = [], skipped = [];
+  const lock = LockService.getScriptLock(); lock.waitLock(25000);
+  const done = [];
+  try {
+    const t = rows_(SH.rec);
+    ids.forEach(id => { try { const i = prqFind_(t, id); if (i < 0) throw new Error('غير موجود'); const r = prqApply_(u, t, i, p.act === 'ret' ? 'ret' : 'ok', p.phrase || prqPhrase_(u.id), p.note); if (r) done.push(r); } catch (e) { skipped.push(String(e.message || e)); } });
+  } finally { lock.releaseLock(); }
+  done.forEach(r => prqAfter_(r).forEach(x => out.push(x)));
+  if (done.some(r => r.d.st === 'ok')) sabSoon_('TDS');
+  return { records: out, skipped: skipped, phrase: prqPhrase_(u.id) };
+}
+function prqSeen_(u, p) {
+  const t = rows_(SH.rec); const i = prqFind_(t, p.id); if (i < 0) return { ok: true };
+  const d = JSON.parse(t.rows[i][5] || '{}'); if (d.t !== u.name) fail_('غير مسموح');
+  d.seen = true; t.sh.getRange(i + 2, 6).setValue(JSON.stringify(d)); return { ok: true };
+}
+/* ما يظهر لكل حساب من طلبات الإذن: المعلمة طلباتها فقط، والمنسقة طلبات قسمها، والإدارة الجميع */
+function prqList_(u) {
+  return rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).filter(x => u.role === 'admin' || x.d.t === u.name || (u.role === 'coord' && u.dept.indexOf(x.dept) >= 0));
+}
+
+/* الاعتماد من زر البريد: صفحة تأكيد بزر (لا يُعتمد شيء بمجرد فتح الرابط) */
+function prqMailPage_(q) {
+  const t = rows_(SH.rec); const i = prqFind_(t, q.prq);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  let body;
+  if (i < 0 || q.k !== prqSig_(q.prq, q.s, q.u)) body = '<p>الرابط غير صالح أو انتهت صلاحيته.</p>';
+  else {
+    const d = JSON.parse(t.rows[i][5] || '{}');
+    if (d.st !== q.s) body = '<p>' + (d.st === 'ok' ? 'هذا الإذن معتمد مسبقاً ✓' : 'تم التعامل مع هذا الطلب مسبقاً ✓') + '</p>';
+    else body = '<p>' + prqDesc_({ t: esc(d.t), kind: esc(d.kind), from: d.from, to: d.to, h: d.h, reason: esc(d.reason), note: esc(d.note) }, esc(t.rows[i][3])) + '</p>' +
+      '<select id="ph" style="font-size:16px;padding:8px;border-radius:8px;width:100%">' + ['في حفظ الله ورعايته', 'يسّر الله أمركِ وقضى حاجتكِ', 'رافقتكِ السلامة وعوداً حميداً', 'أعانكِ الله ويسّر لكِ'].map(x => '<option>' + x + '</option>').join('') + '</select>' +
+      '<button id="b" style="margin-top:12px;width:100%;background:#0A8F8A;color:#fff;border:0;border-radius:10px;padding:12px;font-size:17px;font-weight:bold">✓ اعتماد الإذن</button><p id="m"></p>' +
+      '<script>document.getElementById("b").onclick=function(){this.disabled=true;document.getElementById("m").textContent="جارٍ الاعتماد…";google.script.run.withSuccessHandler(function(x){document.getElementById("m").textContent=x;}).withFailureHandler(function(e){document.getElementById("m").textContent=e.message;}).prqMailAct(' + JSON.stringify(q) + ',document.getElementById("ph").value);};</script>';
+  }
+  return HtmlService.createHtmlOutput('<div dir="rtl" style="font-family:Tahoma,Arial;max-width:520px;margin:30px auto;padding:20px;border:1px solid #E3D9C6;border-radius:14px;line-height:2"><h2 style="color:#7A1F3D">إذنٌ مُيسَّر</h2>' + body + '</div>')
+    .setTitle('إذنٌ مُيسَّر').addMetaTag('viewport', 'width=device-width, initial-scale=1');
+}
+function prqMailAct(q, phrase) {
+  if (!q || q.k !== prqSig_(q.prq, q.s, q.u)) throw new Error('الرابط غير صالح');
+  const u = userById_(String(q.u)); if (!u) throw new Error('الحساب غير موجود');
+  const lock = LockService.getScriptLock(); lock.waitLock(25000); let r;
+  try { const t = rows_(SH.rec); const i = prqFind_(t, q.prq); if (i < 0) throw new Error('الطلب غير موجود');
+    const d = JSON.parse(t.rows[i][5] || '{}'); if (d.st !== q.s) return 'تم التعامل مع هذا الطلب مسبقاً ✓';
+    r = prqApply_(u, t, i, 'ok', phrase || prqPhrase_(u.id), ''); } finally { lock.releaseLock(); }
+  if (r) { prqAfter_(r); if (r.d.st === 'ok') sabSoon_('TDS'); }
+  return 'تم اعتماد الإذن ✓ جزاكِ الله خيراً';
+}
+
+/* تذكير صباحي لمن لديها طلبات معلّقة */
+function prqMorning() {
+  const L = rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).filter(x => ['coord', 'vp', 'pr'].indexOf(x.d.st) >= 0);
+  if (!L.length) return;
+  const by = {};
+  L.forEach(x => { const to = x.d.st === 'coord' ? coordsOf_(x.dept).filter(c => c.name !== x.d.t).map(c => mailOf_(c.name)) : [x.d.st === 'vp' ? vpMail_() : PRINCIPAL_MAIL]; to.filter(Boolean).forEach(m => (by[m] = by[m] || []).push(x)); });
+  Object.keys(by).forEach(m => platMail_(m, 'صباح الخير — ' + by[m].length + ' طلب إذن بانتظار اعتمادكِ', mailBox_('طلبات إذن بانتظار اعتمادكِ', by[m].map(x => '• ' + x.d.t + ' — ' + x.date + ' (' + x.d.h + ' س) — ' + x.d.reason).join('<br>') + '<br><br>افتحي «إذنٌ مُيسَّر» في الميزان، واضغطي «اعتماد الكل».')));
+}
+
+/* ================================================================== النسخ الاحتياطي اليومي
+   نسخة كاملة من ملف الميزان كل ليلة في مجلد «النسخ الاحتياطية» داخل المجلد الخاص، ويُحتفظ بآخر 30 نسخة
+   (الأقدم تنتقل إلى سلة المهملات ولا تُحذف نهائياً). */
+function dailyBackup() {
+  const root = DriveApp.getFolderById(PRIVATE_FOLDER); const it = root.getFoldersByName('النسخ الاحتياطية');
+  const f = it.hasNext() ? it.next() : root.createFolder('النسخ الاحتياطية');
+  DriveApp.getFileById(SS_ID).makeCopy('نسخة الميزان ' + Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd HH-mm'), f);
+  const L = []; const fi = f.getFiles(); while (fi.hasNext()) L.push(fi.next());
+  L.sort((a, b) => b.getDateCreated() - a.getDateCreated()).slice(30).forEach(x => x.setTrashed(true));
+  Logger.log('تم حفظ نسخة احتياطية ✓ — عدد النسخ: ' + Math.min(L.length, 30));
+}
+/* تُشغَّل مرة واحدة من المحرّر: النسخ الاحتياطي كل ليلة (2 فجراً) + تذكير الاعتماد الصباحي (6:30) */
+function startDailyJobs() {
+  ScriptApp.getProjectTriggers().filter(t => ['dailyBackup', 'prqMorning'].indexOf(t.getHandlerFunction()) >= 0).forEach(t => ScriptApp.deleteTrigger(t));
+  ScriptApp.newTrigger('dailyBackup').timeBased().everyDays(1).atHour(2).inTimezone('Asia/Qatar').create();
+  ScriptApp.newTrigger('prqMorning').timeBased().everyDays(1).atHour(6).nearMinute(30).inTimezone('Asia/Qatar').create();
+  dailyBackup();
+  const al = GmailApp.getAliases();
+  Logger.log('تم ✓ النسخ الاحتياطي يومياً، والتذكير الصباحي. عنوان المنصات ' + (al.map(a => String(a).toLowerCase()).indexOf(PLATFORM_MAIL) >= 0 ? 'جاهز للإرسال ✓' : 'لم يُضبط بعد في Gmail (Send mail as)'));
+}

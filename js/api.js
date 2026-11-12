@@ -28,7 +28,7 @@ const DEMO = {
   KEY: 'mizan_demo_v1',
   db() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) {}
-    if (d && d.v === 7) return d;
+    if (d && d.v === 8) return d;
     const staff = [
       ['الكيمياء', 'منى السالم', 'منسقة', 'الكيمياء', '12-3', 4], ['الكيمياء', 'ريم الكعبي', 'معلمة', 'الكيمياء', '12-1، 12-2', 16], ['الكيمياء', 'لطيفة المري', 'معلمة', 'الكيمياء', '11-1، 11-3', 16],
       ['الكيمياء', 'دانة الهاجري', 'معلمة', 'العلوم + الكيمياء', '11-2، 11-6', 12], ['الرياضيات', 'سلمى العتيبي', 'منسقة', 'الرياضيات', '12-3', 6],
@@ -52,8 +52,9 @@ const DEMO = {
     ];
     const pd = [{ i: 0, sem: 'الفصل الأول', dept: 'الكيمياء', title: 'تطبيق أساليب تغذية راجعة إبداعية', type: 'حلقة نقاشية', hrs: '1', date: '2026-10-21', by: 'منى السالم', n: 4 },
                 { i: 1, sem: 'الفصل الأول', dept: 'الرياضيات', title: 'تنويع مستويات الأسئلة الصفية', type: 'حصة نموذجية', hrs: '1', date: '2026-10-11', by: 'نوال الخاطر', n: 4 }];
-    d = { v: 7, staff, recs, pd, reps: [], users: [
+    d = { v: 8, staff, recs, pd, reps: [], users: [
       { id: 'admin', role: 'admin', dept: ['جميع الأقسام'], name: 'النائب الأكاديمي (معاينة)', pin: '000000' },
+      { id: 'p1', role: 'admin', dept: ['جميع الأقسام'], name: 'مديرة المدرسة (معاينة)', pin: '999999' },
       { id: 'c1', role: 'coord', dept: ['الكيمياء'], name: 'منى السالم', pin: '1111' },
       { id: 'c2', role: 'coord', dept: ['الرياضيات'], name: 'سلمى العتيبي', pin: '2222' },
       { id: 'g2', role: 'viewer', dept: ['الكيمياء'], name: 'موجهة تجريبية', pin: '5555' },
@@ -72,7 +73,7 @@ const DEMO = {
     if (!me) throw new Error('انتهت الجلسة، الرجاء الدخول مرة أخرى');
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
     const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE', 'TDS'].includes(r.item));
-    if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')', ph: '5500000' + i, rel: 'أب' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
+    if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'PRQ']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')', ph: '5500000' + i, rel: 'أب' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
     if (a === 'boot') return { ok: 1, stuN: 500, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };
     if (me && me.role === 'viewer' && !['boot', 'records', 'signature'].includes(a)) throw new Error('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
@@ -101,6 +102,25 @@ const DEMO = {
     if (a === 'file') return { ok: 1, name: 'ملف.txt', data: 'data:text/plain;base64,' + btoa('demo') };
     if (a === 'vpFeedback') { const r = d.recs.find(x => x.id === p.id); if (!r) throw new Error('السجل غير موجود'); if (p.fb) { r.d.vpfb = p.fb; r.d.vpfbAt = new Date().toISOString().slice(0, 10); } else { delete r.d.vpfb; delete r.d.vpfbAt; } this.save(d); return { ok: 1, record: r }; }
     if (a === 'sendForm') { console.log('معاينة: لا يُرسل بريد فعلي', p.to, p.subject); return { ok: 1, sent: true }; }
+    if (a === 'prqSubmit') {
+      const x = p.rec, m = t => +t.slice(0, 2) * 60 + +t.slice(3), h = Math.round((m(x.to) - m(x.from)) / 60 * 100) / 100;
+      const isC = d.users.some(u => u.role === 'coord' && u.name === me.name), hasC = d.users.some(u => u.role === 'coord' && u.dept.includes(me.dept[0]) && u.name !== me.name);
+      const st = !isC && hasC ? 'coord' : 'vp';
+      const o = { id: x.id || 'q' + Date.now().toString(36), dept: me.dept[0], item: 'PRQ', date: x.date, sum: 'إذن ' + x.kind, by: me.name, at: new Date().toISOString().slice(0, 16).replace('T', ' '),
+        d: { t: me.name, from: x.from, to: x.to, h, kind: x.kind, reason: x.reason, note: x.note || '', steps: [], st, first: st } };
+      const i = d.recs.findIndex(r => r.id === o.id); if (i >= 0) d.recs[i] = o; else d.recs.push(o); this.save(d); return { ok: 1, record: o };
+    }
+    if (a === 'prqAct') {
+      const L = { coord: 1, vp: 2, pr: 3 }, lv = me.id === 'p1' ? 3 : me.id === 'admin' ? 2 : me.role === 'coord' ? 1 : 0, who = lv === 3 ? 'pr' : lv === 2 ? 'vp' : 'coord';
+      const out = [], skipped = [];
+      p.ids.forEach(id => { const r = d.recs.find(x => x.id === id); if (!r || !L[r.d.st]) return; if (!lv || lv < L[r.d.st]) { skipped.push('بانتظار مرحلة أخرى'); return; }
+        if (p.act === 'ret') { r.d.ret = { by: me.name, w: who, note: p.note || '' }; r.d.st = 'ret'; }
+        else { r.d.steps = (r.d.steps || []).filter(s => L[s.w] < lv).concat([{ by: me.name, w: who, at: new Date().toISOString().slice(0, 10), ph: p.phrase }]); r.d.st = who === 'coord' ? 'vp' : who === 'vp' ? 'pr' : 'ok';
+          if (r.d.st === 'ok') { r.d.seen = false; const td = { id: 'd' + Math.random().toString(36).slice(2, 9), dept: r.dept, item: 'TDS', date: r.date, sum: 'استئذان 1 (إذنٌ مُيسَّر)', by: 'إذنٌ مُيسَّر', at: r.date, d: { t: r.d.t, abs: [], perm: [{ date: r.date, h: r.d.h, type: r.d.kind === 'إذن عمل' ? 'إذن عمل' : 'شخصي' }], prq: r.id } }; d.recs.push(td); out.push(td); } }
+        out.push(r); });
+      this.save(d); return { ok: 1, records: out, skipped };
+    }
+    if (a === 'prqSeen') { const r = d.recs.find(x => x.id === p.id); if (r) { r.d.seen = true; this.save(d); } return { ok: 1 }; }
     if (a === 'logout') { sessionStorage.removeItem('mizan_demo_u'); return { ok: 1 }; }
     throw new Error('عملية غير معروفة');
   }
