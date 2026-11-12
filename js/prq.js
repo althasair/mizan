@@ -114,7 +114,8 @@ function T_prq(el) {
     const r = readForm(f); let reason = r.reason; if (reason === '__x') reason = $('#pqRx', f).value.trim();
     if (!r.date) return toast('حدّدي اليوم', 1); if (!r.from || !r.to) return toast('حدّدي وقت الإذن', 1);
     if (prqHrs(r.from, r.to) <= 0) return toast('وقت النهاية يجب أن يكون بعد وقت البداية', 1); if (!reason) return toast('اختاري سبب الإذن', 1);
-    const j = await call('prqSubmit', { rec: { id: rec && rec.id, date: r.date, from: r.from, to: r.to, reason, kind: kindNow(), note: r.note } });
+    const btn = $('#pqS', f); if (btn.disabled) return; btn.disabled = true; btn.textContent = 'جارٍ الإرسال…';
+    let j; try { j = await call('prqSubmit', { rec: { id: rec && rec.id, date: r.date, from: r.from, to: r.to, reason, kind: kindNow(), note: r.note } }); } finally { btn.disabled = false; btn.textContent = rec ? 'إعادة الإرسال' : 'إرسال الطلب'; }
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
     S.edit = null; refresh();
     const m = document.createElement('div'); m.className = 'modal';
@@ -189,9 +190,12 @@ function A_prq(el) {
   $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
   const run = async (ids, act, note) => {
+    if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],#pAll', el).forEach(b => b.disabled = true);
+    try {
     const j = await call('prqAct', { ids, act, phrase: curPh(), fix: $('#pfix').checked, note });
     j.records.forEach(r => { const i = S.records.findIndex(x => x.id === r.id); if (i >= 0) S.records[i] = r; else S.records.push(r); });
     if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
+    } finally { S.prqBusy = 0; }
     refresh();
   };
   $$('[data-pa]', el).forEach(b => b.onclick = () => run([b.dataset.pa], 'ok'));
