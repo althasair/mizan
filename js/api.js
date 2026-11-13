@@ -28,7 +28,7 @@ const DEMO = {
   KEY: 'mizan_demo_v1',
   db() {
     let d = null; try { d = JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) {}
-    if (d && d.v === 9) return d;
+    if (d && d.v === 10) return d;
     const staff = [
       ['الكيمياء', 'منى السالم', 'منسقة', 'الكيمياء', '12-3', 4], ['الكيمياء', 'ريم الكعبي', 'معلمة', 'الكيمياء', '12-1، 12-2', 16], ['الكيمياء', 'لطيفة المري', 'معلمة', 'الكيمياء', '11-1، 11-3', 16],
       ['الكيمياء', 'دانة الهاجري', 'معلمة', 'العلوم + الكيمياء', '11-2، 11-6', 12], ['الرياضيات', 'سلمى العتيبي', 'منسقة', 'الرياضيات', '12-3', 6],
@@ -55,12 +55,13 @@ const DEMO = {
     ];
     const pd = [{ i: 0, sem: 'الفصل الأول', dept: 'الكيمياء', title: 'تطبيق أساليب تغذية راجعة إبداعية', type: 'حلقة نقاشية', hrs: '1', date: '2026-10-21', by: 'منى السالم', n: 4 },
                 { i: 1, sem: 'الفصل الأول', dept: 'الرياضيات', title: 'تنويع مستويات الأسئلة الصفية', type: 'حصة نموذجية', hrs: '1', date: '2026-10-11', by: 'نوال الخاطر', n: 4 }];
-    d = { v: 9, staff, recs, pd, reps: [], users: [
+    d = { v: 10, staff, recs, pd, reps: [], users: [
       { id: 'admin', role: 'admin', dept: ['جميع الأقسام'], name: 'النائب الأكاديمي (معاينة)', pin: '000000' },
       { id: 'n1', role: 'coord', dept: ['البرامج والأنشطة'], name: 'أخصائية الأنشطة (معاينة)', pin: '7777' },
       { id: 'p1', role: 'admin', dept: ['جميع الأقسام'], name: 'مديرة المدرسة (معاينة)', pin: '999999' },
       { id: 'c1', role: 'coord', dept: ['الكيمياء'], name: 'منى السالم', pin: '1111' },
       { id: 'c2', role: 'coord', dept: ['الرياضيات'], name: 'سلمى العتيبي', pin: '2222' },
+      { id: 's1', role: 'sec', dept: ['الإدارة'], name: 'نجمة (معاينة)', pin: '8888' },
       { id: 'g2', role: 'viewer', dept: ['الكيمياء'], name: 'موجهة تجريبية', pin: '5555' },
       { id: 't1', role: 'teacher', dept: ['الكيمياء'], name: 'ريم الكعبي', pin: '3333' }, { id: 't2', role: 'teacher', dept: ['الرياضيات'], name: 'نوال الخاطر', pin: '4444' }] };
     localStorage.setItem(this.KEY, JSON.stringify(d)); return d;
@@ -77,6 +78,7 @@ const DEMO = {
     if (!me) throw new Error('انتهت الجلسة، الرجاء الدخول مرة أخرى');
     const can = dep => me.role === 'admin' || me.dept.includes(dep);
     const vis = r => me.role === 'admin' || ((can(r.dept) || (['TPV', 'TWS'].includes(r.item) && r.d && (can(r.d.vdept) || can(r.d.bydept)))) && !['VPV', 'FILES', 'NOTE', 'TDS'].includes(r.item));
+    if (a === 'boot' && me.role === 'sec') return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: [], staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), coords: [], records: d.recs.filter(r => r.item === 'PRQ'), reports: [] };
     if (a === 'boot' && me.role === 'teacher') { const TI = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'PRQ']; return { ok: 1, user: strip(me), periods: this.periods, cal: [], pd: [], staff: d.staff.filter(s => s.name === me.name), staffAll: d.staff.map(s => ({ dept: s.dept, name: s.name, role: s.role })), students: String((d.staff.find(s => s.name === me.name) || {}).secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean).flatMap(sc => ['شيخة','مريم','العنود','نورة','حصة','لولوة'].map((n, i) => ({ s: sc, n: n + ' (طالبة تجريبية ' + (i + 1) + ')', ph: '5500000' + i, rel: 'أب' }))), coords: [], records: d.recs.filter(r => TI.includes(r.item) && r.d && (r.d.t === me.name || r.d.v === me.name || r.d.by === me.name)), reports: [], acts: [] }; }
     if (a === 'boot') return { ok: 1, stuN: 500, user: strip(me), periods: this.periods, cal: this.cal, pd: d.pd.filter(x => me.role === 'admin' || can(x.dept)), staff: d.staff.map(s => me.role === 'admin' ? s : { ...s, email: undefined }),
       coords: d.users.filter(u => u.role === 'coord').map(u => ({ id: u.id, dept: u.dept, name: u.name, active: true })), records: d.recs.filter(vis), reports: d.reps.filter(r => can(r.dept)) };

@@ -60,6 +60,49 @@ function prqStatus(r) {
   return `<span class="chip" style="background:#FBF1DB;color:#946410">بانتظار ${PRQ_WHO[d.st] || ''}</span>`;
 }
 
+/* منسقة قسم المعلمة: أول من يصله الطلب (وطلب المنسقة يصل للنائب مباشرة) */
+const PRQ_COORD = { 'التربية الإسلامية': 'خولة المطوع', 'اللغة العربية': 'نجوى أبو ناهية', 'اللغة الإنجليزية': 'هيا الدوسري', 'العلوم الاجتماعية': 'فاطمة النعيمي', 'الرياضيات': 'سحر الرشيد', 'الأحياء': 'يسرا عبده', 'الكيمياء': 'انتصار أحمد', 'الفيزياء': 'أريج أبو حاشية', 'التربية البدنية': 'شيخة القحطاني', 'الحوسبة وتكنولوجيا المعلومات': 'فاتن الجوارنة', 'المهارات الحياتية والمهنية': 'خلود أبو خديجة', 'إدارة الأعمال': 'كوثر الدالي', 'الفنون البصرية': 'كوثر الدالي' };
+function prqFirstName() {
+  const dep = (S.user.dept || [])[0] || ''; const all = S.staffAll || [];
+  const c = all.find(x => x.dept === dep && /منسق/.test(x.role || '') && x.name !== S.user.name) || (PRQ_COORD[dep] && PRQ_COORD[dep] !== S.user.name ? { name: PRQ_COORD[dep] } : null);
+  return c ? 'منسقتكِ أ. ' + c.name : 'النائب الأكاديمي أ. آسيا الذبياني';
+}
+function prqGuide() {
+  return `<div class="card prq-guide"><p class="prq-g1">معلمتي العزيزة، تخفيفًا عليكِ وحتى لا تكتبي طلبكِ في أكثر من مكان، أُنشئ تبويب «إذنٌ مُيسَّر»: طلبٌ واحد يصل إلى من يعتمده، ويُسجَّل وحده، وترين رصيدكِ في كل لحظة.</p>
+    <p class="prq-g2">رصيدكِ <b>${PRQ_LIMIT} ساعات في الشهر</b>، و<b>إذن العمل</b> (ورشة، مهمة رسمية…) لا يُخصم منه. نوصيكِ باستثمار اليوم الدراسي حتى لا تحملي عملكِ إلى البيت، وبالمحافظة على ساعاتكِ للضرورة؛ فقد تحتاجينها آخر الشهر لأمرٍ مهم.</p>
+    <ol class="prq-steps"><li>اختاري اليوم والوقت والسبب.</li><li>اضغطي «إرسال الطلب».</li><li>يصل طلبكِ إلى ${esc(prqFirstName())}، ويُحتسب من رصيدكِ فور اعتمادها.</li><li>يصلكِ إشعار فور الاعتماد النهائي.</li></ol></div>`;
+}
+
+/* ================================================================== السكرتارية: حصر الغياب والاستئذان (اطلاع وطباعة) */
+const isSec = () => S.user && S.user.role === 'sec';
+function S_prq(el) {
+  setTitle('إذنٌ مُيسَّر — حصر الغياب والاستئذان');
+  const all = S.records.filter(r => r.item === 'PRQ' && r.d && r.d.st !== 'ret');
+  const t0 = today(); const MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+  const months = [...new Set(all.map(r => String(r.date).slice(0, 7)).concat([t0.slice(0, 7)]))].sort().reverse();
+  const mo = S.secMo && months.includes(S.secMo) ? S.secMo : t0.slice(0, 7);
+  const st = r => prqCounted(r.d) ? (r.d.st === 'ok' ? '<span class="chip ok">معتمد ✓</span>' : '<span class="chip" style="background:#E7F1FB;color:#1F4E8C">اعتمدته المنسقة</span>') : `<span class="chip" style="background:#FBF1DB;color:#946410">بانتظار ${PRQ_WHO[r.d.st] || ''}</span>`;
+  const tm = r => r.d.from ? `${prqT12(r.d.from)} – ${prqT12(r.d.to)}` : '—';
+  const todayL = all.filter(r => r.date === t0).sort((a, b) => String(a.d.from).localeCompare(String(b.d.from)));
+  const M = all.filter(r => String(r.date).slice(0, 7) === mo);
+  const by = {}; M.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { t: r.d.t, dept: r.dept, n: 0, p: 0, w: 0, pend: 0 }; o.n++; if (r.d.kind === 'إذن عمل') o.w += +r.d.h || 0; else if (prqCounted(r.d)) o.p += +r.d.h || 0; else o.pend += +r.d.h || 0; });
+  const rows = Object.values(by).sort((a, b) => a.dept.localeCompare(b.dept, 'ar') || b.p - a.p);
+  const sum = k => Math.round(rows.reduce((a, o) => a + o[k], 0) * 10) / 10;
+  const names = ['نجمة', 'نائلة'];
+  el.innerHTML = `
+  <div class="hero"><div class="pat pattern"></div><h2>مرحبًا بكنّ سكرتيراتنا الرائعات: ${names.join(' و')} 🌷</h2><p>هنا حصر الغياب والاستئذان من «إذنٌ مُيسَّر»، يتحدّث تلقائيًا كلما اعتُمد إذن، للاطلاع والطباعة.</p></div>
+  <div class="card"><h2>📅 من استأذنت اليوم — ${prqDay(t0)} ${dmy(t0)} <span class="sub">${todayL.length} إذن</span></h2>
+    <div class="tbl"><table class="t"><tr><th>الموظفة</th><th>القسم</th><th>الوقت</th><th>الساعات</th><th>النوع</th><th>الحالة</th></tr>
+    ${todayL.map(r => `<tr><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td style="white-space:nowrap">${tm(r)}</td><td>${prqNum(r.d.h)}</td><td>${esc(r.d.kind || '')}</td><td>${st(r)}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">لا توجد أذونات اليوم</div></td></tr>'}</table></div></div>
+  <div class="card"><h2>📋 حصر الغياب والاستئذان</h2>
+    <div class="row noprint" style="gap:6px;flex-wrap:wrap;margin-bottom:10px">${months.map(m => `<button class="btn sm ${m === mo ? '' : 'sec'}" data-smo="${m}">${MN[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}</button>`).join('')}<span style="flex:1"></span><button class="btn sm ghost" onclick="window.print()">🖨 طباعة</button></div>
+    <div class="grid g4" style="margin-bottom:10px"><div class="kpi"><div class="v">${M.length}</div><div class="l">إذنًا في ${MN[+mo.slice(5, 7) - 1]}</div></div><div class="kpi"><div class="v">${rows.length}</div><div class="l">موظفة</div></div><div class="kpi"><div class="v">${prqNum(sum('p'))}</div><div class="l">ساعة شخصية</div></div><div class="kpi"><div class="v">${prqNum(sum('w'))}</div><div class="l">ساعة إذن عمل</div></div></div>
+    <div class="tbl"><table class="t"><tr><th>#</th><th>الموظفة</th><th>القسم</th><th>الأذونات</th><th>ساعات شخصية</th><th>إذن عمل</th><th>المتبقي من ${PRQ_LIMIT}</th></tr>
+    ${rows.map((o, i) => { const left = Math.max(0, PRQ_LIMIT - o.p); return `<tr><td>${i + 1}</td><td><b>${esc(o.t)}</b></td><td>${esc(o.dept)}</td><td>${o.n}</td><td>${prqNum(o.p)}${o.pend ? ` <small style="color:#946410">(+${prqNum(o.pend)} بانتظار)</small>` : ''}</td><td>${prqNum(o.w)}</td><td style="${left <= 2 ? 'background:#FBE7E9;font-weight:700' : ''}">${prqNum(left)}</td></tr>`; }).join('') || '<tr><td colspan="7"><div class="empty">لا توجد أذونات في هذا الشهر</div></td></tr>'}</table></div>
+    <div class="note" style="margin-top:8px">رصيد كل موظفة ${PRQ_LIMIT} ساعات شهريًا، ويُحتسب الإذن فور اعتماد المنسقة. إذن العمل لا يُخصم من الرصيد.</div></div>`;
+  $$('[data-smo]', el).forEach(b => b.onclick = () => { S.secMo = b.dataset.smo; S_prq(el); });
+}
+
 /* ================================================================== صفحة المعلمة */
 function T_prq(el) {
   setTitle('إذنٌ مُيسَّر');
@@ -71,6 +114,7 @@ function T_prq(el) {
   const reasonIn = d.reason && !Object.values(PRQ_R).flat().includes(d.reason);
   el.innerHTML = `
   <div class="prq-top"><div class="prq-v">﴿${PRQ_TOP.v}﴾</div><small>${PRQ_TOP.s}</small></div>
+  ${prqGuide()}
   <div class="grid g2" style="align-items:start">
   <div class="card"><h2>${ICON.prq} ${rec ? 'تعديل طلب الإذن' : 'طلب إذن'}</h2>
     <form class="form" id="pqf" onsubmit="return false">

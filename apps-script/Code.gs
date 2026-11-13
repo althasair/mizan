@@ -46,7 +46,8 @@ function fail_(msg) { throw new Error(msg); }
 function roleOf_(r) {
   const k = String(r[1]).trim();
   if (r[0] === 'admin' || k === 'المديرة') return 'admin';   // النائب الأكاديمي ومديرة المدرسة
-  if (k === 'توجيه') return 'viewer';                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
+  if (k === 'توجيه') return 'viewer';
+  if (k === 'سكرتارية') return 'sec';                          // السكرتارية: حصر الاستئذانات في «إذنٌ مُيسَّر» للاطلاع فقط                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
   return k === 'معلمة' ? 'teacher' : 'coord';
 }
 const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
@@ -74,6 +75,7 @@ function login_(pin, app) {
   // المنسقات من «الميزان» فقط؛ والمعلمات يدخلن «الميزان» بتبويبات محدودة، و«سبع سنابل» لمبادراتهن وأنشطتهن
   if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
   if (u.role === 'viewer' && app !== 'sab3' && app !== 'mizan') fail_('هذا الرقم للاطلاع على منصتي سبع سنابل والميزان فقط');
+  if (u.role === 'sec' && app && app !== 'mizan') fail_('هذا الرقم للدخول إلى منصة الميزان فقط');
   const token = Utilities.getUuid();
   cache.put('tok_' + token, u.id, SESSION_SECONDS);
   log_(u, 'دخول', u.dept.join('، '));
@@ -132,6 +134,7 @@ function myStudents_(u) {
 }
 function boot_(u) {
   if (u.role === 'teacher') return bootTeacher_(u);
+  if (u.role === 'sec') return bootSec_(u);
   const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
   const cal = rows_(SH.cal).rows.filter(r => r[0]).map(r => ({ t: r[0], from: iso_(r[1]), to: iso_(r[2]), k: r[3] }));
   const pd = rows_(SH.pd).rows.filter(r => r[3]).map((r, i) => ({ i: i, sem: r[0], dept: r[1], need: r[2], title: r[3], type: r[4], hrs: r[5], date: iso_(r[6]), by: r[7], n: r[8], impact: r[9] }))
@@ -647,6 +650,13 @@ function indibat_(force) {
   } catch (e) {}
   return out;
 }
+/* السكرتارية: الأذونات فقط (من، متى، كم ساعة، الحالة) دون السبب والملاحظات */
+function bootSec_(u) {
+  const per = rows_(SH.periods).rows.filter(r => r[0]).map(r => ({ name: r[0], from: iso_(r[1]), to: iso_(r[2]), sem: r[3] }));
+  const staffAll = rows_(SH.teachers).rows.filter(r => r[1]).map(r => ({ dept: String(r[0]), name: String(r[1]), role: String(r[3] || '') }));
+  const recs = rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).map(x => ({ id: x.id, dept: x.dept, item: 'PRQ', date: x.date, d: { t: x.d.t, from: x.d.from || '', to: x.d.to || '', h: x.d.h, kind: x.d.kind, st: x.d.st, first: x.d.first, steps: (x.d.steps || []).map(s => ({ w: s.w })) } }));
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: [], pd: [], staff: [], staffAll: staffAll, coords: [], records: recs, reports: [], server: now_() };
+}
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
@@ -659,6 +669,8 @@ function route_(req) {
     if (u.dept.indexOf('جميع الأقسام') >= 0) u.dept = rows_(SH.teachers).rows.map(r => String(r[0])).filter((d, i, A) => d && A.indexOf(d) === i);
     if (['boot', 'records', 'signature'].indexOf(a) < 0) fail_('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
   }
+  // السكرتارية: اطلاع على حصر الاستئذانات فقط
+  if (u.role === 'sec' && ['boot', 'logout'].indexOf(a) < 0) fail_('هذا الحساب للاطلاع على حصر الاستئذانات فقط');
   switch (a) {
     case 'boot': return boot_(u);
     case 'records': return { records: listRecords_(u) };
