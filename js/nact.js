@@ -240,10 +240,10 @@ function naHome(B, L, st, ind, tot, tour) {
   <div class="grid g4 na-kpi">${kpi.map(([n, t, e, c], i) => `<div class="card na-t na-pop" style="--c:${c};animation-delay:${i * 70}ms"><span class="na-e">${e}</span><b data-cnt="${+n || 0}">0</b><span>${t}</span></div>`).join('')}</div>
 
   <div class="na-two">
-    <div class="card na-rd"><h2>جاهزيتكِ للجولة الأولى</h2>
+    ${tour ? '' : `<div class="card na-rd"><h2>جاهزيتكِ للجولة الأولى</h2>
       <div class="na-rd-in">${naRing(tot, 150, tot >= 80 ? '#17734A' : tot >= 50 ? '#B8892E' : '#7A1F3D')}
         <div class="na-rd-g">${ind.map(I => `<div title="${esc(I.t)}">${naRing(I.pct, 62, I.pct === 100 ? '#17734A' : I.pct >= 50 ? '#B8892E' : '#A3202F', 'المؤشر ' + I.n)}</div>`).join('')}</div></div>
-      <div class="note" style="margin-top:8px">${tot >= 80 ? 'جاهزيةٌ عالية — أحسنتِ!' : 'كل شاهدٍ تضيفينه يرفع النسبة مباشرة.'} اضغطي على «مؤشرات الجولة الأولى» لتفاصيل كل مؤشر.</div></div>
+      <div class="note" style="margin-top:8px">${tot >= 80 ? 'جاهزيةٌ عالية — أحسنتِ!' : 'كل شاهدٍ تضيفينه يرفع النسبة مباشرة.'} اضغطي على «مؤشرات الجولة الأولى» لتفاصيل كل مؤشر.</div></div>`}
     <div class="card"><h2>نبض الأشهر</h2>
       <div class="na-mo">${MO.map(([m, n]) => `<div><i style="--h:${Math.round(n / mx * 100)}%"><b>${n}</b></i><span>${NA_MO[m]}</span></div>`).join('')}</div>
       <div class="note">عدد الأعمال المسجلة في ملفكِ كل شهر.</div></div>
