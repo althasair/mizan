@@ -35,13 +35,15 @@ function prqAutoDate() {
 }
 const prqMine = () => S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === S.user.name).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (b.at || '').localeCompare(a.at || ''));
 /* الساعات الشخصية المعتمدة في شهر (من الانضباط الوظيفي، ويشمل ما سجّله «إذنٌ مُيسَّر» تلقائياً) */
+/* يُحتسب الإذن من الرصيد فور اعتماد المنسقة (ولو لم تعتمده النائبة بعد)، أو عند اعتماده النهائي */
+const prqCounted = d => d.st === 'ok' || (['vp', 'pr'].includes(d.st) && (d.steps || []).some(s => s.w === 'coord'));
 function prqUsed(name, month) {
   let h = 0; const prqIds = new Set();
   S.records.filter(r => r.item === 'TDS' && r.d && r.d.t === name).forEach(r => { if (r.d.prq) prqIds.add(r.d.prq); (r.d.perm || []).forEach(x => { if (String(x.date).slice(0, 7) === month && x.type !== 'إذن عمل') h += +x.h || 0; }); });
-  S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && r.d.st === 'ok' && !prqIds.has(r.id) && String(r.date).slice(0, 7) === month && r.d.kind !== 'إذن عمل').forEach(r => h += +r.d.h || 0);
+  S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && prqCounted(r.d) && !prqIds.has(r.id) && String(r.date).slice(0, 7) === month && r.d.kind !== 'إذن عمل').forEach(r => h += +r.d.h || 0);
   return Math.round(h * 100) / 100;
 }
-const prqPend = (name, month, except) => Math.round(S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && ['coord', 'vp', 'pr'].includes(r.d.st) && r.id !== except && String(r.date).slice(0, 7) === month && r.d.kind !== 'إذن عمل').reduce((a, r) => a + (+r.d.h || 0), 0) * 100) / 100;
+const prqPend = (name, month, except) => Math.round(S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && ['coord', 'vp', 'pr'].includes(r.d.st) && !prqCounted(r.d) && r.id !== except && String(r.date).slice(0, 7) === month && r.d.kind !== 'إذن عمل').reduce((a, r) => a + (+r.d.h || 0), 0) * 100) / 100;
 const prqHrs = (a, b) => { if (!a || !b) return 0; const m = x => +x.slice(0, 2) * 60 + +x.slice(3); return Math.round((m(b) - m(a)) / 60 * 100) / 100; };
 const prqNum = n => String(Math.round((+n || 0) * 100) / 100);
 
@@ -165,7 +167,7 @@ function A_prq(el) {
   const fixed = prqPhGet(); const ph = S.prqPh || fixed || PRQ_PH[0];
   const mo = S.prqMo || today().slice(0, 7);
   const all = S.records.filter(r => r.item === 'PRQ' && r.d);
-  const okMo = all.filter(r => r.d.st === 'ok' && String(r.date).slice(0, 7) === mo);
+  const okMo = all.filter(r => prqCounted(r.d) && String(r.date).slice(0, 7) === mo);
   const byT = {}; okMo.forEach(r => { const o = byT[r.d.t] = byT[r.d.t] || { dept: r.dept, p: 0, w: 0, n: 0 }; o[r.d.kind === 'إذن عمل' ? 'w' : 'p'] += +r.d.h || 0; o.n++; });
   const months = [...new Set(all.map(r => String(r.date).slice(0, 7)).concat([today().slice(0, 7)]))].sort().reverse();
   const row = (r, act) => { const u0 = prqUsed(r.d.t, String(r.date).slice(0, 7)); const tot = u0 + (r.d.kind === 'إذن عمل' ? 0 : +r.d.h || 0);
