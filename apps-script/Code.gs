@@ -68,10 +68,9 @@ function userById_(id) {
 }
 function login_(pin, app) {
   const cache = CacheService.getScriptCache();
-  const fails = Number(cache.get('fails') || 0);
-  if (fails >= 25) fail_('تم إيقاف الدخول مؤقتاً بسبب محاولات خاطئة متكررة. حاولي بعد 10 دقائق.');
+  // لا إيقاف جماعي للدخول: الرقم الخاطئ يتأخر ثانية ونصف فقط (يُبطئ التخمين دون أن يمنع أحداً من الدخول)
   const u = findUserByPin_(pin);
-  if (!u) { cache.put('fails', String(fails + 1), 600); Utilities.sleep(700); fail_('الرقم السري غير صحيح'); }
+  if (!u) { Utilities.sleep(1500); fail_('الرقم السري غير صحيح'); }
   // المنسقات من «الميزان» فقط؛ والمعلمات يدخلن «الميزان» بتبويبات محدودة، و«سبع سنابل» لمبادراتهن وأنشطتهن
   if (app === 'sanabil' && u.role === 'coord') fail_('هذا الرقم للدخول إلى منصة الميزان');
   if (u.role === 'viewer' && app !== 'sab3' && app !== 'mizan') fail_('هذا الرقم للاطلاع على منصتي سبع سنابل والميزان فقط');
