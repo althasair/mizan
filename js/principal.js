@@ -83,10 +83,9 @@ function A_dash(el) {
   const Y = yearRange(); const R = S.records.filter(r => !r.date || (r.date >= Y.from && r.date <= Y.to));
   const by = it => R.filter(r => r.item === it);
   const add = (m, k, n) => { if (!k || k === REF.ALL_MEMBERS) return; m[k] = (m[k] || 0) + (n == null ? 1 : n); };
-  const isIni = r => r.item === 'TA' ? r.d.kind === 'مبادرة' : (/مبادر/.test(r.d.ty || '') || /مبادر/.test(r.d.name || ''));
-  const ini = {}, act = {}, pv = {}, ws = {}, pa = {}, ach = {};
-  R.filter(r => r.item === 'TA').forEach(r => add(isIni(r) ? ini : act, r.d.t));
-  R.filter(r => r.item === 'AC').forEach(r => [r.d.e1, r.d.e2, r.d.e3].forEach(t => add(isIni(r) ? ini : act, t)));
+  const W = tWorks(R); const ini = {}, act = {}, prj = {}, prg = {}, cmp = {}, pv = {}, ws = {}, pa = {}, ach = {};
+  const KM = { 'مبادرة': ini, 'نشاط': act, 'مشروع': prj, 'برنامج': prg, 'مسابقة': cmp };
+  Object.entries(W).forEach(([t, L]) => L.forEach(w => add(KM[w.kind] || act, t)));
   by('TPV').forEach(r => add(pv, r.d.t)); by('TWS').filter(r => /قدّمت/.test(r.d.role || '')).forEach(r => add(ws, r.d.t));
   by('TPA').forEach(r => add(pa, r.d.t, +r.d.n > 0 ? +r.d.n : 1)); by('TACH').forEach(r => add(ach, r.d.t));
   const coordOf = d => { const c = S.coords.find(c => (c.dept || []).includes(d)); return c ? c.name : ''; };
@@ -94,7 +93,7 @@ function A_dash(el) {
   const cAll = {}; R.filter(r => SECTIONS.some(s => s.k === r.item)).forEach(r => add(cAll, coordOf(r.dept)));
   const cRep = {}; S.reports.filter(x => x.status === 'معتمد').forEach(x => add(cRep, coordOf(x.dept)));
   const deptOf = n => (S.staff.find(s => s.name === n) || {}).dept || '';
-  const nIni = Object.values(ini).reduce((a, b) => a + b, 0), nAct = Object.values(act).reduce((a, b) => a + b, 0);
+  const sum = m => Object.values(m).reduce((a, b) => a + b, 0); const nIni = sum(ini), nAct = sum(act);
   const vpPool = tPool(); const semR = semRange(curSem()); const vpSeen = new Set(R.filter(r => r.item === 'VPV' && r.date >= semR.from && r.date <= semR.to).map(r => r.d.t).filter(n => vpPool.some(p => p.name === n)));
   const vpPct = vpPool.length ? vpSeen.size / vpPool.length * 100 : 0; const PC = prCoverage();
   const repAll = S.reports.length, repOk = S.reports.filter(x => x.status === 'معتمد').length;
@@ -102,8 +101,8 @@ function A_dash(el) {
   const podium = (t, m, unit, sub) => { const L = Object.entries(m).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]);
     if (!L.length) return `<div class="card"><h2>${t}</h2><div class="empty">لا توجد سجلات بعد</div></div>`;
     return `<div class="card"><h2>${t}</h2>
-      <div style="display:flex;gap:8px;align-items:flex-end;justify-content:center;margin:6px 0 10px">${[1, 0, 2].map(i => L[i] ? `<div style="flex:1;max-width:150px;text-align:center;background:${i === 0 ? 'linear-gradient(180deg,#FFF6DA,#fff)' : '#FBF8F2'};border:1px solid ${i === 0 ? '#E9C46A' : 'var(--line)'};border-radius:14px;padding:${i === 0 ? '12px 6px 10px' : '8px 6px'}">${cupSVG(i, i === 0 ? 46 : 36)}<div style="font-weight:700;font-size:13px;margin-top:4px">${esc(L[i][0])}</div><div style="font-size:11px;color:var(--muted)">${esc(sub ? sub(L[i][0]) : deptOf(L[i][0]))}</div><div style="font-weight:800;color:var(--maroon)">${L[i][1]} <small style="font-weight:400">${unit}</small></div></div>` : '<div style="flex:1;max-width:150px"></div>').join('')}</div>
-      ${L.slice(3, 8).map(([n, v], j) => `<div class="row" style="margin:4px 0;font-size:13px"><span class="chip">${j + 4}</span><span class="sp">${esc(n)}</span><b>${v}</b></div>`).join('')}</div>`; };
+      <div style="display:flex;gap:8px;align-items:flex-end;justify-content:center;margin:6px 0 10px">${[1, 0, 2].map(i => L[i] ? `<div style="flex:1;max-width:150px;text-align:center;background:${i === 0 ? 'linear-gradient(180deg,#FFF6DA,#fff)' : '#FBF8F2'};border:1px solid ${i === 0 ? '#E9C46A' : 'var(--line)'};border-radius:14px;padding:${i === 0 ? '12px 6px 10px' : '8px 6px'}">${cupSVG(i, i === 0 ? 46 : 36)}<div style="font-weight:700;font-size:13px;margin-top:4px">${sub ? esc(L[i][0]) : `<a class="tf-go" data-tf="${esc(L[i][0])}">${esc(L[i][0])}</a>`}</div><div style="font-size:11px;color:var(--muted)">${esc(sub ? sub(L[i][0]) : deptOf(L[i][0]))}</div><div style="font-weight:800;color:var(--maroon)">${L[i][1]} <small style="font-weight:400">${unit}</small></div></div>` : '<div style="flex:1;max-width:150px"></div>').join('')}</div>
+      ${L.slice(3, 8).map(([n, v], j) => `<div class="row" style="margin:4px 0;font-size:13px"><span class="chip">${j + 4}</span><span class="sp">${sub ? esc(n) : `<a class="tf-go" data-tf="${esc(n)}">${esc(n)}</a>`}</span><b>${v}</b></div>`).join('')}</div>`; };
   const deptCov = [...new Set(vpPool.map(t => t.dept))].map(d => { const n = R.filter(r => r.dept === d && SECTIONS.some(s => s.k === r.item)).length; return [d, n]; }).sort((a, b) => b[1] - a[1]);
   const mx = Math.max(1, ...deptCov.map(x => x[1]));
   el.innerHTML = `<div class="note">لوحة شاملة لكل ما في المنصة خلال العام الأكاديمي ${REF.YEAR || ''}، وتتحدث تلقائيًا مع كل تسجيل.</div>
@@ -118,8 +117,44 @@ function A_dash(el) {
     <div class="card">${ring(PC.half ? Math.min(100, PC.seenS1.size / PC.half * 100) : 0, '#2E7D52', 'هدف المديرة للفصل الأول', PC.seenS1.size + ' من ' + PC.half)}</div>
   </div>
   <h2 style="margin:22px 0 8px;color:var(--maroon)">المعلمات المتميزات</h2>
-  <div class="grid g2">${podium('المبادرات', ini, 'مبادرة')}${podium('الأنشطة', act, 'نشاط')}${podium('الزيارات التبادلية', pv, 'زيارة')}${podium('تطوير الزميلات (ورش قدّمتها)', ws, 'ورشة')}${podium('التواصل مع أولياء الأمور', pa, 'ولي أمر')}${podium('الإنجازات والمشاركات', ach, 'إنجاز')}</div>
+  <div class="note">يُحسب العمل الواحد مرة واحدة لكل معلمة، ويُصنَّف حسب نوعه: المبادرة فكرة شخصية غير مكلّف بها، والمشروع أنشطة مترابطة بمُخرَج، والبرنامج مظلة ممتدة، والنشاط فعالية واحدة. اضغطي على اسم أي معلمة لفتح ملف أعمالها.</div>
+  <div class="grid g2">${podium('المبادرات', ini, 'مبادرة')}${podium('المشاريع', prj, 'مشروع')}${podium('البرامج', prg, 'برنامج')}${podium('الأنشطة', act, 'نشاط')}${podium('المسابقات', cmp, 'مسابقة')}${podium('الزيارات التبادلية', pv, 'زيارة')}${podium('تطوير الزميلات (ورش قدّمتها)', ws, 'ورشة')}${podium('التواصل مع أولياء الأمور', pa, 'ولي أمر')}${podium('الإنجازات والمشاركات', ach, 'إنجاز')}</div>
   <h2 style="margin:22px 0 8px;color:var(--maroon)">المنسقات المتميزات</h2>
   <div class="grid g2">${podium('الأكثر توثيقًا لأعمال القسم', cAll, 'سجل', n => 'منسقة')}${podium('التقارير المعتمدة', cRep, 'تقرير', n => 'منسقة')}${podium('الاجتماعات الأكاديمية', cm('MT'), 'اجتماع', n => 'منسقة')}${podium('الحضور الصفي', cm('V'), 'زيارة', n => 'منسقة')}${podium('الورش الداخلية', cm('WS'), 'ورشة', n => 'منسقة')}${podium('الأنشطة والمبادرات', cm('AC'), 'نشاط', n => 'منسقة')}</div>
   <div class="card" style="margin-top:14px"><h2>حجم التوثيق في الأقسام</h2>${deptCov.map(([d, n]) => `<div class="row" style="margin:6px 0"><span style="width:200px">${esc(d)}</span><div class="bar sp"><i style="width:${n / mx * 100}%"></i></div><b>${n}</b></div>`).join('')}</div>`;
+  $$('.tf-go', el).forEach(a => a.onclick = () => tFileModal(a.dataset.tf, R));
+}
+
+
+/* ------------------------------------------------------------------ أعمال المعلمات: تصنيف موحّد بلا تكرار */
+const TW_KINDS = ['برنامج', 'مشروع', 'مبادرة', 'نشاط', 'مسابقة'];
+const twNorm = x => String(x || '').replace(/[\u064B-\u0652\u0640]/g, '').replace(/[«»"'()\-–—:،.]/g, ' ').replace(/[أإآ]/g, 'ا').replace(/[ىيةه](?=\s|$)/g, 'ه').replace(/(^|\s)ال/g, '$1').replace(/\s+/g, ' ').trim();
+/* سجلات المعلمة (TA) هي الأصل؛ وسجل المنسقة (AC) لا يُحسب للمعلمة إلا إذا لم يكن له سجل منعكس عندها، والعمل الواحد يُحسب مرة واحدة */
+function tWorks(R) {
+  const W = {}, seen = {}, put = (t, w) => { if (!t || t === REF.ALL_MEMBERS) return; const k = w.kind + '|' + twNorm(w.name); seen[t] = seen[t] || new Set(); if (seen[t].has(k)) return; seen[t].add(k); (W[t] = W[t] || []).push(w); };
+  const mir = new Set(); R.forEach(r => { if (r.item === 'TA' && r.d && /\(([^)]+)\)/.test(r.d.q1 || '')) mir.add(r.d.t + '|' + r.d.q1.match(/\(([^)]+)\)/)[1]); });
+  R.filter(r => r.item === 'TA' && r.d && r.d.t).forEach(r => put(r.d.t, { kind: TW_KINDS.includes(r.d.kind) ? r.d.kind : 'نشاط', name: r.d.name, date: r.date, d: r.d }));
+  R.filter(r => r.item === 'AC' && r.d).forEach(r => [r.d.e1, r.d.e2, r.d.e3].forEach(t => { if (t && (S.staff || []).some(s => s.name === t) && !mir.has(t + '|' + r.id)) put(t, { kind: /مسابقة/.test(r.d.ty || '') ? 'مسابقة' : 'نشاط', name: r.d.name, date: r.date, d: r.d, ac: 1 }); }));
+  return W;
+}
+function tFileModal(name, R) {
+  const st = S.staff.find(s => s.name === name) || {}; const W = (tWorks(R)[name] || []).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  const mine = it => R.filter(r => r.item === it && r.d && r.d.t === name);
+  const pv = mine('TPV'), ws = mine('TWS'), pa = mine('TPA'), ach = mine('TACH');
+  const C = { 'برنامج': '#1F3A5F', 'مشروع': '#0E8C88', 'مبادرة': '#62102A', 'نشاط': '#B8903A', 'مسابقة': '#7A4FA3' };
+  const info = w => [w.d.par ? 'ينبثق من: ' + w.d.par : '', w.d.term, w.d.need, w.d.out ? 'المُخرَج: ' + w.d.out : '', w.d.n ? w.d.n + ' طالبة' : '', w.d.impact || w.d.imp || w.d.desc || w.d.pos || ''].filter(Boolean).join(' · ');
+  const sec = (k, L) => L.length ? `<div class="tfs"><h4 style="--c:${C[k]}">${k === 'نشاط' ? 'الأنشطة' : k === 'مبادرة' ? 'المبادرات' : k === 'مشروع' ? 'المشاريع' : k === 'برنامج' ? 'البرامج' : 'المسابقات'} <small>${L.length}</small></h4>${L.map(w => `<div class="tfr"><span class="tfd">${dmy(w.date)}</span><div><b>${esc(w.name || '')}</b>${info(w) ? `<small>${esc(info(w).slice(0, 220))}</small>` : ''}</div></div>`).join('')}</div>` : '';
+  const sec2 = (t, L, f) => L.length ? `<div class="tfs"><h4 style="--c:#5A6B7D">${t} <small>${L.length}</small></h4>${L.sort((a, b) => (a.date || '').localeCompare(b.date || '')).map(r => `<div class="tfr"><span class="tfd">${dmy(r.date)}</span><div>${f(r)}</div></div>`).join('')}</div>` : '';
+  const m = document.createElement('div'); m.className = 'modal';
+  m.innerHTML = `<div class="box tfile"><button class="btn sec sm tfx" aria-label="إغلاق">✕</button>
+    <h3>ملف أعمال ${esc(name)}</h3><div style="color:var(--muted);font-size:13px">${esc(st.dept || '')}</div>
+    <div class="tfk">${TW_KINDS.map(k => `<span style="--c:${C[k]}"><b>${W.filter(w => w.kind === k).length}</b>${k === 'نشاط' ? 'نشاط' : k}</span>`).join('')}<span style="--c:#5A6B7D"><b>${pv.length}</b>زيارة تبادلية</span><span style="--c:#5A6B7D"><b>${ws.length}</b>ورشة</span></div>
+    ${W.length + pv.length + ws.length + pa.length + ach.length ? TW_KINDS.map(k => sec(k, W.filter(w => w.kind === k))).join('') +
+      sec2('الزيارات التبادلية', pv, r => `<b>${esc(r.d.v || '')}</b><small>${esc(r.d.vdept || '')}</small>`) +
+      sec2('الورش والتطوير المهني', ws, r => `<b>${esc(r.d.title || r.d.name || r.sum || '')}</b><small>${esc([r.d.role, r.d.byx].filter(Boolean).join(' · '))}</small>`) +
+      sec2('التواصل مع أولياء الأمور', pa, r => `<b>${esc(r.d.cat || '')}${r.d.s ? ' — ' + esc(r.d.s) : ''}</b><small>${esc([r.d.topic, r.d.way, r.d.res].filter(Boolean).join(' · '))}</small>`) +
+      sec2('الإنجازات والمشاركات', ach, r => `<b>${esc((r.d.kind ? r.d.kind + ': ' : '') + (r.d.name || ''))}</b><small>${esc(r.d.res || '')}</small>`)
+      : '<div class="empty">لا توجد أعمال مسجلة</div>'}</div>`;
+  document.body.appendChild(m); const close = () => m.remove();
+  $('.tfx', m).onclick = close; m.onclick = e => { if (e.target === m) close(); };
 }
