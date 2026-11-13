@@ -20,6 +20,7 @@ const NA_K = {
   media: ['التوثيق والنشر الإعلامي', 'التقارير والاستمارات والإنجازات', [4]],
   stat: ['الإحصائيات والتقارير التحليلية', 'التقارير والاستمارات والإنجازات', [2]],
   trip: ['الرحلات المدرسية', 'الرحلات المدرسية', [3, 5]],
+  exitl: ['كشوف خروج الطالبات من الحصص', 'الرحلات المدرسية', [5]],
   org: ['الشراكة مع المؤسسات', 'الشراكات المجتمعية', [2]],
   par: ['الشراكة مع أولياء الأمور', 'الشراكات المجتمعية', [2]],
 };
@@ -43,7 +44,7 @@ function naStats(L) {
   const partners = new Set(L.filter(r => r.d.partner).map(r => r.d.partner.trim()));
   const trips = L.filter(r => r.d.k === 'trip');
   return {
-    acts: L.filter(r => !['stat', 'media', 'plan', 'ach'].includes(r.d.k)).length,
+    acts: L.filter(r => !['stat', 'media', 'plan', 'ach', 'exitl'].includes(r.d.k)).length,
     stu: sum(r => r.d.n), partners: partners.size, ach: L.filter(r => r.d.k === 'ach').length,
     intl: L.filter(r => r.d.k === 'ach' && /دولي/.test(r.d.level || '')).length,
     trips: trips.length, tripsOk: trips.filter(r => r.d.f_consent && r.d.f_pledge && r.d.f_list).length,
@@ -55,7 +56,7 @@ function naIndState(L) {
   const ck = (naCk() || { d: {} }).d.ck || {};
   const st = naStats(L);
   // ما يُستنتج تلقائياً من السجل
-  const auto = { plan_ok: L.some(r => r.d.k === 'plan'), rep_ph: L.filter(r => r.d.rep).length >= 5, safe_trip: st.trips > 0 && st.tripsOk === st.trips, f_trip: st.trips > 0 && st.tripsOk === st.trips, pub_ch: L.filter(r => r.d.k === 'media').length >= 2, f_rep: L.filter(r => r.d.rep).length > 0 };
+  const auto = { plan_ok: L.some(r => r.d.k === 'plan'), rep_ph: L.filter(r => r.d.rep).length >= 5, safe_trip: st.trips > 0 && st.tripsOk === st.trips, f_trip: st.trips > 0 && st.tripsOk === st.trips, pub_ch: L.filter(r => r.d.k === 'media').length >= 2, f_rep: L.filter(r => r.d.rep).length > 0, exit: L.some(r => r.d.k === 'exitl'), comp: L.some(r => r.d.k === 'exitl') && L.filter(r => r.d.k === 'exitl').every(r => r.d.comp) };
   return NA_IND.map(I => { const items = I.ck.map(([k, t]) => ({ k, t, on: !!(ck[k] || auto[k]), auto: !!auto[k] && !ck[k] })); const done = items.filter(x => x.on).length;
     return Object.assign({}, I, { items, done, pct: Math.round(done / items.length * 100) }); });
 }
@@ -70,7 +71,7 @@ function N_act(el) {
   const chip = (t, c) => `<span class="chip" style="font-size:11px;${c ? `background:${c}1A;color:${c}` : ''}">${t}</span>`;
   const row = r => { const d = r.d, K = NA_K[d.k] || ['—'];
     const flags = [d.rep ? chip('تقرير ✓', '#17734A') : chip('بلا تقرير', '#A3202F'), d.cert ? chip('شهادة شكر', '#946410') : '', d.pub ? chip('منشور', '#1F5F99') : '',
-      d.k === 'trip' ? [['f_consent', 'موافقات'], ['f_pledge', 'تعهد مشرفة'], ['f_list', 'كشف الطالبات']].map(([k, t]) => chip((d[k] ? '✓ ' : '✗ ') + t, d[k] ? '#17734A' : '#A3202F')).join(' ') : ''].join(' ');
+      d.k === 'exitl' ? chip(d.comp ? '✓ عُوّضت الطالبات' : '✗ لم يُوثَّق التعويض', d.comp ? '#17734A' : '#A3202F') : '', d.k === 'trip' ? [['f_consent', 'موافقات'], ['f_pledge', 'تعهد مشرفة'], ['f_list', 'كشف الطالبات']].map(([k, t]) => chip((d[k] ? '✓ ' : '✗ ') + t, d[k] ? '#17734A' : '#A3202F')).join(' ') : ''].join(' ');
     return `<tr><td style="white-space:nowrap">${dmy(r.date)}</td><td><b>${esc(d.title)}</b>${d.partner ? `<div style="font-size:12px;color:var(--muted)">بالشراكة مع: ${esc(d.partner)}</div>` : ''}${d.note ? `<div style="font-size:12px;color:var(--muted)">${esc(d.note)}</div>` : ''}</td>
       <td style="font-size:12px">${esc(K[0])}</td><td style="text-align:center">${d.n ? `<b>${d.n}</b>` : '—'}</td><td>${flags}</td>
       <td style="white-space:nowrap" class="noprint"><button class="btn sm sec" data-ne="${r.id}">تعديل</button> <button class="btn sm ghost" data-nx="${r.id}" style="color:#A33">🗑</button></td></tr>`; };
@@ -126,7 +127,7 @@ function naIndNote(n, L, st) {
     2: `نُفّذ ${st.acts} نشاطاً وبرنامجاً موثقاً، منها: الأيام العالمية والمناسبات (${c('day')})، والهوية الوطنية (${c('nat')})، والقيم التربوية والإذاعة (${c('values') + c('club')})، والفعاليات المدرسية (${c('event') + c('vol')}).`,
     3: st.trips ? `نُفّذت ${st.trips} رحلة مدرسية، اكتملت استماراتها (الموافقات والتعهد والكشف) في ${st.tripsOk} منها.` : 'لم تُسجَّل رحلات بعد.',
     4: `تتوفر ${c('media')} شواهد لقنوات النشر، و${st.pub} نشاطاً موسوماً بأنه منشور.`,
-    5: 'يُستكمل بربط كشوف خروج الطالبات للأنشطة والرحلات بسجل الحصص التعويضية لدى الأقسام.',
+    5: (() => { const E = L.filter(r => r.d.k === 'exitl'), C = E.filter(r => r.d.comp); return E.length ? `وُثّق خروج الطالبات من الحصص في ${E.length} مناسبة (${E.reduce((a, r) => a + (+r.d.n || 0), 0)} طالبة على الأقل) بموافقة النائبة الإدارية، وتم تعويض الطالبات في ${C.length} منها؛ ويُستكمل بربط كل خروج بحصة تعويضية لدى القسم المعني.` : 'يُستكمل بربط كشوف خروج الطالبات للأنشطة والرحلات بسجل الحصص التعويضية لدى الأقسام.'; })(),
     6: `يتضمن السجل ${st.partners} جهة شريكة و${st.cert} شهادة شكر، ويُستكمل بمحاضر الاجتماعات وتسمية البديلة.`,
   };
   return `<div class="na-note">${t[n]}</div>`;
@@ -148,7 +149,7 @@ function naForm(B, rec) {
       <div class="fld"><label>عدد المتطوعات (لتحدي التطوع)</label><input type="number" min="0" data-n="vn" value="${esc(d.vn || '')}"></div>
       <div class="fld"><label>ساعات التطوع</label><input type="number" min="0" data-n="vh" value="${esc(d.vh || '')}"></div>
       <div class="fld" style="grid-column:1/-1"><label>الشواهد المتوفرة</label><div class="na-ck">
-        ${[['rep', 'تقرير النشاط'], ['cert', 'شهادة شكر وتقدير'], ['pub', 'نُشر في قنوات المدرسة'], ['f_consent', 'موافقات أولياء الأمور (للرحلات)'], ['f_pledge', 'تعهد المشرفة (للرحلات)'], ['f_list', 'كشف الطالبات (للرحلات)'], ['exit', 'كشف خروج الطالبات من الحصص']]
+        ${[['rep', 'تقرير النشاط'], ['cert', 'شهادة شكر وتقدير'], ['pub', 'نُشر في قنوات المدرسة'], ['f_consent', 'موافقات أولياء الأمور (للرحلات)'], ['f_pledge', 'تعهد المشرفة (للرحلات)'], ['f_list', 'كشف الطالبات (للرحلات)'], ['exit', 'كشف خروج الطالبات من الحصص'], ['comp', 'تم تعويض الطالبات عن الحصص الفائتة']]
           .map(([k, t]) => `<label><input type="checkbox" data-c="${k}" ${d[k] ? 'checked' : ''}> ${t}</label>`).join('')}</div></div>
       <div class="fld" style="grid-column:1/-1"><label>ملاحظة / أثر النشاط</label><input data-n="note" value="${esc(d.note || '')}"></div>
       <div class="actions" style="grid-column:1/-1"><button class="btn" id="naS">حفظ</button>${rec ? '<button class="btn sec" type="button" id="naC">إلغاء</button>' : ''}</div>
