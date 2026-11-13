@@ -79,7 +79,7 @@ function N_act(el) {
   <div class="na-hero"><div><div class="na-k">ممارسة متميزة</div><h1>ملف البرامج والأنشطة اللامنهجية</h1><div class="na-n">أ. ${esc(naName())} · أخصائية الأنشطة المدرسية · العام الأكاديمي 2026–2027</div></div>
     <div class="na-v">﴿وَتَعَاوَنُوا عَلَى الْبِرِّ وَالتَّقْوَىٰ﴾<small>المائدة 2</small></div></div>
   <div class="grid g4 na-kpi">
-    ${[[st.acts, 'نشاط وبرنامج موثق', '#7A1F3D'], [st.stu, 'مستفيدة مسجلة', '#0A6F6B'], [st.partners, 'جهة شريكة', '#946410'], [st.ach, `إنجازاً (${st.intl} دولية)`, '#1F5F99'],
+    ${[[st.acts, 'نشاط وبرنامج موثق', '#7A1F3D'], [st.stu, 'مشاركة طالبات مسجلة', '#0A6F6B'], [st.partners, 'جهة شريكة', '#946410'], [st.ach, `إنجازاً (${st.intl} دولية)`, '#1F5F99'],
        [st.trips, 'رحلة مدرسية', '#0A6F6B'], [st.par, 'شراكة مع أولياء الأمور', '#946410'], [st.cert, 'شهادة شكر وتقدير', '#7A1F3D'], [st.vh, `ساعة تطوع (${st.vol} متطوعة)`, '#17734A']]
       .map(([n, t, c]) => `<div class="card na-t" style="border-top:4px solid ${c}"><b style="color:${c}">${n}</b><span>${t}</span></div>`).join('')}
   </div>
