@@ -320,3 +320,9 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 @media print{.na-det{break-inside:avoid}.na-det:not([open]) summary~*{display:block}}
 
 .prq-guide{border-inline-start:4px solid #B8903A;line-height:1.9}.prq-guide p{margin:0 0 6px;text-align:justify}.prq-g1{font-weight:700;color:#5A1530}.prq-g2{color:#4A3A40;font-size:14px}.prq-steps{margin:6px 0 0;padding-inline-start:22px;color:#6B5A60;font-size:13.5px}.prq-steps li{margin:2px 0}
+/* لوحة استهلاك ساعات الاستئذان */
+.pd-row{display:flex;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)}.pd-n{width:250px;display:flex;flex-direction:column}.pd-n small{color:var(--muted);font-size:11.5px}.pd-p{width:56px;text-align:left}
+.pd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:12px}.pd-card{margin:0;break-inside:avoid}
+.pd-ts{display:grid;grid-template-columns:repeat(auto-fill,minmax(145px,1fr));gap:8px;margin-top:10px}.pd-t{display:flex;gap:6px;align-items:center}
+.pd-t b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:95px}.pd-t small{color:var(--muted);font-size:11px}
+@media(max-width:700px){.pd-n{width:150px}}

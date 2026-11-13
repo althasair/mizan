@@ -228,9 +228,7 @@ function A_prq(el) {
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
-  ${lv >= 2 ? `<div class="card"><div class="row"><h2 style="margin:0">تقرير الساعات الشهري</h2><span class="sp"></span><select id="pMo">${months.map(m => `<option value="${m}" ${m === mo ? 'selected' : ''}>${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}</option>`).join('')}</select><button class="btn sec noprint" onclick="window.print()">طباعة</button></div>
-    <div class="tbl" style="margin-top:8px"><table class="t"><tr><th>المعلمة</th><th>القسم</th><th>عدد الأذونات</th><th>الشخصي (من ${PRQ_LIMIT})</th><th>إذن عمل</th></tr>
-    ${Object.entries(byT).sort((a, b) => b[1].p - a[1].p).map(([t, o]) => `<tr><td><b>${esc(t)}</b></td><td>${esc(o.dept)}</td><td>${o.n}</td><td><b style="color:${o.p > PRQ_LIMIT ? '#A3202F' : o.p >= 8 ? '#B8521A' : 'inherit'}">${prqNum(o.p)}</b></td><td>${prqNum(o.w)}</td></tr>`).join('') || '<tr><td colspan="5"><div class="empty">لا أذونات معتمدة في هذا الشهر</div></td></tr>'}</table></div></div>` : ''}`;
+  ${lv >= 2 ? prqDash(mo, months) : ''}`;
   const curPh = () => ($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0];
   $$('input[name="pph"]', el).forEach(i => i.onchange = () => { S.prqPh = i.value; if ($('#pfix').checked) prqPhSet(i.value); show(); });
   if ($('#pNot')) $('#pNot').onclick = () => { try { Notification.requestPermission().then(p => { toast(p === 'granted' ? 'تم تفعيل الإشعارات على هذا الجهاز ✓' : 'لم يُسمح بالإشعارات من المتصفح', p !== 'granted'); if (p === 'granted') { prqBell(); show(); } }); } catch (e) { toast('هذا المتصفح لا يدعم الإشعارات', 1); } };
@@ -288,4 +286,44 @@ function prqAlert() {
   document.body.appendChild(m);
   $('#paLater', m).onclick = () => m.remove();
   $('#paGo', m).onclick = () => { m.remove(); S.view = 'a_prq'; S.edit = null; refresh(); };
+}
+
+/* ================================================================== لوحة استهلاك الساعات حسب الأقسام (نسبة وتناسب مع عدد المعلمات) */
+function prqRing(rem, sz) {
+  const p = Math.max(0, Math.min(1, rem / PRQ_LIMIT)), c = rem >= 7 ? '#17734A' : rem >= 4 ? '#946410' : rem > 0 ? '#B8521A' : '#A3202F';
+  return `<svg width="${sz}" height="${sz}" viewBox="0 0 36 36" aria-hidden="true"><circle cx="18" cy="18" r="15.9" fill="none" stroke="#ECEFF1" stroke-width="3.6"/>
+    <circle cx="18" cy="18" r="15.9" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="${(p * 100).toFixed(1)} 100" pathLength="100" transform="rotate(-90 18 18)"/>
+    <text x="18" y="21.5" text-anchor="middle" font-size="10" font-weight="700" fill="${c}">${prqNum(rem)}</text></svg>`;
+}
+function prqDash(mo, months) {
+  const MN = MONTHS[+mo.slice(5, 7) - 1];
+  const D = {};
+  (S.staff || []).filter(s => s.dept && s.name).forEach(s => { (D[s.dept] = D[s.dept] || {}); D[s.dept][s.name] = 1; });
+  S.records.filter(r => r.item === 'PRQ' && r.d && r.dept && String(r.date).slice(0, 7) === mo).forEach(r => { (D[r.dept] = D[r.dept] || {}); D[r.dept][r.d.t] = 1; });
+  const work = (n) => Math.round(S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === n && r.d.kind === 'إذن عمل' && prqCounted(r.d) && String(r.date).slice(0, 7) === mo).reduce((a, r) => a + (+r.d.h || 0), 0) * 100) / 100;
+  const nReq = S.records.filter(r => r.item === 'PRQ' && r.d && prqCounted(r.d) && String(r.date).slice(0, 7) === mo).length;
+  const deps = Object.keys(D).map(dn => {
+    const T = Object.keys(D[dn]).map(n => ({ n, u: prqUsed(n, mo), w: work(n) })).sort((a, b) => b.u - a.u || a.n.localeCompare(b.n, 'ar'));
+    const used = Math.round(T.reduce((a, t) => a + t.u, 0) * 100) / 100, cap = T.length * PRQ_LIMIT;
+    return { dn, T, used, cap, rate: cap ? used / cap : 0, avg: T.length ? used / T.length : 0, who: T.filter(t => t.u > 0).length };
+  }).filter(d => d.T.length).sort((a, b) => b.rate - a.rate || a.dn.localeCompare(b.dn, 'ar'));
+  const tot = deps.reduce((a, d) => a + d.used, 0), cap = deps.reduce((a, d) => a + d.cap, 0), who = deps.reduce((a, d) => a + d.who, 0), staffN = deps.reduce((a, d) => a + d.T.length, 0);
+  const used = deps.filter(d => d.used > 0), most = used[0], least = deps[deps.length - 1];
+  const pct = x => Math.round(x * 1000) / 10 + '%';
+  const card = (t, v, sub, c) => `<div class="card na-t" style="border-top:4px solid ${c}"><b style="color:${c}">${v}</b><span>${t}</span>${sub ? `<small style="color:var(--muted);font-size:11.5px">${sub}</small>` : ''}</div>`;
+  return `<div class="card"><div class="row"><h2 style="margin:0">لوحة استهلاك ساعات الاستئذان — ${MN} ${mo.slice(0, 4)}</h2><span class="sp"></span>
+      <select id="pMo">${months.map(m => `<option value="${m}" ${m === mo ? 'selected' : ''}>${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}</option>`).join('')}</select><button class="btn sec noprint" onclick="window.print()">طباعة</button></div>
+    <div class="note" style="margin-top:6px">تُقارن الأقسام بنسبة الاستهلاك إلى رصيدها الكامل (عدد معلمات القسم × ${PRQ_LIMIT} ساعات)، لا بعدد الساعات، حتى لا يظلم القسمَ الكبيرَ كثرةُ معلماته. والدائرة لكل معلمة تمثل المتبقي من رصيدها الشهري: كاملة خضراء عند عدم الاستئذان، وتنقص كلما استُهلك منها.</div></div>
+  <div class="grid g4 na-kpi">
+    ${card('ساعة شخصية مستهلكة', prqNum(tot), `من رصيد ${cap} ساعة (${pct(cap ? tot / cap : 0)})`, '#7A1F3D')}
+    ${card('إذناً محتسباً', nReq, `${who} معلمة من ${staffN} استأذنّ`, '#0A6F6B')}
+    ${card('الأكثر استئذاناً (بالنسبة)', most ? esc(most.dn) : '—', most ? `${pct(most.rate)} من رصيد القسم · ${prqNum(Math.round(most.avg * 10) / 10)} ساعة للمعلمة` : 'لا استئذان', '#A3202F')}
+    ${card('الأقل استئذاناً (بالنسبة)', least ? esc(least.dn) : '—', least ? (least.used ? `${pct(least.rate)} من رصيد القسم` : 'لم تستأذن أي معلمة 🌿') : '', '#17734A')}
+  </div>
+  <div class="card"><h2>ترتيب الأقسام حسب نسبة الاستهلاك</h2>
+    ${deps.map(d => `<div class="pd-row"><div class="pd-n"><b>${esc(d.dn)}</b><small>${d.T.length == 1 ? "معلمة واحدة" : d.T.length == 2 ? "معلمتان" : d.T.length + " معلمات"} · ${prqNum(d.used)} من ${d.cap} ساعة</small></div>
+      <div class="na-bar" style="flex:1;margin:0 10px"><i style="width:${Math.min(100, d.rate * 100)}%;background:${d.rate >= .5 ? '#A3202F' : d.rate >= .25 ? '#C99A2E' : '#17734A'}"></i></div><b class="pd-p">${pct(d.rate)}</b></div>`).join('')}
+  </div>
+  <div class="pd-grid">${deps.map(d => `<div class="card pd-card"><div class="row"><h3 style="margin:0">${esc(d.dn)}</h3><span class="sp"></span><span class="chip" style="font-size:11.5px">${pct(d.rate)} · ${prqNum(d.used)}/${d.cap} س</span></div>
+      <div class="pd-ts">${d.T.map(t => { const rem = Math.max(0, PRQ_LIMIT - t.u); return `<div class="pd-t">${prqRing(rem, 46)}<div><b>${esc(t.n)}</b><small>${t.u ? (rem ? `متبقي ${prqNum(rem)} ${rem === 1 ? 'ساعة' : rem === 2 ? 'ساعتان' : 'ساعات'}` : 'استُنفد الرصيد') : 'الرصيد كامل'}${t.w ? ` · إذن عمل ${prqNum(t.w)} س` : ''}</small></div></div>`; }).join('')}</div></div>`).join('')}</div>`;
 }
