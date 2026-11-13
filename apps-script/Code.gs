@@ -558,7 +558,7 @@ function sabPA_() {
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 600);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 120);
   return out;
 }
 
@@ -679,6 +679,7 @@ function route_(req) {
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'myStudents': return { students: myStudents_(u) };
+    case 'sabRefresh': CacheService.getScriptCache().remove('sabPA4'); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };

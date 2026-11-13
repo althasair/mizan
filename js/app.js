@@ -123,12 +123,13 @@ function renderApp() {
       <div class="who"><b>${esc(S.user.name)}</b>${isAdmin() ? (typeof isPrincipal === 'function' && isPrincipal() ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية') : isTeacher() ? 'معلمة ' + esc(S.user.dept.join(' و')) : 'منسقة ' + esc(S.user.dept.join(' و'))}${API.live() ? '' : ' · <span style="color:var(--tiffany)">معاينة</span>'}<br><button id="out">تسجيل الخروج</button></div>
     </aside>
     <main class="main">
-      <div class="topbar"><button class="menu-btn" id="menu">☰</button><h1 id="ttl"></h1>${deptSel}
+      <div class="topbar"><button class="menu-btn" id="menu">☰</button><h1 id="ttl"></h1>${deptSel}<button class="btn sm" id="mzRef" title="جلب آخر ما سُجّل هنا وفي سبع سنابل" style="margin-inline-start:auto;white-space:nowrap">🔄 تحديث ومزامنة</button>
         ${isTeacher() ? '' : `<select id="perSel">${S.periods.map(p => `<option ${p.name === S.period ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>`}</div>
       <div class="content" id="view"></div>
     </main>
   </div>`;
   $('#out').onclick = logout;
+  $('#mzRef').onclick = async () => { const b = $('#mzRef'); b.disabled = true; b.textContent = '⏳ جارٍ التحديث…'; try { await call('sabRefresh').catch(() => {}); await boot(); toast('تم التحديث ✓ وظهر آخر ما سُجّل في الميزان وسبع سنابل'); } catch (e) { toast(e.message || 'تعذّر التحديث'); b.disabled = false; b.textContent = '🔄 تحديث ومزامنة'; } };
   $('#menu').onclick = () => $('#side').classList.toggle('open');
   if ($('#perSel')) $('#perSel').onchange = e => { S.period = e.target.value; refresh(); };
   if ($('#deptSel')) $('#deptSel').onchange = e => { S.dept = e.target.value; refresh(); };
