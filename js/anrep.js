@@ -155,8 +155,6 @@ async function arPrint(type, from, to, dept, withTable) {
     <h2>التحليل</h2><div class="an">${arAnalysis(c, type).map(p => `<p>${esc(p)}</p>`).join('')}</div>
     ${N ? `<h2>الرسوم البيانية</h2>${dept === AR_ALL ? arBars(c.byDept, 'التوزيع حسب القسم') : arBars(c.byT, 'التوزيع حسب المعلمة')}${arBars(c.byCat, 'التوزيع حسب ' + T.catH, 8)}${arBars(c.bySub.filter(([k]) => k), 'التوزيع حسب ' + T.sub2, 8)}${arCols(c.byM, 'التوزيع حسب الشهر')}` : ''}
     ${withTable && N ? `<h2>السجل التفصيلي (${N})</h2><table class="dt"><tr><th>م</th><th>التاريخ</th>${dept === AR_ALL ? '<th>القسم</th>' : ''}<th>المعلمة</th><th>${esc(T.catH)}</th><th>التفاصيل</th></tr>${c.L.map((x, i) => `<tr><td style="text-align:center">${i + 1}</td><td style="white-space:nowrap">${arDmy(x.date)}</td>${dept === AR_ALL ? `<td>${esc(x.dept)}</td>` : ''}<td>${esc(x.t)}</td><td>${esc(x.cat)}</td><td class="j">${esc(x.det || '')}${x.stu.length ? ` <small>(${x.stu.length} طالبة)</small>` : ''}</td></tr>`).join('')}</table>` : ''}
-    <div class="q">«عودًا حميدًا طيبًا مباركًا، عنوانه الإتقان وغايته رضا الرحمن»</div>
-    <div class="qn"><span>نائب المديرة للشؤون الأكاديمية</span><span>أ. آسيا الذبياني</span></div>
     <table class="s3"><tr><td>النائبة الإدارية<br>أ. وداد الكربي</td><td>نائب المديرة للشؤون الأكاديمية<br>أ. آسيا الذبياني${sig ? `<img src="${sig}" alt="">` : ''}</td><td>مديرة المدرسة<br>أ. شيخة الرميحي</td></tr></table>`;
   const html = docHTML(inner, imgs, 'تقرير تحليلي — ' + T.t).replace('</style>', AR_CSS + '</style>');
   const w = window.open('', '_blank'); if (!w) { toast('اسمحي بالنوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة', 1); return; }
