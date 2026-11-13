@@ -50,7 +50,8 @@ function roleOf_(r) {
   if (k === 'سكرتارية') return 'sec';                          // السكرتارية: حصر الاستئذانات في «إذنٌ مُيسَّر» للاطلاع فقط                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
   return k === 'معلمة' ? 'teacher' : 'coord';
 }
-const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS'];      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
+const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'XCMP'];   // XCMP: توثيق تعويض الطالبات عن الحصص الفائتة بسبب الخروج للأنشطة
+      // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
   const t = rows_(SH.users);
@@ -161,7 +162,7 @@ function listRecords_(u) {
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
     d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
   return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(indibat_())
-    .filter(x => u.role === 'admin' || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
+    .filter(x => u.role === 'admin' || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
 }
 function repObj_(r) {
@@ -180,7 +181,7 @@ function saveRecord_(u, rec) {
   if (isPrincipal_(u) && rec.item !== 'PRV') fail_('حسابكِ للاطلاع، ويسجّل حضوركِ الصفي فقط');
   if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
   if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
-  const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
+  const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS', 'XCMP'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
   if (u.role === 'teacher' || coordOwn) {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];

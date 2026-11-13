@@ -48,7 +48,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${xmMine().length ? it('t_xcmp', 'تعويض طالباتي عن الخروج', 'cal', xmPend()) : ''}${it('t_pa', 'التواصل مع أولياء الأمور', 'user', n('TPA'))}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
 }
 
 function T_home(el) {
@@ -56,6 +56,7 @@ function T_home(el) {
   const hosted = S.records.filter(r => r.item === 'TPV' && r.d.v === S.user.name && inCur(r));
   const att = S.records.filter(r => r.item === 'TWS' && r.d.by === S.user.name && r.d.t !== S.user.name && inCur(r));
   el.innerHTML = `
+  ${xmPend() ? `<div class="card xm-alert" data-go2="t_xcmp"><b>⏱️ لديكِ ${xmPend()} ${xmPend() > 2 ? 'حصص فاتت' : 'حصة فاتت'} طالباتكِ بسبب الخروج لنشاط مدرسي</b><span>بعد تعويضهن اضغطي هنا ووثّقي التعويض بضغطة واحدة</span></div>` : ''}
   <div class="hero"><div class="pat pattern"></div><h2>أهلاً أ. ${esc(S.user.name)}</h2><p>${esc(p.name)} (من ${dmy(p.from)} إلى ${dmy(p.to)}) — كل ما تسجّلينه يُحفظ في هذه الفترة، ويظهر في تقرير قسمكِ تلقائياً.</p></div>
   <div class="grid g4">
     ${kpi('زياراتي التبادلية', mine('TPV').filter(inCur).length, 'المطلوب زيارة إلى زيارتين شهرياً', 'var(--maroon)')}
@@ -65,6 +66,7 @@ function T_home(el) {
   </div>
   <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_prq', 'إذنٌ مُيسَّر', 'اطلبي إذنكِ في دقيقة: الوقت والسبب فقط، ويصلكِ الاعتماد برسالة.'], ['t_pa', 'التواصل مع أولياء الأمور', 'يُسجَّل في سبع سنابل ويصل هنا تلقائياً — وهنا سجلّكِ كاملاً.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_tas', 'التكليفات والأعباء الوظيفية', 'ما كُلّفتِ به من ملفات ومهام وأعباء: اختاري من القائمة أو اكتبي بعباراتكِ.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
+  $$('[data-go2]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go2; refresh(); });
 }
 
 /* ربط كل بند بمجال تقييم أداء المعلمة: n رقم المعيار (يُضاف من نموذج التقييم المعتمد)، d المجال */

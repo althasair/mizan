@@ -383,3 +383,10 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .na-lk summary{font-size:13px;color:var(--muted)}.na-lkl{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .na-lkl span{font-size:12px;background:#F6F1E8;border-radius:10px;padding:3px 9px}.na-lkl small{color:var(--muted)}
 @media print{.na-pop,.na-mo i,.na-ring circle+circle{animation:none}}
+/* تعويض الطالبات عن الخروج */
+.xm-c{border-inline-start:4px solid #C99A2E}.xm-c.ok{border-inline-start-color:#17734A;background:#FAFDF9}
+.xm-h{display:flex;gap:10px;justify-content:space-between;align-items:flex-start;flex-wrap:wrap}.xm-h b{display:block}.xm-h small{color:var(--muted);font-size:12.5px}
+.xm-st{font-size:12px;border-radius:12px;padding:3px 10px;background:#E8F5EC;color:#17734A;white-space:nowrap}.xm-st.w{background:#FFF3D6;color:#946410}
+.xm-f{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:8px 12px;margin-top:10px;align-items:end}.xm-f .actions{margin:0}
+.xm-alert{cursor:pointer;display:flex;flex-direction:column;gap:2px;border-inline-start:5px solid #C99A2E;background:linear-gradient(90deg,#FFF8E6,#fff)}.xm-alert span{font-size:13px;color:var(--muted)}
+.xm-f[hidden]{display:none}

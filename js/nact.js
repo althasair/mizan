@@ -34,6 +34,7 @@ const NA_IND = [
   { n: 5, t: 'عدم الإخلال بساعات التدريس عند تنفيذ أنشطة الخطة', ck: [['exit', 'كشوف خروج الطالبات لكل نشاط ورحلة'], ['comp', 'حصر الحصص التعويضية للطالبات']] },
   { n: 6, t: 'الاستمرارية المهنية في تنفيذ البرامج والأنشطة', ck: [['meet', 'محاضر اجتماعات ومراسلات المتابعة'], ['circ', 'الاستجابة لتعاميم قسم البرامج والأنشطة'], ['sub', 'تسمية بديلة أو مكلفة معتمدة عند الحاجة']] },
 ];
+const naExComp = r => { if (r.d.comp) return true; const o = typeof xmOfExit === 'function' ? xmOfExit(r) : null; return !!(o && o.n && o.done === o.n); };
 const naRecs = () => S.records.filter(r => r.item === 'NAC' && r.d).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
 const naCk = () => S.records.find(r => r.item === 'NCK') || null;
 const NA_MO = { '08': 'أغسطس', '09': 'سبتمبر', '10': 'أكتوبر', '11': 'نوفمبر', '12': 'ديسمبر', '01': 'يناير', '02': 'فبراير', '03': 'مارس', '04': 'أبريل', '05': 'مايو', '06': 'يونيو' };
@@ -56,7 +57,7 @@ function naIndState(L) {
   const ck = (naCk() || { d: {} }).d.ck || {};
   const st = naStats(L);
   // ما يُستنتج تلقائياً من السجل
-  const auto = { plan_ok: L.some(r => r.d.k === 'plan'), rep_ph: L.filter(r => r.d.rep).length >= 5, safe_trip: st.trips > 0 && st.tripsOk === st.trips, f_trip: st.trips > 0 && st.tripsOk === st.trips, pub_ch: L.filter(r => r.d.k === 'media').length >= 2, f_rep: L.filter(r => r.d.rep).length > 0, exit: L.some(r => r.d.k === 'exitl'), comp: L.some(r => r.d.k === 'exitl') && L.filter(r => r.d.k === 'exitl').every(r => r.d.comp) };
+  const auto = { plan_ok: L.some(r => r.d.k === 'plan'), rep_ph: L.filter(r => r.d.rep).length >= 5, safe_trip: st.trips > 0 && st.tripsOk === st.trips, f_trip: st.trips > 0 && st.tripsOk === st.trips, pub_ch: L.filter(r => r.d.k === 'media').length >= 2, f_rep: L.filter(r => r.d.rep).length > 0, exit: L.some(r => r.d.k === 'exitl'), comp: L.some(r => r.d.k === 'exitl') && L.filter(r => r.d.k === 'exitl').every(naExComp) };
   return NA_IND.map(I => { const items = I.ck.map(([k, t]) => ({ k, t, on: !!(ck[k] || auto[k]), auto: !!auto[k] && !ck[k] })); const done = items.filter(x => x.on).length;
     return Object.assign({}, I, { items, done, pct: Math.round(done / items.length * 100) }); });
 }
@@ -66,13 +67,13 @@ function N_act(el) {
   const L = naRecs(), st = naStats(L), ind = naIndState(L);
   const tot = Math.round(ind.reduce((a, x) => a + x.pct, 0) / ind.length);
   const tab = S.naTab || 'home'; const tour = !!S.naTour;
-  const LV = tour ? L.filter(r => r.d.k !== 'exitl' || r.d.comp) : L;
+  const LV = tour ? L.filter(r => r.d.k !== 'exitl' || naExComp(r)) : L;
   const mo = {}; LV.forEach(r => { const m = String(r.date).slice(5, 7); (mo[m] = mo[m] || []).push(r); });
   const grp = {}; LV.forEach(r => { const g = (NA_K[r.d.k] || ['', 'أخرى'])[1]; (grp[g] = grp[g] || {}); (grp[g][r.d.k] = grp[g][r.d.k] || []).push(r); });
   const chip = (t, c) => `<span class="chip" style="font-size:11px;${c ? `background:${c}1A;color:${c}` : ''}">${t}</span>`;
   const row = r => { const d = r.d, K = NA_K[d.k] || ['—'];
     const T = !!S.naTour; const flags = [d.rep ? chip('تقرير ✓', '#17734A') : T ? '' : chip('بلا تقرير', '#A3202F'), d.cert ? chip('شهادة شكر', '#946410') : '', d.pub ? chip('منشور', '#1F5F99') : '',
-      d.k === 'exitl' ? (d.comp ? chip('✓ عُوّضت الطالبات', '#17734A') : T ? '' : chip('✗ لم يُوثَّق التعويض', '#A3202F')) : '', d.k === 'trip' ? [['f_consent', 'موافقات'], ['f_pledge', 'تعهد مشرفة'], ['f_list', 'كشف الطالبات']].map(([k, t]) => d[k] ? chip('✓ ' + t, '#17734A') : T ? '' : chip('✗ ' + t, '#A3202F')).join(' ') : ''].join(' ');
+      d.k === 'exitl' ? (() => { const o = typeof xmOfExit === 'function' ? xmOfExit(r) : null; if (naExComp(r)) return chip('✓ عُوّضت الطالبات', '#17734A') + (o ? ' ' + chip(`${o.n} حصة`, '#17734A') : ''); if (T) return ''; return o && o.done ? chip(`عُوّض ${o.done} من ${o.n} حصة`, '#946410') : chip(o ? `${o.n} حصة بانتظار التعويض` : '✗ لم يُوثَّق التعويض', '#A3202F'); })() : '', d.k === 'trip' ? [['f_consent', 'موافقات'], ['f_pledge', 'تعهد مشرفة'], ['f_list', 'كشف الطالبات']].map(([k, t]) => d[k] ? chip('✓ ' + t, '#17734A') : T ? '' : chip('✗ ' + t, '#A3202F')).join(' ') : ''].join(' ');
     return `<tr><td style="white-space:nowrap">${dmy(r.date)}</td><td><b>${esc(d.title)}</b>${d.partner ? `<div style="font-size:12px;color:var(--muted)">بالشراكة مع: ${esc(d.partner)}</div>` : ''}${d.note ? `<div style="font-size:12px;color:var(--muted)">${esc(d.note)}</div>` : ''}</td>
       <td style="font-size:12px">${esc(K[0])}</td><td style="text-align:center">${d.n ? `<b>${d.n}</b>` : '—'}</td><td>${flags}</td>
       <td style="white-space:nowrap" class="noprint"><button class="btn sm sec" data-ne="${r.id}">تعديل</button> <button class="btn sm ghost" data-nx="${r.id}" style="color:#A33">🗑</button></td></tr>`; };
@@ -127,7 +128,7 @@ function naIndNote(n, L, st) {
     2: `نُفّذ ${st.acts} نشاطاً وبرنامجاً موثقاً، منها: الأيام العالمية والمناسبات (${c('day')})، والهوية الوطنية (${c('nat')})، والقيم التربوية والإذاعة (${c('values') + c('club')})، والفعاليات المدرسية (${c('event') + c('vol')}).`,
     3: st.trips ? `نُفّذت ${st.trips} رحلة مدرسية، اكتملت استماراتها (الموافقات والتعهد والكشف) في ${st.tripsOk} منها.` : 'لم تُسجَّل رحلات بعد.',
     4: `تتوفر ${c('media')} شواهد لقنوات النشر، و${st.pub} نشاطاً موسوماً بأنه منشور.`,
-    5: (() => { const E = L.filter(r => r.d.k === 'exitl'), C = E.filter(r => r.d.comp); return E.length ? `وُثّق خروج الطالبات من الحصص في ${E.length} مناسبة (${E.reduce((a, r) => a + (+r.d.n || 0), 0)} طالبة على الأقل) بموافقة النائبة الإدارية، وتم تعويض الطالبات في ${C.length} منها؛ ويُستكمل بربط كل خروج بحصة تعويضية لدى القسم المعني.` : 'يُستكمل بربط كشوف خروج الطالبات للأنشطة والرحلات بسجل الحصص التعويضية لدى الأقسام.'; })(),
+    5: (() => { const E = L.filter(r => r.d.k === 'exitl'), C = E.filter(naExComp); return E.length ? `وُثّق خروج الطالبات من الحصص في ${E.length} مناسبة (${E.reduce((a, r) => a + (+r.d.n || 0), 0)} طالبة على الأقل) بموافقة النائبة الإدارية، وتم تعويض الطالبات في ${C.length} منها؛ ويُستكمل بربط كل خروج بحصة تعويضية لدى القسم المعني.` : 'يُستكمل بربط كشوف خروج الطالبات للأنشطة والرحلات بسجل الحصص التعويضية لدى الأقسام.'; })(),
     6: `يتضمن السجل ${st.partners} جهة شريكة و${st.cert} شهادة شكر، ويُستكمل بمحاضر الاجتماعات وتسمية البديلة.`,
   };
   return `<div class="na-note">${t[n]}</div>`;
@@ -195,7 +196,7 @@ function naBadges(L, st) {
     ['🌱', 'رائدة التطوع', c('vol'), 3, 'مبادرات تطوعية'],
     ['📣', 'صوت الشيماء', c('media'), 3, 'قنوات نشر موثقة'],
     ['📑', 'موثِّقة متقنة', rep, Math.max(10, Math.ceil(L.length * .9)), 'نشاطًا بتقرير موثق'],
-    ['⏱️', 'حارسة الوقت التعليمي', E.filter(r => r.d.comp).length, Math.max(1, E.length), 'خروجًا عُوّضت فيه الطالبات'],
+    ['⏱️', 'حارسة الوقت التعليمي', E.filter(naExComp).length, Math.max(1, E.length), 'خروجًا عُوّضت فيه الطالبات'],
     ['💯', 'المئوية', L.length, 100, 'سجلًا في الملف'],
   ].map(([e, t, v, goal, u]) => ({ e, t, v, goal, u, on: v >= goal }));
 }
@@ -208,7 +209,7 @@ function naNeeds(L, ind) {
   if (noRep.length) N.push(['📝', `تقرير النشاط لـ${noRep.length} ${noRep.length > 10 ? 'نشاطًا' : 'أنشطة'}`, noRep.slice(0, 4).map(r => r.d.title).join('، ') + (noRep.length > 4 ? '…' : '')]);
   const tr = L.filter(r => r.d.k === 'trip' && !(r.d.f_consent && r.d.f_pledge && r.d.f_list));
   if (tr.length) N.push(['🚌', `استمارات ${tr.length} ${tr.length > 2 ? 'رحلات' : 'رحلة'}`, 'موافقات أولياء الأمور، وتعهد المشرفة، وكشف الطالبات']);
-  const ex = L.filter(r => r.d.k === 'exitl' && !r.d.comp);
+  const ex = L.filter(r => r.d.k === 'exitl' && !naExComp(r));
   if (ex.length) N.push(['⏱️', `تعويض الطالبات في ${ex.length} ${ex.length > 2 ? 'مناسبات' : 'مناسبة'} خروج`, 'التنسيق مع الأقسام لتوثيق الحصص التعويضية']);
   ind.forEach(I => { const M = I.items.filter(x => !x.on); if (M.length) N.push(['☑️', `المؤشر ${I.n}: ${I.t}`, M.map(x => x.t).join('، ')]); });
   return N;
