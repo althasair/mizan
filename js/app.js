@@ -38,7 +38,10 @@ async function boot() {
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
   S.dept = S.dept || (isAdmin() ? null : S.user.dept[0]);
-  S.view = S.view || 'home';
+  // أخصائية الأنشطة ليست منسقة قسم: تُفصل عن لوحات المنسقات وتفتح على ملفها مباشرة
+  S.actUser = (S.coords || []).find(c => (c.dept || []).includes('البرامج والأنشطة')) || null;
+  S.coords = (S.coords || []).filter(c => !(c.dept || []).includes('البرامج والأنشطة'));
+  S.view = S.view || (typeof isAct === 'function' && isAct() ? 'n_act' : 'home');
   renderApp();
   if (/[?&#]prq=/.test(location.href) && typeof prqLvl === 'function' && prqLvl()) { S.view = 'a_prq'; refresh(); }
   setTimeout(() => { try { prqCelebrate(); } catch (e) {} try { prqAlert(); } catch (e) {} }, 600);
@@ -89,10 +92,12 @@ const ICON = {
 function navHTML() {
   const cnt = k => S.records.filter(r => r.item === k && r.dept === S.dept && inP(r.date, P())).length;
   if (isTeacher()) return T_navHTML();
+  if (typeof isAct === 'function' && isAct()) { const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
+    return `<div class="grp">ملفي</div>${it('n_act', 'ملف البرامج والأنشطة', 'act')}<div class="grp">إذنٌ مُيسَّر</div>${it('t_prq', 'طلباتي', 'prq')}`; }
   if (isAdmin()) {
     const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
     const PR = typeof isPrincipal === 'function' && isPrincipal();
-    return `<div class="grp">إذنٌ مُيسَّر</div><a class="it ${S.view === 'a_prq' ? 'on' : ''}" data-v="a_prq">${ICON.prq}<span>إذنٌ مُيسَّر — الاعتماد</span>${prqPendN() ? `<span class="n">${prqPendN()}</span>` : ''}</a><a class="it ${S.view === 'c_tcert' ? 'on' : ''}" data-v="c_tcert">${ICON.cert}<span>شهادات تعزيز المعلمات</span></a><div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
+    return `<div class="grp">إذنٌ مُيسَّر</div><a class="it ${S.view === 'a_prq' ? 'on' : ''}" data-v="a_prq">${ICON.prq}<span>إذنٌ مُيسَّر — الاعتماد</span>${prqPendN() ? `<span class="n">${prqPendN()}</span>` : ''}</a><a class="it ${S.view === 'c_tcert' ? 'on' : ''}" data-v="c_tcert">${ICON.cert}<span>شهادات تعزيز المعلمات</span></a><div class="grp">البرامج والأنشطة</div>${it('n_act', 'ملف أخصائية الأنشطة', 'act')}<div class="grp">لوحة القيادة</div>${it('a_dash', 'اللوحة الشاملة', 'chart')}${it('home', 'نظرة عامة', 'home')}${it('a_compare', 'مقارنة المنسقات', 'chart')}${it('a_boards', 'لوحات التميز', 'star')}${it('a_subs', 'الاحتياط والتبديل', 'cal')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}${it('a_anrep', 'التقارير التحليلية المطبوعة', 'chart')}
       ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور ' + (typeof prWho === 'function' ? prWho()[0] : 'مديرة المدرسة'), 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
         : `<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
@@ -120,7 +125,7 @@ function renderApp() {
     <aside class="side" id="side">
       <div class="head band"><img src="assets/logo.png" alt=""><div><b>الميزان</b><small>ميزان تربوي</small></div></div>
       <nav id="nav">${navHTML()}</nav>
-      <div class="who"><b>${esc(S.user.name)}</b>${isAdmin() ? (typeof isPrincipal === 'function' && isPrincipal() ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية') : isTeacher() ? 'معلمة ' + esc(S.user.dept.join(' و')) : 'منسقة ' + esc(S.user.dept.join(' و'))}${API.live() ? '' : ' · <span style="color:var(--tiffany)">معاينة</span>'}<br><button id="out">تسجيل الخروج</button></div>
+      <div class="who"><b>${esc(S.user.name)}</b>${isAdmin() ? (typeof isPrincipal === 'function' && isPrincipal() ? 'مديرة المدرسة' : 'نائب المدير للشؤون الأكاديمية') : (typeof isAct === 'function' && isAct()) ? 'أخصائية الأنشطة المدرسية' : isTeacher() ? 'معلمة ' + esc(S.user.dept.join(' و')) : 'منسقة ' + esc(S.user.dept.join(' و'))}${API.live() ? '' : ' · <span style="color:var(--tiffany)">معاينة</span>'}<br><button id="out">تسجيل الخروج</button></div>
     </aside>
     <main class="main">
       <div class="topbar"><button class="menu-btn" id="menu">☰</button><h1 id="ttl"></h1>${deptSel}<button class="btn sm" id="mzRef" title="جلب آخر ما سُجّل هنا وفي سبع سنابل" style="margin-inline-start:auto;white-space:nowrap">🔄 تحديث ومزامنة</button>
@@ -139,9 +144,10 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, n_act: N_act, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep };
   try {
     if (isTeacher() && !['t_pv', 't_ws', 't_pa', 't_ach', 't_act', 't_ds', 't_tas', 't_rep', 't_prq'].includes(v)) return T_home(el);
+    if (typeof isAct === 'function' && isAct() && !['n_act', 't_prq'].includes(v)) return N_act(el);
     if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
     (map[v] || map.home)(el);
   } catch (e) { viewErr(el, e, v); }
