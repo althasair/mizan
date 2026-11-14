@@ -568,7 +568,7 @@ function sabPA_() {
 /* ------------------------------------------------------------------ إحصاءات المعلمات إلى «سبع سنابل» */
 // الأنشطة والمبادرات (AC) والزيارات التبادلية (PV) والإنجازات (ACH) تُكتب في قاعدة سبع سنابل (shared/mizan)
 // فتظهر في لوحة الصدارة ونجوم المعلمات تلقائياً بعد كل حفظ في الميزان
-function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH', 'WS', 'EX', 'PA', 'LR', 'TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
+function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH', 'WS', 'EX', 'PA', 'LR', 'TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'PRQ'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
 // k: a نشاط · i مبادرة · v حضور حصة تبادلية · w توظيف جوانب التميز (ورشة قدّمتها أو زيارة استضافتها) · h إنجاز/مشاركة
 //    p تطوير مهني (ورشة حضرتها أو برنامج خارجي) · o تواصل مع أولياء الأمور · r مصادر التعلم والتقنية
 function syncSanabil() {
@@ -577,7 +577,7 @@ function syncSanabil() {
   const find = n => { const k = normAr_(n); return T.find(x => normAr_(x[1]) === k || normAr_(x[2]) === k); };
   const full = n => { n = String(n || '').trim(); const t = find(n); return t ? String(t[2] || t[1]) : n; };
   const deptAll = d => T.filter(x => String(x[0]) === String(d)).map(x => String(x[2] || x[1]));
-  const list = [], abs = [], pa = [], cv = [];
+  const list = [], abs = [], pa = [], cv = [], prq = [];
   // strict: يُحتسب الاسم فقط إن طابق معلمة في جدول «المعلمات» (للخانات النصية الحرة)
   // منع العدّ المزدوج: سجل المعلمة المنقول من تقرير المنسقة (q1) يُحتسب مرة واحدة، فلا يُعدّ معه السجل الأصلي للشخص نفسه في السنبلة نفسها
   const cover = {}, grp = k => (k === 'a' || k === 'i') ? 'ai' : k;
@@ -603,14 +603,19 @@ function syncSanabil() {
       // الحضور الصفي (أعداد فقط بلا ملاحظات) للوحة الأرقام في سبع سنابل: w = co المنسقة، vp النائب الأكاديمي، pr المديرة
       case 'V': case 'VPV': case 'PRV': if (d.t) cv.push({ w: r.item === 'V' ? 'co' : r.item === 'VPV' ? 'vp' : 'pr', p: String(r.dept || ''), t: full(d.t), d: r.date || d.date || '', kj: d.kj || '' }); break;
       case 'TDS': (d.abs || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'غياب' })); (d.perm || []).forEach(x => abs.push({ n: full(d.t), d: x.date, ty: 'استئذان' })); break;
+      // إذنٌ مُيسَّر ← حصر الاستئذانات في سبع سنابل: يُحتسب الإذن بعد اعتماد المنسقة (أو عند الاعتماد النهائي)، والمعلمة برمز لا باسمها
+      case 'PRQ': { const okd = d.st === 'ok', cnt = okd || ((d.st === 'vp' || d.st === 'pr') && (d.steps || []).some(x => x.w === 'coord'));
+        if (!cnt) break; const ti = T.indexOf(find(d.t));
+        prq.push({ d: r.date || '', dp: String(r.dept || ''), st: okd ? 'معتمد' : 'بانتظار الاعتماد النهائي (اعتمدته المنسقة)', ty: d.kind === 'إذن عمل' ? 'إذن عمل' : 'استئذان', w: d.kind === 'إذن عمل' ? 'مهمة عمل' : String(d.reason || ''), h: +d.h || 0, tc: ti >= 0 ? 'م' + (ti + 1) : 'خ' + String(normAr_(d.t)).split('').reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 99991, 7), src: d.src === 'Approvals' ? 'Approvals' : 'الميزان' }); break; }
     } });
+  const psz = {}; T.forEach(x => { const k = String(x[0] || ''); if (k) psz[k] = (psz[k] || 0) + 1; });
   const body = { fields: { t: { stringValue: JSON.stringify(list) }, cv: { stringValue: JSON.stringify(cv) }, at: { stringValue: new Date().toISOString() }, n: { integerValue: String(list.length) } } };
   const res = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/shared/mizan', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, payload: JSON.stringify(body), muteHttpExceptions: true });
   // تواصل المعلمات مع أولياء الأمور بأسماء الطالبات، والغياب والاستئذان: في وثيقة لا يقرؤها إلا حساب النائب الأكاديمي، ومنها تمتلئ سنبلة «التواصل مع ولي الأمر» لكل طالبة
   UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/adm/mizanpa', {
     method: 'patch', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-    payload: JSON.stringify({ fields: { t: { stringValue: JSON.stringify(pa) }, abs: { stringValue: JSON.stringify(abs) }, at: { stringValue: new Date().toISOString() } } }) });
+    payload: JSON.stringify({ fields: { t: { stringValue: JSON.stringify(pa) }, abs: { stringValue: JSON.stringify(abs) }, prq: { stringValue: JSON.stringify({ recs: prq, size: psz }) }, at: { stringValue: new Date().toISOString() } } }) });
   const msg = res.getResponseCode() === 200 ? 'تم إرسال ' + list.length + ' سجل و' + pa.length + ' تواصل مع أولياء الأمور إلى سبع سنابل' : 'تعذّر الإرسال: ' + res.getContentText().slice(0, 200);
   Logger.log(msg); return msg;
 }
@@ -695,8 +700,8 @@ function route_(req) {
     case 'file': return getFile_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
-    case 'prqSubmit': return prqSubmit_(u, req);
-    case 'prqAct': return prqAct_(u, req);
+    case 'prqSubmit': { const r = prqSubmit_(u, req); sabSoon_('PRQ'); return r; }
+    case 'prqAct': { const r = prqAct_(u, req); sabSoon_('PRQ'); return r; }
     case 'prqSeen': return prqSeen_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
