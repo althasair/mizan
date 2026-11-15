@@ -133,6 +133,7 @@ function T_prq(el) {
     </form></div>
   <div class="card" id="pqBal"></div>
   </div>
+  ${prqMyLog(L)}
   <div class="card"><h2>طلباتي (${L.length})</h2><div class="tbl"><table class="t"><tr><th>اليوم</th><th>الوقت</th><th>الساعات</th><th>السبب</th><th>الحالة</th><th>مسار الاعتماد</th><th></th></tr>
     ${L.map(r => `<tr><td>${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}</td><td><b>${prqNum(r.d.h)}</b></td><td>${esc(r.d.reason)}<br><small style="color:var(--muted)">${esc(r.d.kind)}</small></td><td>${prqStatus(r)}</td><td>${prqChain(r)}</td>
       <td style="white-space:nowrap">${r.d.st !== 'ok' ? `<button class="btn sm sec" data-pe="${r.id}">تعديل</button> <button class="btn sm ghost" data-px="${r.id}" style="color:#A33">إلغاء الطلب</button>` : ''}</td></tr>`).join('') || '<tr><td colspan="7"><div class="empty">لا توجد طلبات بعد</div></td></tr>'}</table></div>
@@ -147,7 +148,7 @@ function T_prq(el) {
     const V = prqVerse(u0 + p0 + add);
     $('#pqBal').innerHTML = `<h2>رصيدي — ${MONTHS[+mo.slice(5, 7) - 1]}</h2>
       <div class="prq-bal"><div class="prq-ring" style="--p:${Math.min(100, (u0 / PRQ_LIMIT) * 100)}%;--c:${V.c}"><b>${prqNum(left)}</b><small>ساعات</small></div>
-      <div><div style="font-size:17px;font-weight:700">المتبقي لكِ ${prqNum(left)} ${left === 1 ? 'ساعة' : 'ساعات'}</div><div style="color:var(--muted);font-size:13px">من ${PRQ_LIMIT} ساعات شخصية في الشهر · المعتمد ${prqNum(u0)}${p0 ? ` · قيد الاعتماد ${prqNum(p0)}` : ''}</div>${kindNow() === 'إذن عمل' ? '<div class="chip ok" style="margin-top:4px">إذن العمل لا يُحسب من رصيدكِ</div>' : ''}</div></div>
+      <div><div style="font-size:17px;font-weight:700">المتبقي لكِ ${prqNum(left)} ${left === 1 ? 'ساعة' : 'ساعات'}</div><div style="color:var(--muted);font-size:13px">من ${PRQ_LIMIT} ساعات شخصية في الشهر · ${prqCnt(S.user.name, mo)} · المعتمد ${prqNum(u0)}${p0 ? ` · قيد الاعتماد ${prqNum(p0)}` : ''}</div>${kindNow() === 'إذن عمل' ? '<div class="chip ok" style="margin-top:4px">إذن العمل لا يُحسب من رصيدكِ</div>' : ''}</div></div>
       <div class="prq-verse" style="border-color:${V.c}"><div class="prq-v" style="color:${V.c}">﴿${V.v}﴾</div><small>${V.s}</small>${V.h ? `<div style="margin-top:6px;font-size:14px">قال رسول الله ﷺ: ${V.h}</div>` : ''}</div>`;
     $('#pqW', f).innerHTML = add && u0 + p0 + add > PRQ_LIMIT ? `<div class="note" style="background:#F9E3E6;color:#A3202F">هذا الطلب يتجاوز رصيدكِ الشهري (${PRQ_LIMIT} ساعات). يمكنكِ إرساله، والقرار لمن تعتمده.</div>` : '';
   };
@@ -228,7 +229,8 @@ function A_prq(el) {
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
-  ${lv >= 2 ? prqDash(mo, months) : ''}`;
+  ${prqToday(lv === 1 ? S.user.dept : null)}
+  ${lv >= 2 ? prqDash(mo, months) : lv === 1 ? prqDeptRep(mo, months, S.user.dept) : ''}`;
   const curPh = () => ($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0];
   $$('input[name="pph"]', el).forEach(i => i.onchange = () => { S.prqPh = i.value; if ($('#pfix').checked) prqPhSet(i.value); show(); });
   if ($('#pNot')) $('#pNot').onclick = () => { try { Notification.requestPermission().then(p => { toast(p === 'granted' ? 'تم تفعيل الإشعارات على هذا الجهاز ✓' : 'لم يُسمح بالإشعارات من المتصفح', p !== 'granted'); if (p === 'granted') { prqBell(); show(); } }); } catch (e) { toast('هذا المتصفح لا يدعم الإشعارات', 1); } };
@@ -326,4 +328,58 @@ function prqDash(mo, months) {
   </div>
   <div class="pd-grid">${deps.map(d => `<div class="card pd-card"><div class="row"><h3 style="margin:0">${esc(d.dn)}</h3><span class="sp"></span><span class="chip" style="font-size:11.5px">${pct(d.rate)} · ${prqNum(d.used)}/${d.cap} س</span></div>
       <div class="pd-ts">${d.T.map(t => { const rem = Math.max(0, PRQ_LIMIT - t.u); return `<div class="pd-t">${prqRing(rem, 46)}<div><b>${esc(t.n)}</b><small>${t.u ? (rem ? `متبقي ${prqNum(rem)} ${rem === 1 ? 'ساعة' : rem === 2 ? 'ساعتان' : 'ساعات'}` : 'استُنفد الرصيد') : 'الرصيد كامل'}${t.w ? ` · إذن عمل ${prqNum(t.w)} س` : ''}</small></div></div>`; }).join('')}</div></div>`).join('')}</div>`;
+}
+
+
+/* ================================================================== تقارير الأذونات: المعلمة والمنسقة */
+const prqMoName = m => MONTHS[+m.slice(5, 7) - 1] + ' ' + m.slice(0, 4);
+const prqOf = (name, mo) => S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && String(r.date).slice(0, 7) === mo);
+function prqCnt(name, mo) { const L = prqOf(name, mo).filter(r => prqCounted(r.d)), p = L.filter(r => r.d.kind !== 'إذن عمل').length, w = L.length - p;
+  return p || w ? `${p ? (p === 1 ? 'إذن شخصي واحد' : p === 2 ? 'إذنان شخصيان' : p + ' أذونات شخصية') : ''}${p && w ? ' و' : ''}${w ? (w === 1 ? 'إذن عمل واحد' : w + ' أذونات عمل') : ''}` : 'لا أذونات هذا الشهر'; }
+const prqHw = n => n === 1 ? 'ساعة' : n === 2 ? 'ساعتان' : 'ساعات';
+
+/* سجل المعلمة الشهري: كم استأذنت وكم بقي لها في كل شهر */
+function prqMyLog(L) {
+  const months = [...new Set(L.map(r => String(r.date).slice(0, 7)).concat([today().slice(0, 7)]))].sort().reverse();
+  const nm = S.user.name;
+  return `<div class="card"><h2>سجلّ أذوناتي الشهري <span class="sub">كل إذن معتمد محفوظ هنا ويُحسب من رصيد شهره</span></h2><div class="tbl"><table class="t">
+    <tr><th>الشهر</th><th>أذونات شخصية</th><th>أذونات عمل</th><th>الساعات الشخصية المعتمدة</th><th>قيد الاعتماد</th><th>المتبقي من الرصيد</th></tr>
+    ${months.map(m => { const A = prqOf(nm, m).filter(r => prqCounted(r.d)), u = prqUsed(nm, m), pd = prqPend(nm, m), rem = Math.max(0, PRQ_LIMIT - u);
+      return `<tr><td><b>${prqMoName(m)}</b>${m === today().slice(0, 7) ? ' <span class="chip" style="font-size:10.5px">الشهر الحالي</span>' : ''}</td><td>${A.filter(r => r.d.kind !== 'إذن عمل').length}</td><td>${A.filter(r => r.d.kind === 'إذن عمل').length}</td>
+        <td>${prqNum(u)}</td><td>${pd ? prqNum(pd) : '—'}</td><td><div style="display:flex;align-items:center;gap:8px">${prqRing(rem, 34)}<b>${prqNum(rem)} ${prqHw(rem)}</b></div></td></tr>`; }).join('')}</table></div></div>`;
+}
+
+/* من استأذن اليوم (للمنسقة: قسمها، وللنائب والمديرة: الجميع) */
+function prqToday(depts) {
+  const d0 = today(), T = S.records.filter(r => r.item === 'PRQ' && r.d && r.date === d0 && r.d.st !== 'ret' && (!depts || depts.includes(r.dept))).sort((a, b) => (a.d.from || '').localeCompare(b.d.from || ''));
+  return `<div class="card"><div class="row"><h2 style="margin:0">المستأذنات اليوم — ${prqDay(d0)} ${dmy(d0)}</h2><span class="sp"></span><span class="chip">${T.length}</span></div>
+    ${T.length ? `<div class="tbl" style="margin-top:8px"><table class="t"><tr><th>المعلمة</th>${depts && depts.length < 2 ? '' : '<th>القسم</th>'}<th>الوقت</th><th>الساعات</th><th>السبب</th><th>الحالة</th></tr>
+      ${T.map(r => `<tr><td><b>${esc(r.d.t)}</b></td>${depts && depts.length < 2 ? '' : `<td>${esc(r.dept)}</td>`}<td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}</td><td>${prqNum(r.d.h)}</td><td>${esc(r.d.reason)} <span class="chip" style="font-size:10.5px">${esc(r.d.kind)}</span></td><td>${prqStatus(r)}</td></tr>`).join('')}</table></div>`
+      : '<div class="empty" style="margin-top:6px">لا توجد أذونات اليوم 🌿</div>'}</div>`;
+}
+
+/* تقرير المنسقة لمعلمات قسمها */
+function prqDeptRep(mo, months, depts) {
+  const names = [...new Set((S.staff || []).filter(s => depts.includes(s.dept) && s.name && s.name !== S.user.name).map(s => s.name)
+    .concat(S.records.filter(r => r.item === 'PRQ' && r.d && depts.includes(r.dept) && r.d.t !== S.user.name).map(r => r.d.t)))];
+  const T = names.map(n => { const A = prqOf(n, mo), C = A.filter(r => prqCounted(r.d)), u = prqUsed(n, mo);
+    return { n, u, rem: Math.max(0, PRQ_LIMIT - u), pd: prqPend(n, mo), np: C.filter(r => r.d.kind !== 'إذن عمل').length, nw: C.filter(r => r.d.kind === 'إذن عمل').length, last: A.map(r => r.date).sort().pop() }; })
+    .sort((a, b) => b.u - a.u || a.n.localeCompare(b.n, 'ar'));
+  const used = T.reduce((a, t) => a + t.u, 0), cap = T.length * PRQ_LIMIT, who = T.filter(t => t.u > 0).length, full = T.filter(t => !t.u).length, pend = T.reduce((a, t) => a + t.pd, 0);
+  const LOG = S.records.filter(r => r.item === 'PRQ' && r.d && depts.includes(r.dept) && r.d.t !== S.user.name && String(r.date).slice(0, 7) === mo).sort((a, b) => (b.date || '').localeCompare(a.date || '') || (a.d.from || '').localeCompare(b.d.from || ''));
+  const card = (t, v, sub, c) => `<div class="card na-t" style="border-top:4px solid ${c}"><b style="color:${c}">${v}</b><span>${t}</span>${sub ? `<small style="color:var(--muted);font-size:11.5px">${sub}</small>` : ''}</div>`;
+  return `<div class="card"><div class="row"><h2 style="margin:0">تقرير أذونات القسم — ${prqMoName(mo)}</h2><span class="sp"></span>
+      <select id="pMo">${months.map(m => `<option value="${m}" ${m === mo ? 'selected' : ''}>${prqMoName(m)}</option>`).join('')}</select><button class="btn sec noprint" onclick="window.print()">طباعة</button></div>
+    <div class="note" style="margin-top:6px">كل إذن محفوظ في سجل الشهر، ويُحسب من رصيد المعلمة (${PRQ_LIMIT} ساعات شخصية شهرياً) بمجرد اعتمادكِ له. أذونات العمل تظهر ولا تُحسب من الرصيد.</div></div>
+  <div class="grid g4 na-kpi">
+    ${card('ساعة شخصية مستهلكة', prqNum(used), `من رصيد القسم ${cap} ساعة`, '#7A1F3D')}
+    ${card('معلمة استأذنت', who, `من ${T.length} معلمات`, '#0A6F6B')}
+    ${card('رصيدها كامل', full, 'لم تستأذن هذا الشهر 🌿', '#17734A')}
+    ${card('ساعة قيد الاعتماد', prqNum(pend), 'بانتظار المراحل التالية', '#946410')}
+  </div>
+  <div class="card"><h2>رصيد المعلمات</h2><div class="pd-ts">${T.map(t => `<div class="pd-t">${prqRing(t.rem, 46)}<div><b>${esc(t.n)}</b><small>${t.u ? (t.rem ? `متبقي ${prqNum(t.rem)} ${prqHw(t.rem)}` : 'استُنفد الرصيد') : 'الرصيد كامل'}${t.np + t.nw ? ` · ${t.np + t.nw} ${t.np + t.nw > 2 ? 'أذونات' : 'إذن'}` : ''}</small></div></div>`).join('') || '<div class="empty">لا توجد معلمات</div>'}</div>
+    <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>أذونات شخصية</th><th>أذونات عمل</th><th>المستهلك</th><th>قيد الاعتماد</th><th>المتبقي</th><th>آخر إذن</th></tr>
+      ${T.map(t => `<tr><td><b>${esc(t.n)}</b></td><td>${t.np}</td><td>${t.nw}</td><td>${prqNum(t.u)}</td><td>${t.pd ? prqNum(t.pd) : '—'}</td><td><b style="color:${t.rem ? 'inherit' : '#A3202F'}">${prqNum(t.rem)}</b></td><td>${t.last ? dmy(t.last) : '—'}</td></tr>`).join('')}</table></div></div>
+  <div class="card"><h2>سجل أذونات الشهر (${LOG.length})</h2><div class="tbl"><table class="t"><tr><th>اليوم</th><th>المعلمة</th><th>الوقت</th><th>الساعات</th><th>السبب</th><th>الحالة</th></tr>
+    ${LOG.map(r => `<tr><td>${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td><b>${esc(r.d.t)}</b></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}</td><td>${prqNum(r.d.h)}</td><td>${esc(r.d.reason)}<br><small style="color:var(--muted)">${esc(r.d.kind)}</small></td><td>${prqStatus(r)}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">لا توجد أذونات في هذا الشهر</div></td></tr>'}</table></div></div>`;
 }
