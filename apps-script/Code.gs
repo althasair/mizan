@@ -54,6 +54,7 @@ const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'XCMP'];
       // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
+  if (!String(pin == null ? '' : pin).trim()) return null;   // الرقم الفارغ لا يفتح أي حساب (لمن خانة رقمها فارغة)
   const t = rows_(SH.users);
   for (const r of t.rows) {
     if (String(r[4]).trim() === String(pin).trim() && String(r[5]).trim() !== 'لا') {
