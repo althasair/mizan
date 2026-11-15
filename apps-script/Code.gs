@@ -124,6 +124,16 @@ function students_(secs) {
   return L.length ? L : base;
 }
 /* أسماء طالبات شُعب صاحبة الحساب نفسها (معلمة أو منسقة) — لرصد التقرير الأكاديمي السلوكي في سبع سنابل */
+/* يتحقق من جلسة سبع سنابل (Firebase) ويعيد صاحبها: حساب الميزان (mz_رقم) أو حساب النائب */
+function fbUser_(idToken) {
+  if (!idToken) fail_('انتهت الجلسة، الرجاء الدخول مرة أخرى');
+  const r = UrlFetchApp.fetch('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=AIzaSyBUA_OYl9NCZsiR92Uvez1545xV-KHId20', { method: 'post', contentType: 'application/json', payload: JSON.stringify({ idToken: String(idToken) }), muteHttpExceptions: true });
+  let x = null; try { x = (JSON.parse(r.getContentText()).users || [])[0]; } catch (e) {}
+  if (!x) fail_('انتهت الجلسة، الرجاء الدخول مرة أخرى');
+  if (/^mz_/.test(x.localId || '')) { const u = userById_(x.localId.slice(3)); if (u) return u; }
+  if (String(x.email || '').toLowerCase() === 'althasair@gmail.com') return { id: 'admin', role: 'admin', dept: [], name: 'آسيا الذبياني' };
+  fail_('الحساب غير معروف في الميزان');
+}
 function myStudents_(u) {
   if (u.role === 'admin') {   // حساب النائب: كل الشعب (لاستكمال سجل القيد في سبع سنابل، مثل الثاني عشر)
     const sh = sheet_(SH.stu); const all = {}; if (sh) { const v = sh.getDataRange().getValues(); v.shift(); v.forEach(r => { if (r[1]) all[r[0] instanceof Date ? (r[0].getMonth() + 1) + '-' + r[0].getDate() : String(r[0]).trim()] = 1; }); }
@@ -668,6 +678,7 @@ function route_(req) {
   if (a === 'ping') return { ok: true, name: 'الميزان', at: now_() };
   if (a === 'login') return login_(req.pin, req.app);
   if (a === 'fbToken') return fbToken_(req.pin);
+  if (a === 'fbStudents') return { students: myStudents_(fbUser_(req.idToken)) };   // سبع سنابل: أسماء طالبات شعب المعلمة بجلستها هناك، دون رقم سري
   const u = auth_(req.token);
   // الموجهة التربوية: اطلاع فقط على أقسامها في الميزان (جميع الأقسام للحساب العام)
   if (u.role === 'viewer') {
