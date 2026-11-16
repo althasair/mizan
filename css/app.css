@@ -433,3 +433,6 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .ev-t{width:100%;border-collapse:collapse}.ev-t th,.ev-t td{border:1px solid var(--line);padding:6px 8px;vertical-align:top;font-size:13px}
 .ev-t th{background:#7A1F33;color:#fff;font-weight:700}.ev-t .c{text-align:center;vertical-align:middle}.ev-sum td{background:#F6EFE3}
 .ev-in{width:64px;text-align:center;border:1px solid var(--line);border-radius:8px;padding:4px;font:inherit;font-weight:700}
+.dl-h{margin:18px 0 8px;color:var(--maroon);font-size:16px}
+.dl-tt th{font-size:11.5px;text-align:center;vertical-align:bottom}.dl-tt th span{font-weight:600}.dl-tt td{text-align:center}.dl-tt td:first-child{text-align:right}
+.dl-tt td.z{color:#C08A4A;background:#FFF7EE}
