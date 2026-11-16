@@ -19,6 +19,9 @@ function trRange() {
   if (k === 'w') { const d = new Date((S.trw || t) + 'T12:00:00'); const st = new Date(d); st.setDate(d.getDate() - d.getDay()); const en = new Date(st); en.setDate(st.getDate() + 6);
     const f = st.toISOString().slice(0, 10), to = en.toISOString().slice(0, 10); return { from: f, to, label: `الأسبوع ${dm(f)} – ${dm(to)}`, kind: 'الأسبوعي' }; }
   if (k === 'p') { const ps = S.periods || []; const p = ps.find(x => x.name === S.trp) || curPer(); S.trp = p.name; return { from: p.from, to: p.to, label: p.name, kind: 'الفصلي' }; }
+  if (k === 'mm') { const ms = trMonthList().slice().reverse(); const a = S.trm1 && ms.includes(S.trm1) ? S.trm1 : ms[0], b0 = S.trm2 && ms.includes(S.trm2) ? S.trm2 : ms[ms.length - 1];
+    const [m1, m2] = a <= b0 ? [a, b0] : [b0, a]; S.trm1 = m1; S.trm2 = m2; const last = new Date(+m2.slice(0, 4), +m2.slice(5, 7), 0).getDate();
+    return { from: m1 + '-01', to: m2 + '-' + ('0' + last).slice(-2), label: m1 === m2 ? 'شهر ' + trM(m1) : `من ${trM(m1)} إلى ${trM(m2)}`, kind: m1 === m2 ? 'الشهري' : '' }; }
   if (k === 'c') { const f = S.trf || (t.slice(0, 8) + '01'), to = S.trto || t; return { from: f, to, label: `من ${dm(f)} إلى ${dm(to)}`, kind: '' }; }
   const mk = S.trm || t.slice(0, 7); const last = new Date(+mk.slice(0, 4), +mk.slice(5, 7), 0).getDate();
   return { from: mk + '-01', to: mk + '-' + ('0' + last).slice(-2), label: 'شهر ' + trM(mk), kind: 'الشهري' };
@@ -33,6 +36,9 @@ function trData(name, rng) {
     is: S.records.filter(r => r.item === 'IS' && r.d && r.d.t === name && inM(r)),
     v: S.records.filter(r => r.item === 'V' && r.d && r.d.t === name && inM(r)),
     rf: S.records.filter(r => r.item === 'SRF' && r.d && r.d.t === name && inM(r)),
+    vis: S.records.filter(r => ['V', 'VPV', 'PRV'].includes(r.item) && r.d && r.d.t === name && r.d.rt && inM(r)),
+    ex: S.records.filter(r => r.item === 'EX' && r.d && (r.d.t === name || r.d.t === REF.ALL_MEMBERS) && inM(r)),
+    sfb: S.records.filter(r => ['SFB', 'SAN', 'SAC'].includes(r.item) && r.d && r.d.t === name && inM(r)),
   };
   D.ini = D.ta.filter(r => r.d.kind === 'مبادرة').length + D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
   D.work = D.ta.length + D.pv.length + D.ws.length + D.pa.length + D.ach.length + D.tas.length;
@@ -115,15 +121,17 @@ function trPage(el, fixed) {
   if (!document.getElementById('trcss')) { const st = document.createElement('style'); st.id = 'trcss'; st.textContent = FORM_CSS + '.trv{font-size:12.5px}.trv h1{font-size:18px}'; document.head.appendChild(st); }
   setTitle(fixed ? 'تقرير أعمالي' : 'تقارير أعمال المعلمات');
   const months = trMonthList(); S.trm = months.includes(S.trm) ? S.trm : months[0];
-  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && (isAdmin() ? (!S.dept || s.dept === S.dept) : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
+  const coordN = new Set((S.coords || []).map(c => c.name).concat((S.staff || []).filter(s => s.role === 'منسقة').map(s => s.name)));
+  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && !coordN.has(s.name) && s.role !== 'منسقة' && (isAdmin() ? (!S.dept || s.dept === S.dept) : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
   S.trt = fixed || (staff.includes(S.trt) ? S.trt : staff[0] || '');
   const RG = trRange();
   const D = S.trt ? trData(S.trt, RG) : null;
   const chip = c => c === 'مبادرة' ? '<span class="chip ok">مبادِرة</span>' : c === 'مجتهدة' ? '<span class="chip tf">مجتهدة</span>' : '<span class="chip warn">بحاجة إلى مضاعفة الجهد</span>';
   el.innerHTML = `<div class="tins">${fixed ? 'معلمتي الغالية، هذا تقرير (أسبوعي أو شهري أو فصلي أو لأي فترة تختارينها) يجمع تلقائياً كل ما وثّقتِه في الميزان وما يصل من سبع سنابل. اختاري نوع التقرير والفترة، ثم اطبعيه أو احفظيه PDF لملفكِ.' : 'اختاري الشهر لتظهر أعمال كل معلمة وتقديرها العام، ثم افتحي تقرير أي معلمة لطباعته. يُبنى التقرير تلقائياً مما وثّقته المعلمة في الميزان وما يصل من سبع سنابل.'}</div>
   <div class="card"><div class="row" style="gap:10px;flex-wrap:wrap">
-    <select id="trK">${[['w', 'أسبوعي'], ['m', 'شهري'], ['p', 'فصلي (فترة التقويم)'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 'm') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select id="trK">${[['m', 'شهر واحد'], ['mm', 'من شهر إلى شهر'], ['p', 'فصلي (فترة التقويم)'], ['w', 'أسبوعي'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 'm') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
     ${(S.trk || 'm') === 'm' ? `<select id="trM">${months.map(m => `<option value="${m}" ${m === S.trm ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select>` : ''}
+    ${S.trk === 'mm' ? (() => { const ms = months.slice().reverse(); return `<label style="font-size:12px">من شهر <select id="trM1">${ms.map(m => `<option value="${m}" ${m === S.trm1 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label><label style="font-size:12px">إلى شهر <select id="trM2">${ms.map(m => `<option value="${m}" ${m === S.trm2 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label>`; })() : ''}
     ${S.trk === 'w' ? `<label style="font-size:12px">أسبوع يوم <input type="date" id="trW" value="${S.trw || today()}"></label>` : ''}
     ${S.trk === 'p' ? `<select id="trPp">${(S.periods || []).map(p => `<option ${p.name === S.trp ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'c' ? `<label style="font-size:12px">من <input type="date" id="trF" value="${RG.from}"></label><label style="font-size:12px">إلى <input type="date" id="trTo" value="${RG.to}"></label>` : ''}
@@ -131,9 +139,14 @@ function trPage(el, fixed) {
     <span class="sp"></span>${S.trt ? '<button class="btn ro-keep" id="trP">طباعة / حفظ PDF</button>' : ''}</div>
   ${fixed ? '' : `<div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الأعمال</th><th>مبادرات</th><th>زيارات تبادلية</th><th>أولياء أمور</th><th>التقدير</th><th></th></tr>
     ${staff.map(t => { const x = trData(t, RG); return `<tr><td style="white-space:nowrap"><b>${esc(t)}</b></td><td>${x.work}</td><td>${x.ini}</td><td>${x.pv.length}</td><td>${x.pa.length}</td><td>${chip(x.cls)}</td><td><button class="btn sm sec" data-tt="${esc(t)}">عرض</button></td></tr>`; }).join('')}</table></div>`}</div>
-  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, RG, D)}<div id="trSign">${trSignBlock(S.trt, { c: '', v: '' })}</div></div></div>` : '<div class="empty">لا توجد معلمات</div>'}`;
+  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, RG, D)}<div id="trSign">${trSignBlock(S.trt, { c: '', v: '' })}</div></div></div>` : '<div class="empty">لا توجد معلمات</div>'}
+  ${D && !isTeacher() ? `<div class="card" id="trEv">${typeof FORMS !== 'undefined' && FORMS ? trEvalHTML(S.trt, RG, trEval(S.trt, RG, D), true) : '<div class="empty">جارٍ تحميل استمارة التقييم…</div>'}</div>` : ''}`;
+  if (D && !isTeacher() && typeof loadForms === 'function' && !FORMS) loadForms().then(() => { const b = $('#trEv', el); if (b) { b.innerHTML = trEvalHTML(S.trt, RG, trEval(S.trt, RG, D), true); trEvBind(b, S.trt, RG); } });
+  if (D && !isTeacher() && $('#trEv', el) && FORMS) trEvBind($('#trEv', el), S.trt, RG);
   if (S.trt && !isTeacher()) trSigs(((S.staff || []).find(x => x.name === S.trt) || {}).dept).then(sg => { const b = $('#trSign', el); if (b) b.innerHTML = trSignBlock(S.trt, sg); });
   if ($('#trM')) $('#trM').onchange = e => { S.trm = e.target.value; show(); };
+  if ($('#trM1')) $('#trM1').onchange = e => { S.trm1 = e.target.value; show(); };
+  if ($('#trM2')) $('#trM2').onchange = e => { S.trm2 = e.target.value; show(); };
   $('#trK').onchange = e => { S.trk = e.target.value; show(); };
   if ($('#trW')) $('#trW').onchange = e => { S.trw = e.target.value; show(); };
   if ($('#trPp')) $('#trPp').onchange = e => { S.trp = e.target.value; show(); };
@@ -144,6 +157,69 @@ function trPage(el, fixed) {
   if ($('#trP')) $('#trP').onclick = async () => {
     const imgs = await lhImgs(); const sg = await trSigs(((S.staff || []).find(x => x.name === S.trt) || {}).dept);
     const html = docHTML(trBody(S.trt, RG, trData(S.trt, RG)) + trSignBlock(S.trt, sg), imgs, `تقرير أعمال ${S.trt} ${RG.label}`);
+    const w = window.open('', '_blank'); if (!w) { toast('اسمحي بالنوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة', 1); return; }
+    w.document.write(html); w.document.close(); setTimeout(() => w.print(), 700);
+  };
+}
+
+/* ================================================================== استمارة تقييم الأداء السنوي (العادية) — تقدير مقترح
+   يُبنى على متوسط تقديرات الحضور الصفي (المنسقة والنائب والمديرة) لمعايير الحصة، وعلى الأعمال التي وثّقتها المعلمة خلال الفترة.
+   الدرجة مقترحة فقط، ويمكن تعديلها قبل الطباعة. */
+const TR_BAND = p => p >= 90 ? 'ممتاز' : p >= 80 ? 'جيد جداً' : p >= 70 ? 'جيد' : p >= 60 ? 'مقبول' : 'ضعيف';
+const TR_RT = [100, 88, 75, 60, 45];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
+const TR_VD = { 1: 'التخطيط', 2: 'تنفيذ الدرس', 3: 'الإدارة الصفية وبيئة التعلم', 4: 'التقويم' };
+const TR_OV = {};
+function trEval(name, rng, D) {
+  const mo = Math.max(1, Math.round((new Date(rng.to) - new Date(rng.from)) / 864e5 / 30));
+  const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : [];
+  const vw = n => n === 1 ? 'زيارة صفية واحدة' : n === 2 ? 'زيارتين صفيتين' : n <= 10 ? `${n} زيارات صفية` : `${n} زيارة صفية`;
+  const vAvg = dn => { const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
+  const wk = (n, target) => 60 + 40 * Math.min(1, n / Math.max(1, target));
+  const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
+  const presWS = D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
+  const abs = D.ds.reduce((a, r) => a + (r.d.abs || []).filter(x => x.type !== 'مرضي').length, 0);
+  const nVis = D.vis.length;
+  const mix = (v, w, wv) => v ? { p: v.p * wv + w * (1 - wv), src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null;
+  const rows = TR_DOM.map(([n, t, w]) => {
+    let o = null, ev = [];
+    if (n === 1) { const v = vAvg(1); o = v ? { p: v.p, src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null; }
+    if (n === 2) { const c = D.ta.length + D.sen.length; ev.push(`${D.ta.length} نشاطاً وبرنامجاً`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(2), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
+    if (n === 3) { ev.push(`${D.rf.length} شهادة تعزيز للطالبات`); o = mix(vAvg(3), wk(D.rf.length, mo), 0.85); }
+    if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
+    if (n === 5) { const c = D.pv.length + D.host.length + D.ws.length + D.ex.length; ev.push(`${D.pv.length + D.host.length} زيارة تبادلية`, `${D.ws.length + D.ex.length} ورشة وبرنامج`, presWS ? `قدّمت ${presWS} لزميلاتها` : ''); o = { p: Math.min(100, wk(c, mo * 1.5) + (presWS ? 5 : 0)), src: 'الأعمال الموثّقة' }; }
+    if (n === 6) { ev.push(`تواصل مع أولياء أمور ${nPA} طالبة`, D.ach.length ? `${D.ach.length} إنجاز ومشاركة` : ''); o = { p: wk(D.pa.length + D.ach.length, mo * 2), src: 'الأعمال الموثّقة' }; }
+    if (n === 7) { ev.push(`${D.tas.length} تكليفاً`, `${D.ini} مبادرة`, D.ds.length ? `غياب غير مرضي: ${abs}` : ''); o = { p: Math.max(50, Math.min(100, 85 + 15 * Math.min(1, (D.tas.length + D.ini) / mo) - 4 * abs)), src: 'التكليفات والمبادرات والانضباط' }; }
+    const key = name + '|' + rng.from + '|' + rng.to + '|' + n;
+    const sug = o ? Math.round(o.p / 100 * w * 2) / 2 : null;
+    const val = TR_OV[key] != null ? TR_OV[key] : sug;
+    return { n, t, w, sug, val, key, src: o ? o.src : 'لا تتوفر بيانات كافية — يُستكمل بالحضور الصفي', ev: ev.filter(x => x && !/(^|\s)0\s/.test(x)) };
+  });
+  const have = rows.filter(r => r.val != null), tot = have.reduce((a, r) => a + r.val, 0), wSum = have.reduce((a, r) => a + r.w, 0);
+  const pct = wSum ? tot / wSum * 100 : 0;
+  return { rows, tot, wSum, pct, band: wSum ? TR_BAND(Math.round(pct)) : '—', missing: rows.filter(r => r.val == null).map(r => r.n) };
+}
+function trEvalHTML(name, rng, E, live) {
+  const st = (S.staff || []).find(x => x.name === name) || {};
+  const num = v => v == null ? '—' : (Math.round(v * 2) / 2).toString();
+  return `<div class="ev-f">
+    <h2 style="margin:0 0 2px;text-align:center;color:#7A1F33">استمارة تقييم الأداء السنوي للمعلمة — تقدير مقترح</h2>
+    <div style="text-align:center;font-size:12.5px;color:#555;margin-bottom:8px">أ. ${esc(name)} — ${esc(st.dept || '')} — ${esc(rng.label)}</div>
+    ${live ? '<div class="note noprint" style="margin-bottom:8px">الدرجات مقترحة: تُبنى على متوسط تقديرات الحضور الصفي لمعايير الحصة (التخطيط، وتنفيذ الدرس، والإدارة الصفية، والتقويم)، وعلى ما وثّقته المعلمة خلال الفترة. يمكنكِ تعديل أي درجة قبل الطباعة.</div>' : ''}
+    <table class="ev-t"><tr><th style="width:30%">المعيار</th><th style="width:8%">الوزن</th><th>أساس التقدير والشواهد</th><th style="width:12%">الدرجة</th></tr>
+    ${E.rows.map(r => `<tr><td><b>${r.n}. ${esc(r.t)}</b></td><td class="c">${r.w}</td><td style="font-size:12px">${esc(r.src)}${r.ev.length ? `<div style="color:#666">${esc(r.ev.join('، '))}</div>` : /الأعمال/.test(r.src) ? '<div style="color:#8A4A08">لم يُوثَّق خلال الفترة</div>' : ''}</td>
+      <td class="c">${live ? `<input type="number" class="ev-in" data-k="${esc(r.key)}" min="0" max="${r.w}" step="0.5" value="${r.val == null ? '' : num(r.val)}" placeholder="—">${r.sug != null && r.val !== r.sug ? `<div style="font-size:10px;color:#888">المقترح ${num(r.sug)}</div>` : ''}` : `<b>${num(r.val)}</b>`}</td></tr>`).join('')}
+    <tr class="ev-sum"><td colspan="2"><b>المجموع</b></td><td>${E.missing.length ? `<span style="font-size:11.5px;color:#8A4A08">احتُسب من ${E.wSum} درجة لعدم توفر بيانات المعيار ${E.missing.join(' و')}</span>` : ''}</td><td class="c"><b>${num(E.tot)} / ${E.wSum}</b></td></tr>
+    <tr class="ev-sum"><td colspan="3"><b>النسبة والتقدير العام</b></td><td class="c"><b>${Math.round(E.pct)}% — ${E.band}</b></td></tr></table>
+    ${live ? `<div class="actions noprint" style="margin-top:8px"><button class="btn sec" id="evRst">العودة للدرجات المقترحة</button><button class="btn" id="evPr">طباعة الاستمارة</button></div>` : ''}</div>`;
+}
+function trEvBind(box, name, rng) {
+  const D = trData(name, rng);
+  $$('.ev-in', box).forEach(i => i.onchange = () => { const v = i.value === '' ? null : Math.max(0, Math.min(+i.max, +i.value)); if (v == null) delete TR_OV[i.dataset.k]; else TR_OV[i.dataset.k] = v; box.innerHTML = trEvalHTML(name, rng, trEval(name, rng, D), true); trEvBind(box, name, rng); });
+  const rs = $('#evRst', box); if (rs) rs.onclick = () => { Object.keys(TR_OV).filter(k => k.startsWith(name + '|' + rng.from + '|' + rng.to + '|')).forEach(k => delete TR_OV[k]); box.innerHTML = trEvalHTML(name, rng, trEval(name, rng, D), true); trEvBind(box, name, rng); };
+  const pr = $('#evPr', box); if (pr) pr.onclick = async () => {
+    const imgs = await lhImgs(); const sg = await trSigs(((S.staff || []).find(x => x.name === name) || {}).dept);
+    const css = '<style>.ev-t{width:100%;border-collapse:collapse}.ev-t th,.ev-t td{border:1px solid #999;padding:5px 6px;font-size:12px;vertical-align:top}.ev-t th{background:#7A1F33;color:#fff}.ev-t .c{text-align:center}.ev-sum td{background:#F6EFE3}</style>';
+    const html = docHTML(css + trEvalHTML(name, rng, trEval(name, rng, D), false) + trSignBlock(name, sg), imgs, `استمارة تقييم ${name} ${rng.label}`);
     const w = window.open('', '_blank'); if (!w) { toast('اسمحي بالنوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة', 1); return; }
     w.document.write(html); w.document.close(); setTimeout(() => w.print(), 700);
   };
