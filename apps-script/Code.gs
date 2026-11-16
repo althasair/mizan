@@ -172,7 +172,7 @@ function listRecords_(u) {
   const lead = u.role === 'admin' ? [] : all.filter(x => (x.item === 'VPV' || x.item === 'PRV') && u.dept.indexOf(x.dept) >= 0).map(x => ({
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
     d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
-  return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(indibat_())
+  return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(sabAdm_()).concat(indibat_())
     .filter(x => u.role === 'admin' || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
 }
@@ -544,7 +544,7 @@ function sabPA_() {
     const tok = sabAccess_(); if (!tok) return [];
     const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
       method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '3' }, { integerValue: '6' }, { integerValue: '4' }, { integerValue: '7' }] } } } } } }) });
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '1' }, { integerValue: '3' }, { integerValue: '6' }, { integerValue: '4' }, { integerValue: '7' }] } } } } } }) });
     const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
     const T = rows_(SH.teachers).rows.filter(x => x[1]);
     const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
@@ -563,6 +563,11 @@ function sabPA_() {
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), link: String(g('link') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
+      if (Number(g('type')) === 1) {   // تحليل النتائج وتحديد المستهدفات: ينعكس في «تحليل وقراءة النتائج» بتقرير المنسقة
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SAN', date: String(g('date')), sum: 'تحليل النتائج — سبع سنابل',
+          d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
+        return;
+      }
       if (Number(g('type')) === 3) {   // حصة إثرائية
         out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
@@ -573,6 +578,35 @@ function sabPA_() {
     });
   } catch (e) { return []; }
   const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 120);
+  return out;
+}
+
+/* إجراءات رفع التحصيل المرفوعة من نماذج Forms إلى سبع سنابل (الحصص الإثرائية الجماعية والفردية وغيرها) محفوظة في نسخة النائب الأكاديمي (adm)
+   لا في «entries»؛ فتُقرأ من هناك أيضاً حتى تنعكس كلها في تقرير المنسقة الشهري، دون تكرار ما أدخلته المعلمات مباشرة (eid) */
+function sabAdm_() {
+  const c = CacheService.getScriptCache();
+  try { const n = c.get('sabAdmN'); if (n != null) { const parts = c.getAll([...Array(+n).keys()].map(i => 'sabAdm' + i)); return JSON.parse([...Array(+n).keys()].map(i => parts['sabAdm' + i] || '').join('')); } } catch (e) {}
+  const out = [];
+  try {
+    const tok = sabAccess_(); if (!tok) return [];
+    const base = 'https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/adm/';
+    const get = id => JSON.parse(UrlFetchApp.fetch(base + id, { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }).getContentText());
+    const meta = get('meta'); const n = meta.fields && meta.fields.n ? Number(meta.fields.n.integerValue || meta.fields.n.doubleValue || 0) : 0; if (!n) return [];
+    const reqs = [...Array(n).keys()].map(i => ({ url: base + 's' + i, headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }));
+    const txt = UrlFetchApp.fetchAll(reqs).map(r => { const j = JSON.parse(r.getContentText()); return j.fields && j.fields.t ? j.fields.t.stringValue || '' : ''; }).join('');
+    const st = JSON.parse(txt); const A = (st.actions || []).filter(a => a && !a.eid && a.src !== 'mizan' && a.src !== 'teacher');
+    const T = rows_(SH.teachers).rows.filter(x => x[1]);
+    const tOf = nm => { const k = normAr_(nm); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
+    const iso = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/); if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return y + '-' + ('0' + m[1]).slice(-2) + '-' + ('0' + m[2]).slice(-2); } return v.slice(0, 10); };
+    const IT = { 1: 'SAN', 3: 'SEN', 4: 'SFB', 5: 'TPA', 6: 'SRF', 7: 'SAC' };
+    A.forEach((a, i) => { const it = IT[+a.type]; if (!it) return; const t = tOf(a.teacher); if (!t) return;
+      const stu = Array.isArray(a.students) ? a.students : []; const date = iso(a.date);
+      const id = 'sabA_' + Utilities.base64EncodeWebSafe(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, [date, a.teacher, a.section, a.type, a.detail, stu.join(',')].join('|'), Utilities.Charset.UTF_8)).slice(0, 14);
+      const d = it === 'TPA' ? { t: String(t[1]), s: a.section || '', n: a.whole ? 1 : Math.max(1, stu.length), way: String(a.detail || '').split(' — ')[0], topic: '', res: '', stu: stu, src: 'sab3' }
+        : { t: String(t[1]), s: a.section || '', subj: a.subject || '', whole: !!a.whole, n: a.whole ? 0 : stu.length, stu: stu, det: String(a.detail || ''), src: 'sab3' };
+      out.push({ id: id, dept: String(t[0]), item: it, date: date, sum: 'من سبع سنابل (النماذج)', d: d, by: 'سبع سنابل', at: '', up: '' }); });
+  } catch (e) { return []; }
+  try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 300); c.put('sabAdmN', String(k), 300); } } catch (e) {}
   return out;
 }
 

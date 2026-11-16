@@ -114,7 +114,7 @@ function navHTML() {
   });
   if (S.user.role === 'coord') { const nn = k => S.records.filter(r => r.item === k && r.d && r.d.t === S.user.name && inP(r.date, curPer())).length;
     h += `<div class="grp">إذنٌ مُيسَّر</div><a class="it ${S.view === 'a_prq' ? 'on' : ''}" data-v="a_prq">${ICON.prq}<span>أذونات القسم واعتمادها</span>${prqPendN() ? `<span class="n">${prqPendN()}</span>` : ''}</a><div class="grp">تكريم المعلمات</div><a class="it ${S.view === 'c_tcert' ? 'on' : ''}" data-v="c_tcert">${ICON.cert}<span>شهادات التكريم</span></a><div class="grp">سجلّي الشخصي</div>` + (xmMine().length ? [['t_xcmp', 'تعويض طالباتي عن الخروج', 'XC']] : []).concat([['t_pv', 'زياراتي التبادلية', 'TPV'], ['t_ws', 'الورش وتطوير الزملاء', 'TWS'], ['t_tas', 'تكليفاتي وأعبائي', 'TAS'], ['t_prq', 'إذنٌ مُيسَّر — طلباتي', 'PRQ']]).map(([v, t, k]) => { const c = k === 'XC' ? xmPend() : nn(k); return `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON.dot}<span>${t}</span>${c ? `<span class="n">${c}</span>` : ''}</a>`; }).join(''); }
-  h += `<div class="grp">المخرجات</div><a class="it ${S.view === 'report' ? 'on' : ''}" data-v="report">${ICON.doc}<span>تقرير أعمال القسم</span></a><a class="it ${S.view === 'stats' ? 'on' : ''}" data-v="stats">${ICON.chart}<span>مؤشراتي ومقارناتي</span></a><a class="it ${S.view === 'c_trep' ? 'on' : ''}" data-v="c_trep">${ICON.doc}<span>تقارير أعمال المعلمات</span></a>`;
+  h += `<div class="grp">المخرجات</div><a class="it ${S.view === 'c_dlog' ? 'on' : ''}" data-v="c_dlog">${ICON.chart}<span>سجل أعمال القسم (مرجع كمي)</span></a><a class="it ${S.view === 'report' ? 'on' : ''}" data-v="report">${ICON.doc}<span>تقرير أعمال القسم</span></a><a class="it ${S.view === 'stats' ? 'on' : ''}" data-v="stats">${ICON.chart}<span>مؤشراتي ومقارناتي</span></a><a class="it ${S.view === 'c_trep' ? 'on' : ''}" data-v="c_trep">${ICON.doc}<span>تقارير أعمال المعلمات</span></a>`;
   return h;
 }
 function renderApp() {
@@ -145,7 +145,7 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep };
+  const map = { home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, c_dlog: C_dlog, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep };
   try {
     if (typeof isSec === 'function' && isSec()) return S_prq(el);
     if (isTeacher() && !['t_pv', 't_ws', 't_ach', 't_act', 't_ds', 't_tas', 't_rep', 't_prq', 't_xcmp'].includes(v)) return T_home(el);
@@ -350,6 +350,8 @@ async function C_report(el, deptArg) {
       ${isAdmin() ? adminRepButtons(rp) : ''}
       <button class="btn sec ro-keep" onclick="window.print()">طباعة / حفظ PDF</button>
     </div>
+    ${(() => { const n = R.rows.reduce((a, [, subs]) => a + subs.reduce((b, [, T]) => b + T.filter(t => typeof t === 'string' && (!t.trim() || /^(لم |لا توجد|لا )/.test(t.trim()))).length, 0), 0);
+      return n ? `<div class="emp-bar noprint"><span></span>${n} ${n > 10 ? 'خانة' : n > 2 ? 'خانات' : n === 2 ? 'خانتان' : 'خانة'} لم تُعبَّأ بعد — مظلّلة باللون البرتقالي في التقرير (التظليل يظهر على الشاشة فقط ولا يُطبع)</div>` : ''; })()}
     ${paperHTML(R, rp, sig, csig)}`;
   if ($('#sign')) $('#sign').onclick = () => pinModal('توقيع التقرير', 'بالتوقيع تُقفل سجلات هذه الفترة ويُرسل التقرير للنائب الأكاديمي للاعتماد. أدخلي رقمك السري:', async pin => {
     const snap = buildReport(ctxFor(dept, p)); delete snap.T.perTeacher;
@@ -374,7 +376,8 @@ function paperHTML(R, rp, sig, csig) {
         h += '<tr>';
         if (first) { h += `<td class="m" rowspan="${total}"${sub === null ? ' colspan="2"' : ''}>${esc(main)}</td>`; first = false; }
         if (i === 0 && sub !== null) h += `<td class="s${small ? ' small' : ''}" rowspan="${texts.length}">${esc(sub)}</td>`;
-        h += `<td class="x">${t && t.lines ? tLines(t) : t && t.peer ? peerTbl(t.peer) : esc(t)}</td></tr>`;
+        const emp = typeof t === 'string' && (!t.trim() || /^(لم |لا توجد|لا )/.test(t.trim()));
+        h += `<td class="x${emp ? ' emp' : ''}">${t && t.lines ? tLines(t) : t && t.peer ? peerTbl(t.peer) : esc(t)}</td></tr>`;
       });
     });
     return h;

@@ -50,6 +50,11 @@ function buildReport(ctx) {
   T.as_ach = sec(ASa, r => SEC.AS.tx(d(r)), 'لم تُسجَّل اختبارات تحصيلية خلال الفترة.', 'الاختبارات التحصيلية: ');
   const ASn = AS.filter(r => SEC.AS.an(d(r)));
   T.as_anal = sec(ASn, r => SEC.AS.an(d(r)), 'لم يُسجَّل تحليل للنتائج خلال الفترة.', 'تمت قراءة النتائج وتحليلها: ');
+  /* تحليل النتائج الذي سجّلته المعلمات في سبع سنابل */
+  { const SA = ctx.recs.filter(r => r.dept === dept && r.item === 'SAN' && r.d && inP(String(r.date).slice(0, 10), P));
+    if (SA.length) { const by = {}; SA.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      const tx = `حلّلت معلمات القسم نتائج (${SA.length}) من الشعب وحدّدن المهارات المفقودة والمستهدفات في منصة سبع سنابل: ` + Object.entries(by).map(([t, L]) => `أ. ${t} (${uniq(L.map(r => r.d.s)).join('، ')})`).join('؛ ') + '.';
+      T.as_anal = /^لم /.test(T.as_anal) ? tx : T.as_anal + ' ' + tx; } }
 
   /* رفع التحصيل */
   const RA = Rp('RA');
@@ -65,6 +70,11 @@ function buildReport(ctx) {
     sbTxt = `سجّلت معلمات القسم في منصة سبع سنابل ${parts.join('، و')}، كالآتي: ` + Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length})`).join('، ') + '.';
   }
   T.ra = (sbTxt ? sbTxt + (RA.length ? ' ' : '') : '') + (RA.length ? (sbTxt ? 'كما نفّذ القسم إجراءات أخرى لرفع التحصيل: ' : 'نفّذ القسم الإجراءات الآتية لرفع التحصيل: ') + RA.map(r => SEC.RA.tx(d(r))).join('؛ ') + '.' : '') || 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.';
+  /* تعويض الطالبات عن الحصص الفائتة بسبب الخروج للأنشطة (توثيق المعلمات في الميزان) */
+  { const XC = ctx.recs.filter(r => r.dept === dept && r.item === 'XCMP' && r.d && inP(String(r.date).slice(0, 10), P));
+    if (XC.length) { const by = {}; XC.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      const tx = `وعوّضت معلمات القسم الطالبات عن (${XC.length}) من الحصص التي فاتتهن بسبب الخروج للأنشطة المدرسية: ` + Object.entries(by).map(([t, L]) => `أ. ${t}: ` + L.map(r => `${r.d.ex} — الصف ${r.d.c} (${r.d.how}${r.d.per ? '، ' + r.d.per : ''}، ${dm(r.date)})`).join('؛ ')).join('. ') + '.';
+      T.ra = /^لم /.test(T.ra) ? tx.replace(/^و/, '') : T.ra + ' ' + tx; } }
   /* تعزيز الطالبات بالشهادات من سبع سنابل: من عزّزت، وكم طالبة، وعلى ماذا */
   { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
     if (RF.length) { const by = {}; RF.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));

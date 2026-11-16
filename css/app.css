@@ -417,3 +417,15 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .tc-gal span{font-size:11.5px;color:var(--ink,#333);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tc-th,.tc-pv{position:relative;overflow:hidden;border-radius:8px;background:#F4F1EA;width:100%}
 .tc-th{min-height:110px}.tc-pv{min-height:200px;box-shadow:0 6px 20px #0002}
+/* تقرير أعمال القسم: الخانات غير المعبّأة */
+.rep td.x.emp{background:#FFE3C2;color:#8A4A08;box-shadow:inset 3px 0 0 #F08A24}
+.emp-bar{display:flex;align-items:center;gap:8px;background:#FFF3E6;border:1px solid #F5C08A;color:#8A4A08;border-radius:12px;padding:8px 12px;margin-bottom:12px;font-size:13.5px;font-weight:600}
+.emp-bar span{width:16px;height:16px;border-radius:4px;background:#FFE3C2;border:2px solid #F08A24}
+@media print{.rep td.x.emp{background:none !important;color:inherit !important;box-shadow:none !important}}
+/* سجل أعمال القسم */
+.dl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;margin-bottom:14px}
+.dl-c{font:inherit;cursor:pointer;text-align:right;background:#fff;border:1px solid var(--line);border-top:4px solid var(--c);border-radius:14px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;position:relative;transition:.15s}
+.dl-c:hover{transform:translateY(-2px);box-shadow:0 6px 16px #0001}.dl-c.on{box-shadow:0 0 0 3px color-mix(in srgb,var(--c) 35%,transparent);background:#FFFCF6}
+.dl-c b{font-size:26px;color:var(--c);line-height:1.1}.dl-c>span:not(.dl-e){font-weight:700;font-size:13.5px}.dl-c small{font-size:11px;color:var(--muted)}
+.dl-c .dl-e{position:absolute;top:10px;left:12px;font-size:22px}.dl-c.z{opacity:.7}.dl-c.z b{color:#C9BFAF}
+.dl-zero{margin-top:8px;background:#FFF3E6;border-radius:10px;padding:6px 10px;color:#8A4A08}
