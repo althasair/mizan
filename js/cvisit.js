@@ -271,7 +271,7 @@ function isForm(t, rec) {
 
 /* ================================================================== الاستمارة */
 function cvForm(el, rec) {
-  const F = FORMS.visit;
+  let F = FORMS.visit;
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.cvT || '', date: today(), mode: 'ميدانية', kj: S.cvK || 'كلية', rt: {}, rc: {}, fu: [], str: ['', ''], imp: ['', ''], pre: '', form: 1 };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.fu = d.fu || []; d.str = d.str || (d.f1 ? [d.f1, d.f2].filter(Boolean) : ['', '']); d.imp = d.imp || recsOf({ d }); if (!d.imp.length) d.imp = ['', ''];
   cvNotesInit(d, d.str, d.imp); d.wsi = d.wsi || {};
@@ -285,6 +285,7 @@ function cvForm(el, rec) {
   syncFU();
   let lastD = '';
   const draw = () => {
+    F = vForm(d);
     const s = staffBy(d.t); const secs = String(s.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const subs = uniqA(String(s.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\//).map(x => x.trim()));
     if (!d.subj && subs.length === 1) d.subj = subs[0];
@@ -308,6 +309,7 @@ function cvForm(el, rec) {
       <div class="fld"><label>الموضوع</label><input id="cTop" value="${esc(d.topic || '')}" placeholder="عنوان الدرس"></div>
       <div class="fld"><label>كلية / جزئية <small style="color:var(--muted)">· المتوقع وفق الخطة: ${esc(expK)}</small></label><select id="cKj">${['كلية', 'جزئية'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>نوع المتابعة</label><select id="cMode">${['ميدانية', 'عن بُعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      ${isSciT(d.t) || SCI_DEPTS.includes(S.dept) || d.sci ? sciPick(d, 'cSci') : ''}
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="cLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
     </form>
     ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات في الربع (${esc(P.lbl)})</span><span class="chip">زيارات الربع قبل هذه: ${inM.length}</span>
@@ -342,6 +344,7 @@ function cvForm(el, rec) {
     $('#cT').onchange = () => { grab(); d.subj = ''; d.s = ''; d.ach = ''; d.achAuto = 1; syncFU(); draw(); };
     $('#cD').onchange = () => { grab(); syncFU(); draw(); };
     $('#cKj').onchange = () => { grab(); draw(); };
+    if ($('#cSci')) $('#cSci').onchange = e => { grab(); d.sci = e.target.value ? 1 : 0; if (!d.sci) Object.keys(d.rt).forEach(i => { if (+i >= FORMS.visit.items.length) { delete d.rt[i]; delete d.rc[i]; } }); draw(); };
     $('#cSec').onchange = $('#cSub').onchange = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else d.rt[i] = k; draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
@@ -377,7 +380,7 @@ function cvForm(el, rec) {
 
 /* ================================================================== الطباعة والإرسال */
 function cvInner(r) {
-  const F = FORMS.visit, d = r.d; let lastD = '';
+  const F = vForm(r.d), d = r.d; let lastD = '';
   const cN = r.by || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
   const achT = d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
   const ys = (v, x) => v === x ? '☑' : '☐';

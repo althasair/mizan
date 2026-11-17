@@ -4,6 +4,11 @@
 
 let FORMS = null;
 const loadForms = async () => FORMS || (FORMS = await fetch('data/forms.json?v=' + (window.MIZAN_V || Date.now())).then(r => r.json()));
+/* استمارة المواد العلمية (الفيزياء والكيمياء والأحياء والعلوم): الاستمارة العامة نفسها + مجال «الجانب العملي» (7 معايير) */
+const SCI_DEPTS = ['الفيزياء', 'الكيمياء', 'الأحياء'];
+const isSciT = name => { const s = (S.staff || []).find(x => x.name === name); return !!s && (SCI_DEPTS.includes(s.dept) || /علوم|فيزياء|كيمياء|أحياء/.test(s.subj || '')); };
+const vForm = d => d && d.sci && FORMS.visit_sci ? Object.assign({}, FORMS.visit, { title: FORMS.visit.title + ' (المواد العلمية)', items: FORMS.visit.items.concat(FORMS.visit_sci) }) : FORMS.visit;
+const sciPick = (d, id) => `<div class="fld"><label>نوع الاستمارة</label><select id="${id}"><option value="" ${d.sci ? '' : 'selected'}>الاستمارة العادية</option><option value="1" ${d.sci ? 'selected' : ''}>استمارة المواد العلمية (مع الجانب العملي)</option></select></div>`;
 const DAYS7 = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
 const dayOf = d => d ? DAYS7[new Date(d + 'T12:00:00').getDay()] : '';
 const SEMS = ['الفصل الأول', 'الفصل الثاني'];
@@ -130,7 +135,7 @@ function sanabilFor(name) {
   try { const m = sanabilMeans(); if (!m) return null; const s = staffBy(name); return m[nameKey(s.full || name)] || m[nameKey(name)] || null; } catch (e) { return null; }
 }
 function vpVisitForm(el, rec) {
-  const F = FORMS.visit; const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.vpvT || '', date: today(), mode: 'ميدانيّة', kj: 'كليّة', rt: {}, rc: {}, st: ['', '', ''], im: ['', '', ''] };
+  let F = FORMS.visit; const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.vpvT || '', date: today(), mode: 'ميدانيّة', kj: 'كليّة', rt: {}, rc: {}, st: ['', '', ''], im: ['', '', ''] };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.st = d.st || ['', '', '']; d.im = d.im || ['', '', ''];
   cvNotesInit(d, d.st, d.im); d.wsi = d.wsi || {}; d.fu = d.fu || []; if (!d.pre) d.pre = F.preamble.replace('{name}', d.t || '...');
   const KND = S.vkind === 'PRV' ? 'PRV' : 'VPV';
@@ -143,6 +148,7 @@ function vpVisitForm(el, rec) {
   const teaches = (st, sub) => !sub || subjToks(st).some(x => nrm(x) === nrm(sub) || nrm(x).includes(nrm(sub)) || nrm(sub).includes(nrm(x))) || nrm(st.dept || '') === nrm(sub);
   const tchAll = S.staff.filter(s => +s.load > 0 || s.role === 'معلمة');
   const draw = () => {
+    F = vForm(d);
     const tch = tchAll.filter(x => teaches(x, d.subj)).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
     const s = staffBy(d.t); const secs = String(s.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
     const subs = uniqA(String(s.subj || '').split(/\+|،/).map(x => x.trim()));
@@ -167,6 +173,7 @@ function vpVisitForm(el, rec) {
       <div class="fld"><label>الموضوع</label><input id="fTop" value="${esc(d.topic || '')}" placeholder="عنوان الدرس"></div>
       <div class="fld"><label>نوع المتابعة</label><select id="fMode">${['ميدانيّة', 'عن بُعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       <div class="fld"><label>كليّة / جزئيّة</label><select id="fKj">${['كليّة', 'جزئيّة'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      ${isSciT(d.t) || d.sci ? sciPick(d, 'fSci') : ''}
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="fLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
     </form>${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
     ${cvFuCard(d, prev)}
@@ -188,9 +195,10 @@ function vpVisitForm(el, rec) {
     };
     $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); if (!d.subj || !teaches(st, d.subj)) d.subj = subjToks(st)[0] || ''; const sc = String(st.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean); d.s = sc.length === 1 ? sc[0] : ''; if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
+    if ($('#fSci')) $('#fSci').onchange = e => { grab(); d.sci = e.target.value ? 1 : 0; if (!d.sci) Object.keys(d.rt).forEach(i => { if (+i >= FORMS.visit.items.length) { delete d.rt[i]; delete d.rc[i]; } }); draw(); };
     const reAch = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $('#fSec').onchange = reAch; $('#fSub').onchange = () => { grab(); if (d.t && !teaches(staffBy(d.t), d.subj)) { d.t = ''; d.s = ''; } if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
-    $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 3 || k === 4) && !d.rc[i]) d.rc[i] = FORMS.visit.items[i].r[0]; if (k < 2 && d.rc[i] === FORMS.visit.items[i].r[0]) delete d.rc[i]; } draw(); });
+    $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 3 || k === 4) && !d.rc[i]) d.rc[i] = F.items[i].r[0]; if (k < 2 && d.rc[i] === F.items[i].r[0]) delete d.rc[i]; } draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     cvNotesBind(el, d, fn => { grab(); if (fn) fn(); draw(); });
     $('#vb').onclick = () => { S.vpv = null; show(); };
@@ -235,7 +243,7 @@ function achMini(t, subj) {
     ${tot.n && Object.keys(agg).length > 1 ? bar('الإجمالي', tot.s / tot.n, '') : ''}</div></div>`;
 }
 function visitInner(r) {
-  const F = FORMS.visit, d = r.d; let lastD = '';
+  const F = vForm(r.d), d = r.d; let lastD = '';
   const ys = (v, x) => v === x ? '☑' : '☐';
   return `<h1>${esc(F.title)}</h1><div class="sub">${esc(SCHOOL())} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
