@@ -466,3 +466,4 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .apl-ta{width:100%;margin-top:6px;font:inherit;font-size:13px;border:1px solid var(--line);border-radius:8px;padding:6px 8px;resize:vertical}
 .apl-ds{font-size:13px;color:#2E4A39;margin-top:4px}
 .apl-h{color:var(--muted);font-size:11.5px;font-weight:400}
+.apl-fin{margin-top:10px;font-size:13px;color:#2E4A39}.apl-fin summary{cursor:pointer;color:#1F7A4D;font-weight:700}.apl-fin div{padding:3px 0;border-bottom:1px dashed var(--line)}
