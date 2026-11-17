@@ -152,7 +152,8 @@ function tFileModal(name, R) {
     ${W.length + pv.length + ws.length + pa.length + ach.length ? TW_KINDS.map(k => sec(k, W.filter(w => w.kind === k))).join('') +
       sec2('الزيارات التبادلية', pv, r => `<b>${esc(r.d.v || '')}</b><small>${esc(r.d.vdept || '')}</small>`) +
       sec2('الورش والتطوير المهني', ws, r => `<b>${esc(r.d.title || r.d.name || r.sum || '')}</b><small>${esc([r.d.role, r.d.byx].filter(Boolean).join(' · '))}</small>`) +
-      sec2('التواصل مع أولياء الأمور', pa, r => `<b>${esc(r.d.cat || '')}${r.d.s ? ' — ' + esc(r.d.s) : ''}</b><small>${esc([r.d.topic, r.d.way, r.d.res].filter(Boolean).join(' · '))}</small>`) +
+      sec2('التواصل مع أولياء الأمور', pa, r => `<b>${esc(r.d.cat || r.d.way || 'تواصل')}${r.d.s ? ' — ' + esc(r.d.s) : ''}${r.d.src === 'sab3' ? ' <span class="chip tf" style="font-size:10.5px">من سبع سنابل</span>' : ''}</b><small>${esc([r.d.topic, r.d.cat ? r.d.way : '', r.d.res].filter(Boolean).join(' · '))}</small>`) +
+      sec2('أنشطة ومبادرات الشراكة مع أولياء الأمور', mine('TA').filter(isPaAct), r => `<b>${esc((r.d.kind ? r.d.kind + ': ' : '') + (r.d.name || ''))}</b><small>${esc([r.d.tg, r.d.imp || r.d.impact].filter(Boolean).join(' · '))}</small>`) +
       sec2('الإنجازات والمشاركات', ach, r => `<b>${esc((r.d.kind ? r.d.kind + ': ' : '') + (r.d.name || ''))}</b><small>${esc(r.d.res || '')}</small>`)
       : '<div class="empty">لا توجد أعمال مسجلة</div>'}</div>`;
   document.body.appendChild(m); const close = () => m.remove();

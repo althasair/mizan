@@ -104,7 +104,9 @@ function bootTeacher_(u) {
   const students = students_(secs);
   // طلبات الإذن الخاصة بها، وتواصلها مع أولياء الأمور المسجَّل في سبع سنابل (للعرض فقط)
   rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).filter(x => x.d.t === u.name).forEach(x => recs.push(x));
-  try { const me1 = normAr_(u.name); sabPA_().filter(x => x.item === 'TPA' && normAr_(x.d.t) === me1).forEach(x => recs.push(x)); } catch (e) {}
+  try { const me1 = normAr_(u.name); sabPA_().filter(x => x.d && normAr_(x.d.t) === me1).forEach(x => recs.push(x)); } catch (e) {}
+  // وما رُفع منه إلى سبع سنابل عبر نماذج Forms (محفوظ في نسخة النائب الأكاديمي)، والحصص الإثرائية والتغذية الراجعة والتعزيز، ليظهر في «تقرير أعمالي»
+  try { const me2 = normAr_(u.name), seen = {}; recs.forEach(x => seen[x.id] = 1); sabAdm_().filter(x => x.d && normAr_(x.d.t) === me2 && !seen[x.id]).forEach(x => recs.push(x)); } catch (e) {}
   const staffAll = rows_(SH.teachers).rows.filter(r => r[1] && r[8] !== 'لا').map(r => ({ dept: r[0], name: r[1], role: r[3] }));
   // أسماء الأنشطة القائمة في المدرسة (للاختيار منها)
   const acts = {};

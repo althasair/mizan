@@ -286,6 +286,11 @@ function buildReport(ctx) {
     const PAt = mineD('TPA');
     if (PAt.length) { const by = {}; PAt.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ways: new Set(), cats: new Set() }; o.n += +r.d.n > 0 ? +r.d.n : 1; if (r.d.way) o.ways.add(r.d.way); if (r.d.cat) o.cats.add(r.d.cat); });
       add('pa_ind', 'وسجّلت المعلمات تواصلهن مع أولياء الأمور: ' + Object.entries(by).map(([t, o]) => `أ. ${t} (${o.n})` + (o.cats.size ? ` لأغراض: ${[...o.cats].join('، ')}` : '') + (o.ways.size ? ` — ${[...o.ways].join('، ')}` : '')).join('؛ ') + '.'); }
+    // أنشطة المعلمات ومبادراتهن للشراكة مع أولياء الأمور (دون ما سجّلته المنسقة نفسه في بند أولياء الأمور)
+    { const nk = x => String(x || '').replace(/[ً-ْـ\s«»"()\-–—:،.]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+      const pe = PAe.map(r => nk(d(r).why) + '|' + nk(d(r).c));
+      const PAa = mineD('TA').filter(r => !r.d.q1 && isPaAct(r) && !(nk(r.d.name).length > 3 && pe.some(k => k.includes(nk(r.d.name)))));
+      if (PAa.length) add('pa_ev', 'ونفّذت معلمات القسم للشراكة مع أولياء الأمور: ' + PAa.map(r => `${r.d.kind || 'نشاط'} «${nz(r.d.name)}» (أ. ${r.d.t})` + dateTxt(r.date)).join('؛ ') + '.'); }
     // الإنجازات والمشاركات
     const AH = mineD('TACH'); const AHw = AH.filter(r => /إنجاز/.test(r.d.kind)), AHp = AH.filter(r => !/إنجاز/.test(r.d.kind));
     const ahTx = r => `«${nz(r.d.name)}»` + (r.d.ent ? ` (${r.d.ent})` : '') + (r.d.res ? `، ${r.d.res}` : '') + ` بإشراف أ. ${r.d.t}` + dateTxt(r.date);
