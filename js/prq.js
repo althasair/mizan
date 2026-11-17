@@ -9,7 +9,10 @@ const PRQ_R = {
   'شخصي': ['موعد طبي', 'ظرف عائلي', 'مراجعة جهة', 'حاجة إلى راحة', 'ظرف طارئ'],
   'إذن عمل': ['ورشة تدريبية', 'مهمة رسمية', 'اجتماع خارجي', 'مرافقة طالبات'],
 };
-const PRQ_PH = ['في حفظ الله ورعايته', 'يسّر الله أمركِ وقضى حاجتكِ', 'رافقتكِ السلامة وعوداً حميداً', 'أعانكِ الله ويسّر لكِ'];
+const PRQ_PH = ['في حفظ الله ورعايته', 'يسّر الله أمركِ وقضى حاجتكِ', 'أعانكِ الله ويسّر لكِ', 'حفظكِ الله أينما كنتِ', 'كتب الله لكِ الخير حيث كان', 'قضى الله حاجتكِ وأتمّ عليكِ نعمته', 'أحاطكِ الله بلطفه وعنايته', 'جعل الله لكِ في كل خطوة توفيقاً', 'رافقكِ التوفيق والسلامة', 'بارك الله في وقتكِ وجهدكِ', 'ألبسكِ الله ثوب العافية', 'شفى الله من تحبّين وعافاه', 'أسعد الله أيامكِ', 'دمتِ بخيرٍ وعافية'];
+/* يوم الخميس: عبارة الاعتماد ثابتة */
+const PRQ_THU = 'في حفظ الله ورعايته معلمتي الغالية، وخميسكِ فلّة';
+const prqIsThu = () => new Date().getDay() === 4;
 const PRQ_WHO = { coord: 'منسقة القسم', vp: 'النائب الأكاديمي', pr: 'مديرة المدرسة' };
 const PRQ_TOP = { v: 'وَالْعَصْرِ  إِنَّ الْإِنسَانَ لَفِي خُسْرٍ  إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ', s: 'العصر 1-3' };
 function prqVerse(used) {
@@ -209,7 +212,7 @@ function prqPhSet(p) { try { const u = new Date(Date.now() + 6 * 864e5).toISOStr
 function A_prq(el) {
   setTitle('إذنٌ مُيسَّر — الاعتماد');
   const lv = prqLvl(); const L = prqForMe(); const mineL = L.filter(r => r._mine), early = L.filter(r => !r._mine);
-  const fixed = prqPhGet(); const ph = S.prqPh || fixed || PRQ_PH[0];
+  const fixed = prqPhGet(); const thu = prqIsThu(); const ph = thu ? PRQ_THU : (S.prqPh || fixed || PRQ_PH[0]);
   const mo = S.prqMo || today().slice(0, 7);
   const all = S.records.filter(r => r.item === 'PRQ' && r.d);
   const okMo = all.filter(r => prqCounted(r.d) && String(r.date).slice(0, 7) === mo);
@@ -224,22 +227,22 @@ function A_prq(el) {
   el.innerHTML = `
   <div class="prq-top"><div class="prq-v">﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا﴾</div><small>النساء 58</small></div>
   <div class="card"><h2>عبارة الاعتماد <span class="sub">تظهر للمعلمة مع رسالة الموافقة</span></h2>
-    <div class="row" style="flex-wrap:wrap;gap:8px">${PRQ_PH.map(x => `<label class="chip" style="cursor:pointer;padding:6px 12px;${x === ph ? 'background:var(--maroon);color:#fff' : ''}"><input type="radio" name="pph" value="${esc(x)}" ${x === ph ? 'checked' : ''} style="display:none"> ${esc(x)}</label>`).join('')}</div>
-    ${'Notification' in window && Notification.permission !== 'granted' ? '<button class="btn sec sm" id="pNot" style="float:left">🔔 تفعيل إشعارات هذا الجهاز</button>' : ''}<label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label></div>
+    ${thu ? `<div class="chip" style="padding:8px 14px;background:var(--maroon);color:#fff;font-size:14px">${esc(PRQ_THU)}</div><div style="font-size:12px;color:var(--muted);margin-top:6px">عبارة يوم الخميس ثابتة، وتعود العبارات للاختيار بقية الأيام.</div>` : `<div class="row" style="flex-wrap:wrap;gap:8px">${PRQ_PH.map(x => `<label class="chip" style="cursor:pointer;padding:6px 12px;${x === ph ? 'background:var(--maroon);color:#fff' : ''}"><input type="radio" name="pph" value="${esc(x)}" ${x === ph ? 'checked' : ''} style="display:none"> ${esc(x)}</label>`).join('')}</div>
+    ${'Notification' in window && Notification.permission !== 'granted' ? '<button class="btn sec sm" id="pNot" style="float:left">🔔 تفعيل إشعارات هذا الجهاز</button>' : ''}<label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label>`}</div>
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
   ${prqToday(lv === 1 ? S.user.dept : null)}
   ${lv >= 2 ? prqDash(mo, months) : lv === 1 ? prqDeptRep(mo, months, S.user.dept) : ''}`;
-  const curPh = () => ($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0];
+  const curPh = () => prqIsThu() ? PRQ_THU : (($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0]);
   $$('input[name="pph"]', el).forEach(i => i.onchange = () => { S.prqPh = i.value; if ($('#pfix').checked) prqPhSet(i.value); show(); });
   if ($('#pNot')) $('#pNot').onclick = () => { try { Notification.requestPermission().then(p => { toast(p === 'granted' ? 'تم تفعيل الإشعارات على هذا الجهاز ✓' : 'لم يُسمح بالإشعارات من المتصفح', p !== 'granted'); if (p === 'granted') { prqBell(); show(); } }); } catch (e) { toast('هذا المتصفح لا يدعم الإشعارات', 1); } };
-  $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
+  if ($('#pfix')) $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
   const run = async (ids, act, note) => {
     if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],#pAll', el).forEach(b => b.disabled = true);
     try {
-    const j = await call('prqAct', { ids, act, phrase: curPh(), fix: $('#pfix').checked, note });
+    const j = await call('prqAct', { ids, act, phrase: curPh(), fix: !!($('#pfix') || {}).checked, note });
     j.records.forEach(r => { const i = S.records.findIndex(x => x.id === r.id); if (i >= 0) S.records[i] = r; else S.records.push(r); });
     if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
     } finally { S.prqBusy = 0; }

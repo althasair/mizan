@@ -882,7 +882,11 @@ function prqSubmit_(u, p) {
 }
 
 /* اعتماد أو إعادة (طلب واحد أو الكل) */
+const PRQ_PHS = ['في حفظ الله ورعايته', 'يسّر الله أمركِ وقضى حاجتكِ', 'أعانكِ الله ويسّر لكِ', 'حفظكِ الله أينما كنتِ', 'كتب الله لكِ الخير حيث كان', 'قضى الله حاجتكِ وأتمّ عليكِ نعمته', 'أحاطكِ الله بلطفه وعنايته', 'جعل الله لكِ في كل خطوة توفيقاً', 'رافقكِ التوفيق والسلامة', 'بارك الله في وقتكِ وجهدكِ', 'ألبسكِ الله ثوب العافية', 'شفى الله من تحبّين وعافاه', 'أسعد الله أيامكِ', 'دمتِ بخيرٍ وعافية'];
+const PRQ_THU = 'في حفظ الله ورعايته معلمتي الغالية، وخميسكِ فلّة';   // يوم الخميس: عبارة الاعتماد ثابتة
+function prqThu_() { return Utilities.formatDate(new Date(), 'Asia/Qatar', 'u') === '4'; }
 function prqApply_(u, t, i, act, phrase, note) {
+  if (prqThu_()) phrase = PRQ_THU;
   const row = t.rows[i]; if (row[2] !== 'PRQ') fail_('ليس طلب إذن');
   const d = JSON.parse(row[5] || '{}'); const lv = prqLvl_(u);
   if (d.st === 'ok' || d.st === 'ret') return null;
@@ -919,7 +923,7 @@ function prqAfterX_(rec) {
 }
 function prqAct_(u, p) {
   const ids = [].concat(p.ids || p.id || []); if (!ids.length) fail_('لا توجد طلبات');
-  if (p.fix && p.phrase) { const until = Utilities.formatDate(new Date(Date.now() + 6 * 864e5), 'Asia/Qatar', 'yyyy-MM-dd'); PropertiesService.getScriptProperties().setProperty('phr_' + u.id, JSON.stringify({ p: String(p.phrase).slice(0, 80), until: until })); }
+  if (p.fix && p.phrase && !prqThu_()) { const until = Utilities.formatDate(new Date(Date.now() + 6 * 864e5), 'Asia/Qatar', 'yyyy-MM-dd'); PropertiesService.getScriptProperties().setProperty('phr_' + u.id, JSON.stringify({ p: String(p.phrase).slice(0, 80), until: until })); }
   const out = [], skipped = [];
   const lock = LockService.getScriptLock(); lock.waitLock(25000);
   const done = [];
@@ -951,7 +955,7 @@ function prqMailPage_(q) {
     const d = JSON.parse(t.rows[i][5] || '{}');
     if (d.st !== q.s) body = '<p>' + (d.st === 'ok' ? 'هذا الإذن معتمد مسبقاً ✓' : 'تم التعامل مع هذا الطلب مسبقاً ✓') + '</p>';
     else body = '<p>' + prqDesc_({ t: esc(d.t), kind: esc(d.kind), from: d.from, to: d.to, h: d.h, reason: esc(d.reason), note: esc(d.note) }, esc(t.rows[i][3])) + '</p>' +
-      '<select id="ph" style="font-size:16px;padding:8px;border-radius:8px;width:100%">' + ['في حفظ الله ورعايته', 'يسّر الله أمركِ وقضى حاجتكِ', 'رافقتكِ السلامة وعوداً حميداً', 'أعانكِ الله ويسّر لكِ'].map(x => '<option>' + x + '</option>').join('') + '</select>' +
+      '<select id="ph" style="font-size:16px;padding:8px;border-radius:8px;width:100%">' + (prqThu_() ? [PRQ_THU] : PRQ_PHS).map(x => '<option>' + x + '</option>').join('') + '</select>' +
       '<button id="b" style="margin-top:12px;width:100%;background:#0A8F8A;color:#fff;border:0;border-radius:10px;padding:12px;font-size:17px;font-weight:bold">✓ اعتماد الإذن</button><p id="m"></p>' +
       '<script>document.getElementById("b").onclick=function(){this.disabled=true;document.getElementById("m").textContent="جارٍ الاعتماد…";google.script.run.withSuccessHandler(function(x){document.getElementById("m").textContent=x;}).withFailureHandler(function(e){document.getElementById("m").textContent=e.message;}).prqMailAct(' + JSON.stringify(q) + ',document.getElementById("ph").value);};</script>';
   }
