@@ -204,9 +204,9 @@ function buildReport(ctx) {
 
   /* المصادر والتعليم الإلكتروني */
   const LR = Rp('LR');
-  T.lrc = sec(LR.filter(r => d(r).k === 'تفعيل مركز مصادر التعلم'), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
-  const EL = LR.filter(r => d(r).k === 'توظيف أدوات التعليم الإلكتروني');
-  const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => d(r).e + ((x => x ? ` (${x})` : '')([d(r).s ? (/^الصف/.test(d(r).s) ? d(r).s : 'الصف ' + d(r).s) : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
+  T.lrc = sec(LR.filter(r => !lrIsEL(d(r).k)), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
+  const EL = LR.filter(r => lrIsEL(d(r).k));
+  const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => lrTools(d(r)).join('، ') + ((x => x ? ` (${x})` : '')([d(r).s ? (/^الصف/.test(d(r).s) ? d(r).s : 'الصف ' + d(r).s) : '', d(r).mode && d(r).mode !== 'داخل الحصة الصفية' ? d(r).mode : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
   T.el_n = elBy.reduce((a, x) => a + x.tools.length, 0);
   T.elearn = T.el_n ? 'وظّفت معلمات القسم أدوات التعليم الإلكتروني: ' + elBy.map(x => (x.t === REF.ALL_MEMBERS ? 'جميع معلمات القسم' : x.t === 'القسم' ? 'القسم' : `أ. ${x.t}`) + `: ${x.tools.join('، ')}`).join('؛ ') + '.' : 'لم يُسجَّل توظيف لأدوات التعليم الإلكتروني خلال الفترة.';
 
@@ -290,6 +290,8 @@ function buildReport(ctx) {
     { const nk = x => String(x || '').replace(/[ً-ْـ\s«»"()\-–—:،.]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
       const pe = PAe.map(r => nk(d(r).why) + '|' + nk(d(r).c));
       const PAa = mineD('TA').filter(r => !r.d.q1 && isPaAct(r) && !(nk(r.d.name).length > 3 && pe.some(k => k.includes(nk(r.d.name)))));
+      const ACa = Rp('AC').filter(r => /أولياء/.test(d(r).tg || '') && !(nk(d(r).name).length > 3 && pe.some(k => k.includes(nk(d(r).name)))));
+      if (ACa.length) add('pa_ev', 'ونفّذ القسم بمشاركة أولياء الأمور: ' + ACa.map(r => `${d(r).ty || 'نشاط'} «${nz(d(r).name)}»` + (d(r).tg ? ` (المستهدف: ${d(r).tg})` : '') + dateTxt(r.date)).join('؛ ') + '.');
       if (PAa.length) add('pa_ev', 'ونفّذت معلمات القسم للشراكة مع أولياء الأمور: ' + PAa.map(r => `${r.d.kind || 'نشاط'} «${nz(r.d.name)}» (أ. ${r.d.t})` + dateTxt(r.date)).join('؛ ') + '.'); }
     // الإنجازات والمشاركات
     const AH = mineD('TACH'); const AHw = AH.filter(r => /إنجاز/.test(r.d.kind)), AHp = AH.filter(r => !/إنجاز/.test(r.d.kind));

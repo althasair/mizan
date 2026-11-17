@@ -31,7 +31,7 @@ const paResOf = c => (TPA_RESC[c] || [].concat(...Object.values(TPA_RESC))).conc
 const TPA_TOPIC = paTopOf(''), TPA_RES = paResOf('');
 const TACH_KIND = ['مشاركة', 'إنجاز (مركز أو جائزة)'];
 const TACH_LVL = ['على مستوى المدرسة', 'على مستوى الدولة', 'دولي'];
-const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف الحادي عشر', 'طالبات الصف الثاني عشر', 'جميع الطالبات', 'طالبات شعبتي', 'الطالبات الواعدات', 'الموهوبات والمتفوقات', 'أولياء الأمور', 'المعلمات'];
+const TA_TG = ['طالبات الصف العاشر', 'طالبات الصف الحادي عشر', 'طالبات الصف الثاني عشر', 'جميع الطالبات', 'طالبات شعبتي', 'الطالبات الواعدات', 'الموهوبات والمتفوقات', 'أولياء الأمور', 'أولياء الأمور والطالبات', 'المعلمات'];
 
 (() => { const st = document.createElement('style'); st.textContent = '.multi label,#stuPanel label,.tradio label{display:flex!important;align-items:center;gap:6px;font-weight:400!important;font-size:12.5px}.multi input[type=checkbox],#stuPanel input[type=checkbox],.tradio input[type=radio]{width:auto!important;margin:0;flex:none}.multi,#stuPanel{text-align:right}'; document.head.appendChild(st); })();
 /* الفترة الحالية حسب التاريخ: تدخل المعلمة عليها مباشرة */
@@ -408,7 +408,7 @@ function T_act(el) {
       kf('مشروع', `<label>عدد المراحل أو الأنشطة</label><input type="number" min="2" data-n="stages" value="${esc(d.stages || '')}" placeholder="2 فأكثر">`) +
       kf('مشروع', `<label>المُخرَج النهائي</label><input data-n="out" value="${esc(d.out || '')}" placeholder="مثال: معرض، بحث، منتج، عرض نهائي">`, 1) +
       kf('مبادرة', `<label>الحاجة أو المشكلة التي تعالجها</label>${fSel('need', TA_NEEDS, d.need, 'اختاري الحاجة')}`) +
-      kf('برنامج مبادرة', `<label>الفئة المستهدفة</label>${fSel('tg', TA_TG, d.tg, 'اختاري الفئة')}`) +
+      kf('برنامج مشروع نشاط مبادرة مسابقة', `<label>الفئة المستهدفة <small style="color:var(--muted)">(إن شارك أولياء الأمور اختاري «أولياء الأمور والطالبات»)</small></label>${fSel('tg', TA_TG, d.tg, 'اختاري الفئة')}`) +
       kf('مسابقة', `<label>مستوى المسابقة</label>${fSel('lvl', TA_LVL, d.lvl, 'اختاري المستوى')}`) +
       kf('مبادرة', `<label>المدة</label>${fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')}`) +
       `<div class="fld" id="taTo"><label>تاريخ النهاية</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
@@ -438,7 +438,7 @@ function T_act(el) {
         oth.style.display = imp.value === TA_OTHER ? '' : 'none'; };
       $$('[data-m="ps"] input', f).forEach(c => c.addEventListener('change', fill)); imp.onchange = () => { oth.style.display = imp.value === TA_OTHER ? '' : 'none'; if (imp.value === TA_OTHER) oth.focus(); }; fill(); },
     pre: r => { const k = r.kind; const ow = $('#tf [data-n="own"]'); r.own = !!(ow && ow.checked); r.dur = k === 'مبادرة' ? (r.dur || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
-      const keep = { 'برنامج': ['goal', 'term', 'tg'], 'مشروع': ['par', 'goal', 'stages', 'out', 'n'], 'نشاط': ['par', 'n'], 'مبادرة': ['need', 'tg', 'n', 'own'], 'مسابقة': ['lvl', 'n', 'win'] }[k] || [];
+      const keep = { 'برنامج': ['goal', 'term', 'tg'], 'مشروع': ['par', 'goal', 'stages', 'out', 'n', 'tg'], 'نشاط': ['par', 'n', 'tg'], 'مبادرة': ['need', 'tg', 'n', 'own'], 'مسابقة': ['lvl', 'n', 'win', 'tg'] }[k] || [];
       ['par', 'goal', 'term', 'stages', 'out', 'need', 'tg', 'lvl', 'n', 'win', 'own'].forEach(x => { if (!keep.includes(x)) delete r[x]; });
       if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
     check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' 

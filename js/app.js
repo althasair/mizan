@@ -199,7 +199,7 @@ function optsFor(f, r) {
   const dept = S.dept, mem = deptStaff(dept);
   const coord = mem.filter(s => s.role === 'منسقة').map(s => s.name), tch = mem.filter(s => s.role !== 'منسقة').map(s => s.name);
   switch (f.ty) {
-    case 'sel': case 'combo': return getList(f.l);
+    case 'sel': case 'combo': case 'multi': return getList(f.l);
     case 'teacher': return tch;
     case 'teacherC': return [...coord, ...tch];
     case 'member': return [ALL(), ...coord, ...tch];
@@ -217,13 +217,17 @@ function fieldHTML(f, r) {
   const v = r[f.n] == null ? '' : r[f.n];
   const lab = `<label>${esc(f.h)}${f.req ? ' <i>*</i>' : ''}</label>`;
   const hidden = f.show && !f.show(r) ? ' hide' : '';
-  const wide = ['area'].includes(f.ty) || ['crit', 'rec'].includes(f.ty) || f.n === 'b' ? ' wide' : '';
+  const wide = ['area', 'multi'].includes(f.ty) || ['crit', 'rec'].includes(f.ty) || f.n === 'b' ? ' wide' : '';
   let inp;
   if (f.ty === 'date') inp = `<input type="date" data-n="${f.n}" value="${esc(v)}">`;
   else if (f.ty === 'int') inp = `<input type="number" min="0" step="1" data-n="${f.n}" value="${esc(v)}">`;
   else if (f.ty === 'pct') inp = `<input type="number" min="0" max="100" step="1" data-n="${f.n}" value="${esc(v)}">`;
   else if (f.ty === 'text') inp = `<input type="text" data-n="${f.n}" value="${esc(v)}">`;
   else if (f.ty === 'area') inp = `<textarea data-n="${f.n}">${esc(v)}</textarea>`;
+  else if (f.ty === 'multi') {   // اختيار متعدد من قائمة، مع إضافة ما ليس فيها
+    const o = optsFor(f, r), cur = String(v).split(/[،,]\s*/).map(x => x.trim()).filter(Boolean), all = o.concat(cur.filter(x => !o.includes(x)));
+    inp = `<input type="hidden" data-n="${f.n}" value="${esc(cur.join('، '))}"><div class="mchk" data-mc="${f.n}">${all.map(x => `<label class="${cur.includes(x) ? 'on' : ''}"><input type="checkbox" value="${esc(x)}" ${cur.includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div><input type="text" class="mchk-add" data-ma="${f.n}" placeholder="أداة أخرى؟ اكتبيها ثم اضغطي Enter">`;
+  }
   else {
     const o = optsFor(f, r);
     const free = ['combo', 'allT', 'dep', 'subj', 'member'].includes(f.ty) || f.free;
@@ -266,10 +270,17 @@ function C_section(sec, el) {
       const box = $(`[data-f="${f.n}"]`, frm); if (f.show) box.classList.toggle('hide', !f.show(r));
       if (f.ty === 'dep' && changed === f.on) { const dl = $(`#dl_${f.n}`, frm); dl.innerHTML = f.src(r).map(x => `<option value="${esc(x)}">`).join(''); }
     });
-    const ok = sec.f.filter(f => f.req).every(f => r[f.n] !== '' && r[f.n] != null);
+    const ok = sec.f.filter(f => f.req && !(f.show && !f.show(r))).every(f => r[f.n] !== '' && r[f.n] != null);
     $('#pv').textContent = ok ? sec.tx(r) : '…أكملي الحقول المطلوبة لتظهر الجملة';
   };
-  frm.addEventListener('input', e => upd(e.target.dataset.n)); frm.addEventListener('change', e => upd(e.target.dataset.n)); upd(S.prefill ? 'b' : '');
+  // الاختيار المتعدد: تُجمع الاختيارات في الخانة المخفية
+  $$('.mchk', frm).forEach(box => { const n = box.dataset.mc, hid = $(`input[data-n="${n}"]`, frm);
+    const sync = () => { hid.value = $$('input:checked', box).map(c => c.value).join('، '); $$('label', box).forEach(l => l.classList.toggle('on', $('input', l).checked)); upd(n); };
+    box.addEventListener('change', e => { e.stopPropagation(); sync(); });
+    const add = $(`[data-ma="${n}"]`, frm); add.addEventListener('keydown', e => { if (e.key !== 'Enter') return; e.preventDefault(); const x = add.value.trim(); if (!x) return;
+      let c = $$('input', box).find(i => i.value === x); if (!c) { const l = document.createElement('label'); l.innerHTML = `<input type="checkbox" value="${esc(x)}">${esc(x)}`; box.appendChild(l); c = $('input', l); }
+      c.checked = true; add.value = ''; sync(); }); });
+  frm.addEventListener('input', e => { if (e.target.dataset.ma) return; upd(e.target.dataset.n); }); frm.addEventListener('change', e => upd(e.target.dataset.n)); upd(S.prefill ? 'b' : '');
   S.prefill = null;
   frm.onsubmit = async e => {
     e.preventDefault(); const r = readForm(frm);

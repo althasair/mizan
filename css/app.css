@@ -436,3 +436,9 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .dl-h{margin:18px 0 8px;color:var(--maroon);font-size:16px}
 .dl-tt th{font-size:11.5px;text-align:center;vertical-align:bottom}.dl-tt th span{font-weight:600}.dl-tt td{text-align:center}.dl-tt td:first-child{text-align:right}
 .dl-tt td.z{color:#C08A4A;background:#FFF7EE}
+/* اختيار متعدد في نماذج المنسقة */
+.mchk{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;max-height:210px;overflow:auto;padding:4px 0}
+.mchk label{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:999px;padding:4px 11px;font-size:12.5px;cursor:pointer;background:#fff;white-space:nowrap;font-weight:500}
+.mchk label input{display:none}
+.mchk label.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
+.mchk-add{margin-top:6px;font-size:12.5px}
