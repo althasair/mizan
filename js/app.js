@@ -28,6 +28,7 @@ async function call(a, p) { busy(true); try { return await API.call(a, p); } cat
 /* ------------------------------------------------------------------ الإقلاع */
 async function start() {
   REF = await fetch('data/ref.json?v=' + (window.MIZAN_V || Date.now())).then(r => r.json());
+  await plansLoad();
   const tok = sessionStorage.getItem('mizan_tok');
   if (tok) { S.token = tok; try { await boot(); return; } catch (e) { sessionStorage.removeItem('mizan_tok'); } }
   renderLogin();
@@ -249,7 +250,7 @@ function C_section(sec, el) {
   el.innerHTML = `
     <div class="note">${esc(sec.note)}</div>
     ${locked ? '<div class="note warn">تقرير هذه الفترة موقّع ومقفل؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
-    ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
+    ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div><div class="card apl" id="aplC"></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
     <div class="card" id="fc"><h2>${editing ? 'تعديل سجل' : 'إضافة سجل جديد'} <span class="sub">الحقول المعلَّمة بـ * مطلوبة</span></h2>
       <form class="form" id="frm" autocomplete="off">${sec.f.map(f => fieldHTML(f, base)).join('')}
         <div class="preview"><b>هكذا ستظهر في التقرير</b><span id="pv"></span></div>
@@ -295,7 +296,7 @@ function C_section(sec, el) {
   };
   if ($('#cancel')) $('#cancel').onclick = () => { S.edit = null; refresh(); };
   if ($('#imp')) $('#imp').onclick = () => importForms('PA');
-  if (sec.k === 'PL') planUpCard(S.dept);
+  if (sec.k === 'PL') { planUpCard(S.dept); aplCard(S.dept); }
   $$('[data-ed]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.ed; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });
   $$('[data-del]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; await call('delete', { id: b.dataset.del }); S.records = S.records.filter(x => x.id !== b.dataset.del); toast('تم الحذف'); refresh(); });
   $$('[data-pd]', el).forEach(b => b.onclick = () => { S.prefill = { b: b.dataset.pd }; S.edit = null; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });

@@ -35,7 +35,9 @@ function buildReport(ctx) {
 
   /* التخطيط */
   const PL = Rp('PL');
-  T.pl_annual = sec(PL.filter(r => d(r).c === 'الخطة السنوية للقسم'), r => SEC.PL.tx(d(r)), 'لم تُسجَّل حالة الخطة السنوية خلال الفترة.', 'الخطة السنوية للقسم: ');
+  { const plA = PL.filter(r => d(r).c === 'الخطة السنوية للقسم'), ap = typeof aplReport === 'function' ? aplReport(ctx.recs, dept, P) : '';
+    T.pl_annual = ap ? (plA.length ? sec(plA, r => SEC.PL.tx(d(r)), '', 'الخطة السنوية للقسم: ') + ' ' : '') + ap
+      : sec(plA, r => SEC.PL.tx(d(r)), 'لم تُسجَّل حالة الخطة السنوية خلال الفترة.', 'الخطة السنوية للقسم: '); }
   T.pl_sem = sec(PL.filter(r => d(r).c === 'الخطة الفصلية'), r => SEC.PL.tx(d(r)), 'لم تُسجَّل متابعة الخطط الفصلية خلال الفترة.', 'تمت متابعة تغطية المعايير وفق الخطط الفصلية: ');
 
   /* التقييمات */
