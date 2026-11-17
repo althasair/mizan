@@ -475,8 +475,30 @@ function upload_(u, p) {
   log_(u, 'رفع مرفق', u.dept.join('، '), name);
   return { fid: f.getId(), name: name };
 }
+/* ------------------------------------------------------------------ الخطط السنوية للأقسام — ترفعها المنسقة، وتبقى النسخ السابقة محفوظة */
+const PLAN_FOLDER = 'خطط الأقسام السنوية';
+function planFolder_() { const root = DriveApp.getFolderById(PRIVATE_FOLDER), it = root.getFoldersByName(PLAN_FOLDER); return it.hasNext() ? it.next() : root.createFolder(PLAN_FOLDER); }
+function planUp_(u, p) {
+  if (['coord', 'admin'].indexOf(u.role) < 0) fail_('رفع الخطة للمنسقة والنائب الأكاديمي');
+  const dept = String(p.dept || ''); if (u.role !== 'admin' && u.dept.indexOf(dept) < 0) fail_('غير مسموح');
+  const m = String(p.data || '').match(/^data:([\w.+\/-]*);base64,(.+)$/); if (!m) fail_('صيغة الملف غير مدعومة');
+  const bytes = Utilities.base64Decode(m[2]); if (bytes.length > 15 * 1024 * 1024) fail_('حجم الملف أكبر من 15 ميجابايت');
+  const ext = (String(p.name || '').match(/\.[A-Za-z0-9]{2,5}$/) || [''])[0];
+  const name = 'الخطة السنوية - ' + dept + ' - ' + Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd HH.mm') + ext;
+  const f = planFolder_().createFile(Utilities.newBlob(bytes, m[1] || 'application/octet-stream', name));
+  f.setDescription(u.id + '|' + dept + '|' + u.name + '|' + String(p.name || '').slice(0, 150));
+  log_(u, 'رفع الخطة السنوية', dept, name);
+  return { plans: planList_(u, { dept: dept }).plans };
+}
+function planList_(u, p) {
+  const dept = String(p.dept || ''); if (u.role !== 'admin' && u.role !== 'viewer' && u.dept.indexOf(dept) < 0) fail_('غير مسموح');
+  const out = [], it = planFolder_().getFiles();
+  while (it.hasNext()) { const f = it.next(), x = String(f.getDescription() || '').split('|'); if (x[1] !== dept) continue;
+    out.push({ fid: f.getId(), name: f.getName(), orig: x[3] || '', by: x[2] || '', at: Utilities.formatDate(f.getDateCreated(), 'Asia/Qatar', 'yyyy-MM-dd HH:mm'), size: f.getSize() }); }
+  out.sort((a, b) => b.at.localeCompare(a.at)); return { plans: out };
+}
 function getFile_(u, p) {
-  const f = DriveApp.getFileById(String(p.fid)); if (f.getParents().next().getName() !== 'مرفقات المعلمات') fail_('غير مسموح');
+  const f = DriveApp.getFileById(String(p.fid)); if (['مرفقات المعلمات', PLAN_FOLDER].indexOf(f.getParents().next().getName()) < 0) fail_('غير مسموح');
   const [owner, ...depts] = String(f.getDescription() || '').split('|');
   if (!(u.role === 'admin' || owner === u.id || (u.role === 'coord' && depts.some(d => u.dept.indexOf(d) >= 0)))) fail_('غير مسموح');
   const b = f.getBlob(); return { name: f.getName(), data: 'data:' + b.getContentType() + ';base64,' + Utilities.base64Encode(b.getBytes()) };
@@ -720,7 +742,7 @@ function route_(req) {
   // الموجهة التربوية: اطلاع فقط على أقسامها في الميزان (جميع الأقسام للحساب العام)
   if (u.role === 'viewer') {
     if (u.dept.indexOf('جميع الأقسام') >= 0) u.dept = rows_(SH.teachers).rows.map(r => String(r[0])).filter((d, i, A) => d && A.indexOf(d) === i);
-    if (['boot', 'records', 'signature'].indexOf(a) < 0) fail_('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
+    if (['boot', 'records', 'signature', 'planList', 'file'].indexOf(a) < 0) fail_('حساب الموجهة للاطلاع فقط، ولا يسمح بالتعديل');
   }
   // السكرتارية: اطلاع على حصر الاستئذانات فقط
   if (u.role === 'sec' && ['boot', 'logout'].indexOf(a) < 0) fail_('هذا الحساب للاطلاع على حصر الاستئذانات فقط');
@@ -746,6 +768,8 @@ function route_(req) {
     case 'myStudents': return { students: myStudents_(u) };
     case 'sabRefresh': CacheService.getScriptCache().remove('sabPA4'); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
+    case 'planUp': return planUp_(u, req);
+    case 'planList': return planList_(u, req);
     case 'setSig': return setSig_(u, req);
     case 'syncIndibat': if (!isVP_(u)) fail_('للنائب الأكاديمي فقط'); indibat_(true); return { records: listRecords_(u), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
     case 'prqSubmit': { const r = prqSubmit_(u, req); sabSoon_('PRQ'); return r; }

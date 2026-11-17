@@ -442,3 +442,9 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .mchk label input{display:none}
 .mchk label.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
 .mchk-add{margin-top:6px;font-size:12.5px}
+/* الخطة السنوية للقسم */
+.pl-up .pl-cur{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px}
+.pl-up .pl-cur a,.pl-up .pl-old a{color:var(--maroon);font-weight:700;text-decoration:none}
+.pl-up .pl-cur small,.pl-up .pl-old small{color:var(--muted);font-size:12px}
+.pl-up .pl-old{margin-top:8px;font-size:13px}.pl-up .pl-old summary{cursor:pointer;color:var(--muted)}
+.pl-up .pl-old div{padding:4px 0;border-bottom:1px dashed var(--line)}

@@ -249,7 +249,7 @@ function C_section(sec, el) {
   el.innerHTML = `
     <div class="note">${esc(sec.note)}</div>
     ${locked ? '<div class="note warn">تقرير هذه الفترة موقّع ومقفل؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
-    ${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
+    ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
     <div class="card" id="fc"><h2>${editing ? 'تعديل سجل' : 'إضافة سجل جديد'} <span class="sub">الحقول المعلَّمة بـ * مطلوبة</span></h2>
       <form class="form" id="frm" autocomplete="off">${sec.f.map(f => fieldHTML(f, base)).join('')}
         <div class="preview"><b>هكذا ستظهر في التقرير</b><span id="pv"></span></div>
@@ -295,9 +295,32 @@ function C_section(sec, el) {
   };
   if ($('#cancel')) $('#cancel').onclick = () => { S.edit = null; refresh(); };
   if ($('#imp')) $('#imp').onclick = () => importForms('PA');
+  if (sec.k === 'PL') planUpCard(S.dept);
   $$('[data-ed]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.ed; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });
   $$('[data-del]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; await call('delete', { id: b.dataset.del }); S.records = S.records.filter(x => x.id !== b.dataset.del); toast('تم الحذف'); refresh(); });
   $$('[data-pd]', el).forEach(b => b.onclick = () => { S.prefill = { b: b.dataset.pd }; S.edit = null; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });
+}
+/* الخطة السنوية للقسم: رفع الملف إلى مجلد الميزان الخاص، مع بقاء النسخ السابقة */
+async function planUpCard(dept) {
+  const box = $('#plUp'); if (!box) return;
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' م.ب' : Math.max(1, Math.round(n / 1024)) + ' ك.ب';
+  const draw = L => {
+    const can = isAdmin() || S.user.role === 'coord';
+    box.innerHTML = `<h2>📎 الخطة السنوية للقسم <span class="sub">Word أو Excel أو PDF — عند رفع نسخة معدّلة تبقى السابقة محفوظة</span></h2>
+      ${L.length ? `<div class="pl-cur"><span class="chip ok">النسخة الحالية</span> <a href="#" data-fid="${esc(L[0].fid)}">${esc(L[0].orig || L[0].name)}</a> <small>رُفعت ${esc(L[0].at)}${L[0].by ? ' — ' + esc(L[0].by) : ''} · ${kb(L[0].size)}</small></div>
+        ${L.length > 1 ? `<details class="pl-old"><summary>النسخ السابقة (${L.length - 1})</summary>${L.slice(1).map(x => `<div><a href="#" data-fid="${esc(x.fid)}">${esc(x.orig || x.name)}</a> <small>${esc(x.at)}${x.by ? ' — ' + esc(x.by) : ''}</small></div>`).join('')}</details>` : ''}`
+        : '<div class="empty" style="padding:8px 0">لم تُرفع خطة القسم بعد.</div>'}
+      ${can ? `<label class="btn" style="margin-top:10px;cursor:pointer">⬆️ ${L.length ? 'رفع نسخة معدّلة من الخطة' : 'رفع الخطة السنوية للقسم'}<input type="file" id="plF" accept=".doc,.docx,.xls,.xlsx,.pdf" hidden></label>` : ''}`;
+    const inp = $('#plF'); if (inp) inp.onchange = async () => { const f = inp.files[0]; if (!f) return;
+      if (f.size > 15e6) return toast('حجم الملف أكبر من 15 ميجابايت', 1);
+      if (!/\.(docx?|xlsx?|pdf)$/i.test(f.name)) return toast('اختاري ملف Word أو Excel أو PDF', 1);
+      box.querySelector('label.btn').textContent = 'جارٍ الرفع…';
+      try { const data = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(f); });
+        const j = await call('planUp', { dept, name: f.name, data }); toast('تم رفع الخطة ✓'); draw(j.plans || []); }
+      catch (e) { draw(L); } };
+  };
+  try { const j = await API.call('planList', { dept }); draw(j.plans || []); }
+  catch (e) { box.innerHTML = '<h2>📎 الخطة السنوية للقسم</h2><div class="empty" style="padding:8px 0">رفع الخطة يعمل بعد تحديث كود الخادم.</div>'; }
 }
 function setVal(frm, n, v) { const i = $(`[data-n="${n}"]`, frm); if (i && (i.value === '' || n !== 'j')) i.value = v == null ? '' : v; }
 function recHTML(r) {
