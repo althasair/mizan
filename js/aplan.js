@@ -35,53 +35,142 @@ const aplActive = (s, q) => !s.once && (!s.q || s.q.includes(q));
 const aplChip = (k, n) => k === n ? '<span class="chip ok">مكتمل</span>' : k ? `<span class="chip warn">جارٍ ${k}/${n}</span>` : '<span class="chip">لم يبدأ</span>';
 const aplBar = (k, n) => `<span class="apl-bar"><i style="width:${n ? Math.round(k / n * 100) : 0}%"></i></span>`;
 
+/* ------------------------------------------------------------------ واجهة المتابعة السريعة: جدول النموذج المعتمد نفسه
+   نقرة واحدة على حالة المتابعة (على المسار / متأخر / …) أو على بند فرعي تحقق، والحفظ يجري في الخلفية دون انتظار */
+const APS_ST = ['على المسار', 'متأخر', 'متأخر جداً', 'لم يبدأ', 'مكتمل'];
+const APS_C = { 'على المسار': 'g', 'متأخر': 'o', 'متأخر جداً': 'r', 'لم يبدأ': 'n', 'مكتمل': 'b' };
+const aplQueue = []; let aplBusy = false;
+function aplMark(t) { const m = $('#aplSv'); if (m) m.textContent = t; }
+function aplPush(fn) { aplQueue.push(fn); aplRun(); }
+async function aplRun() {
+  if (aplBusy) return; aplBusy = true; aplMark('… جارٍ الحفظ');
+  while (aplQueue.length) { const f = aplQueue.shift(); try { await f(); } catch (e) { toast('تعذّر الحفظ: ' + e.message, 1); } }
+  aplBusy = false; aplMark('✓ حُفظ كل شيء');
+}
+/* حفظ سجل في الخلفية: يظهر فوراً، ثم يأخذ رقمه من الخادم */
+function aplSave(rec) {
+  const tmp = Object.assign({ id: 'tmp' + Date.now() + Math.random().toString(36).slice(2, 6), at: new Date().toISOString() }, rec);
+  S.records.push(tmp);
+  aplPush(async () => { const r = Object.assign({}, rec); if (tmp.real) r.id = tmp.real; const j = await API.call('save', { rec: r }); tmp.real = j.record.id; tmp.id = j.record.id; });
+  return tmp;
+}
+function aplDel(r) {
+  S.records = S.records.filter(x => x !== r);
+  aplPush(async () => { if (r.id && !String(r.id).startsWith('tmp')) await API.call('delete', { id: r.id }); });
+}
+const apsOf = (dept, mid) => S.records.filter(r => r.dept === dept && r.item === 'APS' && r.d && r.d.mid === mid).sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at))[0];
+/* الحالة المعروضة: ما اختارته المنسقة، وإلا تُستنتج من البنود الفرعية */
+function apsShow(dept, it, done) {
+  const r = apsOf(dept, it.id); if (r) return { st: r.d.st, date: r.date, set: 1 };
+  const k = it.subs.filter(s => done[s.id] || s.once).length;
+  if (k === it.subs.length) { const ds = it.subs.map(s => done[s.id] && done[s.id].date).filter(Boolean).sort(); return { st: 'مكتمل', date: ds.pop() || '', q1: it.subs.every(s => s.once) }; }
+  if (k > it.subs.filter(s => s.once).length) { const ds = it.subs.map(s => done[s.id] && done[s.id].date).filter(Boolean).sort(); return { st: 'على المسار', date: ds.pop() || '' }; }
+  return { st: '', date: '' };
+}
+
 function aplCard(dept) {
   const box = $('#aplC'); if (!box) return;
   const plan = aplPlanOf(dept);
-  if (!plan) { box.innerHTML = '<h2>✅ متابعة تنفيذ الخطة السنوية</h2><div class="empty" style="padding:8px 0">لم تُرتَّب بنود خطة القسم بعد. بعد رفع الخطة السنوية تُرتَّب بنودها هنا، فتختارين منها ما تحقق كل شهر.</div>'; return; }
+  if (!plan) { box.innerHTML = '<h2>✅ متابعة تنفيذ الخطة السنوية</h2><div class="empty" style="padding:8px 0">لم تُرتَّب بنود خطة القسم بعد. بعد رفع الخطة السنوية تُرتَّب بنودها هنا، فتتابعينها بنقرة واحدة.</div>'; return; }
   const can = isAdmin() || S.user.role === 'coord';
-  const done = aplDone(S.records, dept), st = aplStat(plan, done);
-  // البنود المتكررة (كالحصر بعد كل اختبار) تُسجَّل في كل شهر تتحقق فيه؛ «تحقق هذا الشهر» يُقفل البند للشهر الحالي فقط
-  const mo = today().slice(0, 7), all = aplRecs(S.records, dept);
-  const thisMo = {}, hist = {}; all.forEach(r => { (hist[r.d.sid] = hist[r.d.sid] || []).push(r); if ((r.date || '').slice(0, 7) === mo) thisMo[r.d.sid] = r; });
   const Q = aplQ(), QN = ['', 'الأول', 'الثاني', 'الثالث', 'الرابع'][Q];
-  S.aplD = S.aplD == null ? 0 : S.aplD;
-  const D = plan.doms[S.aplD] || plan.doms[0];
-  const act = D.items.filter(it => it.subs.some(x => aplActive(x, Q))), fin = D.items.filter(it => it.subs.every(x => x.once));
-  if (!act.some(i => i.id === S.aplM)) S.aplM = act.length ? act[0].id : null;
-  const M = act.find(i => i.id === S.aplM);
-  const finHTML = fin.length ? `<details class="apl-fin"><summary>✔ بنود استُكملت في الربع الأول (${fin.length})</summary>${fin.map(it => `<div>${esc(it.t)}</div>`).join('')}</details>` : '';
-  box.innerHTML = `<h2>✅ متابعة تنفيذ الخطة السنوية <span class="sub">بنود الربع ${QN} — اختاري المجال ثم البند الأساسي، وأشّري على ما تحقق من بنوده الفرعية؛ يكتمل البند الأساسي بتحقق فروعه كلها.</span></h2>
-    <div class="apl-sum"><b>${st.pct}%</b><div>${aplBar(st.ok, st.all)}<small>تحقق ${st.ok} من ${st.all} بنداً فرعياً في خطة القسم</small></div></div>
-    <div class="apl-doms">${plan.doms.map((x, i) => { const k = x.items.reduce((a, it) => a + st.per[it.id].k, 0), n = x.items.reduce((a, it) => a + st.per[it.id].n, 0);
-      return `<button class="apl-dom${x === D ? ' on' : ''}" data-ad="${i}"><span>${esc(x.d)}</span>${aplBar(k, n)}<small>${k}/${n}</small></button>`; }).join('')}</div>
-    <div class="form" style="margin-top:12px"><div class="fld wide"><label>البند الأساسي</label><select id="aplM">${act.map(it => `<option value="${it.id}" ${it.id === S.aplM ? 'selected' : ''}>${esc(it.t)} — ${st.per[it.id].k}/${st.per[it.id].n}</option>`).join('')}</select></div></div>
-    ${finHTML}${!M ? `<div class="empty" style="padding:8px 0">لا توجد بنود لهذا المجال في الربع ${QN}.</div>` : `<div class="apl-main"><div>${aplChip(st.per[M.id].k, st.per[M.id].n)} <small>أشّري على ما تحقق هذا الشهر، والوصف بجانبه يظهر في التقرير الشهري ويمكنكِ تعديله · المنفّذ: ${esc(M.by)} · موعد الانتهاء: ${esc(M.due)}</small></div>
-      ${M.subs.some(x => x.once) ? `<div class="apl-sub ok"><b>✔ استُكمل في الربع الأول:</b> <span class="apl-ds">${M.subs.filter(x => x.once).map(x => esc(x.t)).join('، ')}</span></div>` : ''}
-      ${M.subs.filter(x => aplActive(x, Q)).map(s => { const r = thisMo[s.id], H = (hist[s.id] || []).filter(x => x !== r).sort((a, b) => a.date.localeCompare(b.date));
-        return `<div class="apl-sub${r ? ' ok' : ''}">
-          <label class="apl-chk"><input type="checkbox" data-as="${s.id}" ${r ? 'checked disabled' : ''} ${can ? '' : 'disabled'}> <b>${esc(s.t)}</b>${r ? ` <span class="chip ok">تحقق ${dm(r.date)}</span>` : ''}${H.length ? ` <small class="apl-h">سبق تحققه: ${H.map(x => dm(x.date)).join('، ')}</small>` : ''}</label>
-          ${r ? `<div class="apl-ds">${esc(r.d.ds)}${can ? ` <button class="btn sm ghost" data-aun="${r.id}">إلغاء التحقق</button>` : ''}</div>`
-              : `<textarea class="apl-ta" data-ads="${s.id}" rows="2" ${can ? '' : 'disabled'}>${esc(aplFill(s.ds, dept, today()))}</textarea>`}</div>`; }).join('')}
-      ${can && M.subs.some(s => aplActive(s, Q) && !thisMo[s.id]) ? `<div class="row" style="gap:10px;align-items:center;margin-top:10px"><label style="font-size:13px">تاريخ التحقق</label><input type="date" id="aplDt" value="${today()}" style="max-width:170px"><button class="btn" id="aplSave">حفظ ما تحقق</button></div>` : ''}
-    </div>`}`;
-  $$('[data-ad]', box).forEach(b => b.onclick = () => { S.aplD = +b.dataset.ad; S.aplM = null; aplCard(dept); });
-  if ($('#aplM', box)) $('#aplM', box).onchange = e => { S.aplM = e.target.value; aplCard(dept); };
-  $$('.apl-ta', box).forEach(t => t.oninput = () => { t.dataset.ed = 1; const c = $(`[data-as="${t.dataset.ads}"]`, box); if (c && !c.checked) c.checked = true; });
-  if ($('#aplDt', box)) $('#aplDt', box).onchange = e => { const dt = e.target.value || today(); $$('.apl-ta', box).forEach(t => { if (t.dataset.ed) return; const s = M.subs.find(x => x.id === t.dataset.ads); t.value = aplFill(s.ds, dept, dt); }); };
-  if ($('#aplSave', box)) $('#aplSave', box).onclick = async () => {
-    const pick = M.subs.filter(s => aplActive(s, Q) && !thisMo[s.id] && $(`[data-as="${s.id}"]`, box).checked);
-    if (!pick.length) return toast('أشّري على البند الفرعي الذي تحقق', 1);
-    const date = $('#aplDt', box).value || today();
-    for (const s of pick) {
-      const ds = ($(`[data-ads="${s.id}"]`, box).value || aplFill(s.ds, dept, date)).trim();
-      const d = { dom: D.d, mid: M.id, main: M.t, sid: s.id, sub: s.t, st: 'تحقق', ds, date };
-      const j = await call('save', { rec: { dept, item: 'APL', date, sum: (s.t + ': ' + ds).slice(0, 400), d } });
-      S.records.push(j.record);
-    }
-    toast(pick.length > 1 ? `تم حفظ ${pick.length} بنود فرعية ✓` : 'تم الحفظ ✓'); aplCard(dept);
+  const draw = () => {
+    const done = aplDone(S.records, dept), st = aplStat(plan, done), mo = today().slice(0, 7);
+    const all = S.aplAll;
+    const thisMo = {}; aplRecs(S.records, dept).forEach(r => { if ((r.date || '').slice(0, 7) === mo) thisMo[r.d.sid] = r; });
+    const rows = plan.doms.map(D => {
+      const items = D.items.filter(it => all || it.subs.some(s => aplActive(s, Q)));
+      if (!items.length) return '';
+      const k = D.items.reduce((a, it) => a + st.per[it.id].k, 0), n = D.items.reduce((a, it) => a + st.per[it.id].n, 0);
+      return `<tr class="apl-dh"><td colspan="5"><b>${esc(D.d)}</b> ${aplBar(k, n)} <small>${k}/${n}</small></td></tr>` + items.map(it => {
+        const s = apsShow(dept, it, done);
+        const subs = it.subs.filter(x => all || aplActive(x, Q) || x.once);
+        return `<tr><td class="apl-a"><div>${esc(it.t)}</div><div class="apl-subs">${subs.map(x => {
+            if (x.once) return `<span class="apl-sc q1" title="استُكمل في الربع الأول">✔ ${esc(x.t)}</span>`;
+            const r = thisMo[x.id], ever = done[x.id];
+            return `<button class="apl-sc${r ? ' on' : ever ? ' was' : ''}" data-sc="${x.id}" data-mid="${it.id}" title="${esc(aplFill(x.ds, dept, today()))}" ${can ? '' : 'disabled'}>${r ? '✔ ' : ''}${esc(x.t)}${!r && ever ? ` <small>${dm(ever.date)}</small>` : ''}</button>`; }).join('')}</div></td>
+          <td class="apl-by">${esc(it.by)}</td><td class="apl-due">${esc(it.due)}</td>
+          <td class="apl-st">${s.q1 ? '<span class="aps b on">مكتمل</span>' : APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td>
+          <td class="apl-dt">${s.q1 ? 'الربع الأول' : s.date ? dm(s.date) : '—'}</td></tr>`; }).join('');
+    }).join('');
+    box.innerHTML = `<h2>✅ متابعة تنفيذ الخطة السنوية <span class="sub">انقري حالة المتابعة لكل إجراء، وانقري البند الفرعي الذي تحقق هذا الشهر فيظهر وصفه في التقرير الشهري. الحفظ تلقائي.</span></h2>
+      <div class="apl-sum"><b>${st.pct}%</b><div>${aplBar(st.ok, st.all)}<small>تحقق ${st.ok} من ${st.all} بنداً فرعياً في خطة القسم</small></div>
+        <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span>
+        <button class="btn sm sec" id="aplAll">${all ? 'بنود الربع ' + QN + ' فقط' : 'عرض الخطة كاملة'}</button>
+        <button class="btn sm" id="aplPr">🖨️ طباعة متابعة الخطة (نموذج الوزارة)</button></div></div>
+      <div class="apl-tw"><table class="apl-t"><thead><tr><th>الإجراءات والأنشطة الإشرافية والبرامج ${all ? '' : `<small>(الربع ${QN})</small>`}</th><th>المنفّذ</th><th>موعد الانتهاء</th><th>المتابعة</th><th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table></div>
+      ${!all ? '<div class="apl-note">✔ البنود الخضراء استُكملت في الربع الأول، وما اكتملت بنوده كلها في الربع الأول يظهر في «عرض الخطة كاملة» وفي الطباعة بحالة «مكتمل».</div>' : ''}`;
+    $('#aplAll', box).onclick = () => { S.aplAll = !S.aplAll; draw(); };
+    $('#aplPr', box).onclick = () => aplDocx(dept);
+    $$('[data-st]', box).forEach(b => b.onclick = () => {
+      const mid = b.dataset.mid, v = b.dataset.st, r = apsOf(dept, mid), it = plan.doms.flatMap(D => D.items).find(i => i.id === mid);
+      if (r && r.d.st === v) return;
+      const rec = { dept, item: 'APS', date: today(), sum: `${it.t}: ${v}`.slice(0, 400), d: { mid, main: it.t, st: v, date: today() } };
+      if (r && (r.date || '').slice(0, 7) === today().slice(0, 7)) { Object.assign(r, { date: rec.date, sum: rec.sum, d: rec.d, at: new Date().toISOString() }); aplPush(async () => { const j = await API.call('save', { rec: Object.assign({}, rec, { id: r.real || r.id }) }); r.id = j.record.id; }); }
+      else aplSave(rec);
+      draw();
+    });
+    $$('[data-sc]', box).forEach(b => b.onclick = () => {
+      const sid = b.dataset.sc, r = thisMo[sid];
+      if (r) { aplDel(r); draw(); return; }
+      const it = plan.doms.flatMap(D => D.items).find(i => i.id === b.dataset.mid), D = plan.doms.find(D => D.items.includes(it)), s = it.subs.find(x => x.id === sid);
+      const ds = aplFill(s.ds, dept, today());
+      aplSave({ dept, item: 'APL', date: today(), sum: (s.t + ': ' + ds).slice(0, 400), d: { dom: D.d, mid: it.id, main: it.t, sid, sub: s.t, st: 'تحقق', ds, date: today() } });
+      draw();
+    });
   };
-  $$('[data-aun]', box).forEach(b => b.onclick = async () => { if (!confirm('إلغاء تحقق هذا البند الفرعي؟')) return; await call('delete', { id: b.dataset.aun }); S.records = S.records.filter(x => x.id !== b.dataset.aun); toast('تم الإلغاء'); aplCard(dept); });
+  draw();
+}
+
+/* طباعة متابعة الخطة على النموذج المعتمد نفسه: ملف Word الخاص بخطة القسم (بترويسته وأعمدته وقوائمه)،
+   تُملأ فيه خانتا «المتابعة» و«تاريخ المتابعة» لكل إجراء من الميزان، ثم يُنزَّل لطباعته من Word */
+async function aplJSZip() {
+  if (window.JSZip) return window.JSZip;
+  await new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'assets/vendor/jszip.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+  return window.JSZip;
+}
+const aplXText = s => (s.match(/<w:t(?: [^>]*)?>[^<]*<\/w:t>/g) || []).map(t => t.replace(/<[^>]+>/g, '')).join('').replace(/&amp;/g, '&').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').trim();
+const aplXEsc = s => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+const aplNorm = s => String(s).replace(/[ً-ْ]/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/\s+/g, ' ').trim();
+const APL_VAL_RPR = '<w:rPr><w:rFonts w:ascii="Lusail+" w:hAnsi="Lusail+" w:cs="Lusail+"/><w:color w:val="A4012D"/><w:lang w:val="en-GB" w:bidi="ar-QA"/></w:rPr>';
+/* يضع قيمة في عنصر تحكم (قائمة أو تاريخ) ويُلغي النص الإرشادي */
+function aplSetSdt(sdt, text, iso) {
+  let s = sdt.replace('<w:showingPlcHdr/>', '');
+  if (iso) s = s.replace(/w:fullDate="[^"]*"/, `w:fullDate="${iso}T00:00:00Z"`);
+  s = s.replace(/(<w:sdtContent>[\s\S]*?<w:p[ >][\s\S]*?<\/w:pPr>)([\s\S]*?)(<\/w:p>)/, (m, a, runs, c) => a + `<w:r>${APL_VAL_RPR}<w:t xml:space="preserve">${aplXEsc(text)}</w:t></w:r>` + c);
+  return s;
+}
+async function aplDocx(dept) {
+  const plan = aplPlanOf(dept); if (!plan || !plan.docx) return toast('لا يوجد ملف النموذج لخطة هذا القسم', 1);
+  toast('جارٍ تجهيز ملف الخطة…');
+  try {
+    const JSZip = await aplJSZip();
+    const buf = await fetch(encodeURI(plan.docx) + '?v=' + (window.MIZAN_V || '')).then(r => { if (!r.ok) throw new Error('تعذّر تحميل النموذج'); return r.arrayBuffer(); });
+    const zip = await JSZip.loadAsync(buf);
+    let x = await zip.file('word/document.xml').async('string');
+    const done = aplDone(S.records, dept), items = {}; plan.doms.forEach(D => D.items.forEach(it => items[aplNorm(it.t)] = it));
+    let n = 0;
+    x = x.replace(/<w:tr[ >][\s\S]*?<\/w:tr>/g, row => {
+      const parts = row.match(/<w:tc>[\s\S]*?<\/w:tc>|<w:sdt>[\s\S]*?<\/w:sdt>/g) || [];
+      if (parts.length < 7) return row;
+      const it = items[aplNorm(aplXText(parts[1]))]; if (!it) return row;
+      const s = apsShow(dept, it, done); if (!s.st) return row;   // لا متابعة في الميزان: يبقى ما في الملف كما هو
+      const stSdt = parts[5], dtSdt = parts[6];
+      if (stSdt.indexOf('<w:comboBox>') < 0 && stSdt.indexOf('<w:dropDownList>') < 0) return row;
+      const li = (stSdt.match(/<w:listItem [^>]*\/>/g) || []).map(l => (l.match(/w:displayText="([^"]*)"/) || [])[1]).filter(Boolean);
+      const val = li.find(v => aplNorm(v) === aplNorm(s.st)) || s.st;
+      let out = row.replace(stSdt, aplSetSdt(stSdt, val));
+      const iso = s.date || (s.q1 ? '' : '');
+      if (iso && dtSdt.indexOf('<w:date') >= 0) out = out.replace(dtSdt, aplSetSdt(dtSdt, iso.split('-').reverse().join('/'), iso));
+      n++; return out;
+    });
+    zip.file('word/document.xml', x);
+    const blob = await zip.generateAsync({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+    a.download = `متابعة الخطة السنوية - ${dept} - ${today().split('-').reverse().join('-')}.docx`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    toast(`تم تجهيز الخطة على النموذج المعتمد (${n} إجراءً محدَّث المتابعة) ✓`);
+  } catch (e) { toast('تعذّر تجهيز الملف: ' + e.message, 1); }
 }
 
 /* جملة التقرير الشهري: ما تحقق خلال الفترة مجمّعاً تحت بنده الأساسي، ثم نسبة ما تحقق من الخطة حتى نهاية الفترة */

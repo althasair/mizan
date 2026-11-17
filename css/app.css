@@ -467,3 +467,24 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .apl-ds{font-size:13px;color:#2E4A39;margin-top:4px}
 .apl-h{color:var(--muted);font-size:11.5px;font-weight:400}
 .apl-fin{margin-top:10px;font-size:13px;color:#2E4A39}.apl-fin summary{cursor:pointer;color:#1F7A4D;font-weight:700}.apl-fin div{padding:3px 0;border-bottom:1px dashed var(--line)}
+/* متابعة الخطة: جدول النموذج المعتمد بنقرة واحدة */
+.apl-tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.apl-sv{font-size:12px;color:#1F7A4D;min-width:90px}
+.apl-tw{overflow-x:auto;margin-top:8px}
+.apl-t{width:100%;border-collapse:collapse;font-size:13px}
+.apl-t th{background:#601804;color:#fff;padding:7px 6px;font-weight:700;font-size:12.5px}
+.apl-t td{border-bottom:1px solid var(--line);padding:7px 6px;vertical-align:top}
+.apl-t tr.apl-dh td{background:var(--maroon-l);color:var(--maroon);padding:6px 8px}
+.apl-t tr.apl-dh .apl-bar{display:inline-block;width:110px;vertical-align:middle;margin:0 6px}
+.apl-a{min-width:300px}.apl-by,.apl-due,.apl-dt{white-space:nowrap;font-size:12px;color:#555;text-align:center}
+.apl-subs{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px}
+.apl-sc{border:1px solid var(--line);background:#fff;border-radius:999px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
+.apl-sc.on{background:#1F7A4D;border-color:#1F7A4D;color:#fff}
+.apl-sc.was{border-color:#BFDCC9;color:#1F7A4D}.apl-sc small{opacity:.75;font-size:10.5px}
+.apl-sc.q1{background:#F1F8F3;border-color:#BFDCC9;color:#1F7A4D;cursor:default}
+.apl-st{white-space:nowrap}
+.aps{border:1px solid var(--line);background:#fff;border-radius:8px;padding:3px 7px;font:inherit;font-size:11.5px;cursor:pointer;margin:1px;color:#555}
+.aps.on.g{background:#1F7A4D;border-color:#1F7A4D;color:#fff}.aps.on.o{background:#D98A00;border-color:#D98A00;color:#fff}
+.aps.on.r{background:#A4012D;border-color:#A4012D;color:#fff}.aps.on.n{background:#6B7280;border-color:#6B7280;color:#fff}.aps.on.b{background:#1E5AA8;border-color:#1E5AA8;color:#fff}
+.aps.on.auto{opacity:.7;border-style:dashed}
+.apl-note{font-size:12px;color:var(--muted);margin-top:8px}
