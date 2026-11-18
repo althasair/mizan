@@ -14,6 +14,7 @@ const PRQ_PH = ['في حفظ الله ورعايته', 'يسّر الله أمر
 const PRQ_THU = 'في حفظ الله ورعايته معلمتي الغالية، وخميسكِ فلّة';
 const prqIsThu = () => new Date().getDay() === 4;
 const PRQ_WHO = { coord: 'منسقة القسم', vp: 'النائب الأكاديمي', pr: 'مديرة المدرسة' };
+const PRQ_REJ = ['تعارض الإذن مع حصص المعلمة وتعذّر الاحتياط', 'تجاوز الرصيد الشهري للاستئذان', 'وجود اختبار أو مهمة رسمية في الوقت نفسه', 'كثرة المستأذنات في القسم في اليوم نفسه', 'عدم كفاية المبرر أو المستند'];
 const PRQ_TOP = { v: 'وَالْعَصْرِ  إِنَّ الْإِنسَانَ لَفِي خُسْرٍ  إِلَّا الَّذِينَ آمَنُوا وَعَمِلُوا الصَّالِحَاتِ وَتَوَاصَوْا بِالْحَقِّ وَتَوَاصَوْا بِالصَّبْرِ', s: 'العصر 1-3' };
 function prqVerse(used) {
   const r = used / PRQ_LIMIT;
@@ -59,6 +60,7 @@ function prqChain(r) {
 function prqStatus(r) {
   const d = r.d;
   if (d.st === 'ok') return '<span class="chip ok">معتمد ✓</span>';
+  if (d.st === 'rej') return `<span class="chip" style="background:#F9E3E6;color:#A3202F">لم تتم الموافقة ✕</span>${d.rej && d.rej.note ? `<div style="font-size:12px;color:#A3202F">السبب: ${esc(d.rej.note)}${d.rej.by ? ' — ' + esc(d.rej.by) : ''}</div>` : ''}`;
   if (d.st === 'ret') return `<span class="chip" style="background:#FCEADB;color:#B8521A">أُعيد للتعديل</span>${d.ret && d.ret.note ? `<div style="font-size:12px;color:#B8521A">${esc(d.ret.by)}: ${esc(d.ret.note)}</div>` : ''}`;
   return `<span class="chip" style="background:#FBF1DB;color:#946410">بانتظار ${PRQ_WHO[d.st] || ''}</span>`;
 }
@@ -80,7 +82,7 @@ function prqGuide() {
 const isSec = () => S.user && S.user.role === 'sec';
 function S_prq(el) {
   setTitle('إذنٌ مُيسَّر — حصر الغياب والاستئذان');
-  const all = S.records.filter(r => r.item === 'PRQ' && r.d && r.d.st !== 'ret');
+  const all = S.records.filter(r => r.item === 'PRQ' && r.d && r.d.st !== 'ret' && r.d.st !== 'rej');
   const t0 = today(); const MN = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
   const months = [...new Set(all.map(r => String(r.date).slice(0, 7)).concat([t0.slice(0, 7)]))].sort().reverse();
   const mo = S.secMo && months.includes(S.secMo) ? S.secMo : t0.slice(0, 7);
@@ -222,7 +224,7 @@ function A_prq(el) {
     return `<tr><td>${act ? `<input type="checkbox" data-pk="${r.id}" checked>` : ''}</td><td><b>${esc(r.d.t)}</b><br><small style="color:var(--muted)">${esc(r.dept)}</small></td><td>${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}<br><b>${prqNum(r.d.h)} س</b></td>
       <td>${esc(r.d.reason)}${r.d.note ? `<br><small>${esc(r.d.note)}</small>` : ''}<br><span class="chip" style="font-size:11px">${esc(r.d.kind)}</span></td>
       <td style="font-size:12px">${r.d.kind === 'إذن عمل' ? 'لا يُحسب' : `<b style="color:${tot > PRQ_LIMIT ? '#A3202F' : 'inherit'}">${prqNum(tot)}</b> من ${PRQ_LIMIT} بعد هذا الإذن`}</td><td>${prqChain(r)}</td>
-      <td style="white-space:nowrap"><button class="btn sm" data-pa="${r.id}">✓ اعتماد</button> <button class="btn sm ghost" data-pr="${r.id}" style="color:#B8521A">إعادة للتعديل</button></td></tr>`; };
+      <td style="white-space:nowrap"><button class="btn sm" data-pa="${r.id}">✓ اعتماد</button> <button class="btn sm ghost" data-pr="${r.id}" style="color:#B8521A">إعادة للتعديل</button> <button class="btn sm ghost" data-prj="${r.id}" style="color:#A3202F">✕ رفض</button></td></tr>`; };
   const head = '<tr><th></th><th>المعلمة</th><th>اليوم</th><th>الوقت</th><th>السبب</th><th>رصيد الشهر</th><th>المسار</th><th></th></tr>';
   el.innerHTML = `
   <div class="prq-top"><div class="prq-v">﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا﴾</div><small>النساء 58</small></div>
@@ -240,16 +242,27 @@ function A_prq(el) {
   if ($('#pfix')) $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
   const run = async (ids, act, note) => {
-    if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],#pAll', el).forEach(b => b.disabled = true);
+    if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],[data-prj],#pAll', el).forEach(b => b.disabled = true);
     try {
     const j = await call('prqAct', { ids, act, phrase: curPh(), fix: !!($('#pfix') || {}).checked, note });
     j.records.forEach(r => { const i = S.records.findIndex(x => x.id === r.id); if (i >= 0) S.records[i] = r; else S.records.push(r); });
-    if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
+    if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'rej' ? 'تم رفض الطلب، ووصل السبب للمعلمة ✓' : act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
     } finally { S.prqBusy = 0; }
     refresh();
   };
   $$('[data-pa]', el).forEach(b => b.onclick = () => run([b.dataset.pa], 'ok'));
   $$('[data-pr]', el).forEach(b => b.onclick = () => { const n = prompt('سبب الإعادة للتعديل (يصل للمعلمة):', ''); if (n === null) return; run([b.dataset.pr], 'ret', n); });
+  /* الرفض: سبب جاهز للاختيار أو مكتوب، يصل للمعلمة مع الإشعار والبريد */
+  $$('[data-prj]', el).forEach(b => b.onclick = () => {
+    const tr = b.closest('tr'), nx = tr.nextElementSibling; if (nx && nx.classList.contains('prq-rj')) { nx.remove(); return; }
+    const x = document.createElement('tr'); x.className = 'prq-rj';
+    x.innerHTML = `<td colspan="8" style="background:#FDF3F4"><b style="color:#A3202F">سبب الرفض</b> <small style="color:var(--muted)">(يصل للمعلمة)</small>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin:6px 0">${PRQ_REJ.map(t => `<button class="btn sm ghost" data-rjt="${esc(t)}">${esc(t)}</button>`).join('')}</div>
+      <div class="row" style="gap:8px"><input class="rj-in" placeholder="أو اكتبي السبب بعباراتكِ…" style="flex:1"><button class="btn sm" style="background:#A3202F" data-rjgo="${b.dataset.prj}">تأكيد الرفض</button></div></td>`;
+    tr.after(x);
+    $$('[data-rjt]', x).forEach(c => c.onclick = () => { $('.rj-in', x).value = c.dataset.rjt; });
+    $('[data-rjgo]', x).onclick = () => { const n = $('.rj-in', x).value.trim(); if (!n) return toast('اكتبي سبب الرفض أو اختاريه', 1); run([b.dataset.prj], 'rej', n); };
+  });
   if ($('#pAll')) $('#pAll').onclick = () => { const ids = $$('[data-pk]', el).filter(c => c.checked).map(c => c.dataset.pk); if (!ids.length) return toast('حدّدي طلباً واحداً على الأقل', 1); run(ids, 'ok'); };
 }
 
@@ -354,7 +367,7 @@ function prqMyLog(L) {
 
 /* من استأذن اليوم (للمنسقة: قسمها، وللنائب والمديرة: الجميع) */
 function prqToday(depts) {
-  const d0 = today(), T = S.records.filter(r => r.item === 'PRQ' && r.d && r.date === d0 && r.d.st !== 'ret' && (!depts || depts.includes(r.dept))).sort((a, b) => (a.d.from || '').localeCompare(b.d.from || ''));
+  const d0 = today(), T = S.records.filter(r => r.item === 'PRQ' && r.d && r.date === d0 && r.d.st !== 'ret' && r.d.st !== 'rej' && (!depts || depts.includes(r.dept))).sort((a, b) => (a.d.from || '').localeCompare(b.d.from || ''));
   return `<div class="card"><div class="row"><h2 style="margin:0">المستأذنات اليوم — ${prqDay(d0)} ${dmy(d0)}</h2><span class="sp"></span><span class="chip">${T.length}</span></div>
     ${T.length ? `<div class="tbl" style="margin-top:8px"><table class="t"><tr><th>المعلمة</th>${depts && depts.length < 2 ? '' : '<th>القسم</th>'}<th>الوقت</th><th>الساعات</th><th>السبب</th><th>الحالة</th></tr>
       ${T.map(r => `<tr><td><b>${esc(r.d.t)}</b></td>${depts && depts.length < 2 ? '' : `<td>${esc(r.dept)}</td>`}<td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}</td><td>${prqNum(r.d.h)}</td><td>${esc(r.d.reason)} <span class="chip" style="font-size:10.5px">${esc(r.d.kind)}</span></td><td>${prqStatus(r)}</td></tr>`).join('')}</table></div>`

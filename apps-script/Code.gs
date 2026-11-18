@@ -913,11 +913,13 @@ function prqApply_(u, t, i, act, phrase, note) {
   if (prqThu_()) phrase = PRQ_THU;
   const row = t.rows[i]; if (row[2] !== 'PRQ') fail_('ليس طلب إذن');
   const d = JSON.parse(row[5] || '{}'); const lv = prqLvl_(u);
-  if (d.st === 'ok' || d.st === 'ret') return null;
+  if (d.st === 'ok' || d.st === 'ret' || d.st === 'rej') return null;
   if (!lv || lv < PRQ_ST[d.st]) fail_('هذا الطلب بانتظار ' + PRQ_WHO[d.st]);
   if (lv === 1 && (u.dept.indexOf(row[1]) < 0 || d.t === u.name)) fail_('هذا الطلب ليس لقسمكِ');
   const who = lv === 3 ? 'pr' : lv === 2 ? 'vp' : 'coord';
-  if (act === 'ret') {
+  if (act === 'rej') {
+    d.rej = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) }; d.st = 'rej'; d.seen = false;
+  } else if (act === 'ret') {
     d.ret = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) }; d.st = 'ret'; d.seen = false;
   } else {
     d.steps = (d.steps || []).filter(s => PRQ_ST[s.w] < PRQ_ST[who]).concat([{ by: u.name, w: who, at: now_(), ph: String(phrase || PRQ_DEF).slice(0, 80) }]);
@@ -925,12 +927,13 @@ function prqApply_(u, t, i, act, phrase, note) {
   }
   row[5] = JSON.stringify(d); row[8] = now_();
   t.sh.getRange(i + 2, 6).setValue(row[5]); t.sh.getRange(i + 2, 9).setValue(row[8]);
-  log_(u, act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
+  log_(u, act === 'rej' ? 'رفض طلب إذن' : act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
   return recObj_(row);
 }
 function prqAfter_(rec) { try { return prqAfterX_(rec); } catch (e) { log_(null, 'تنبيه', rec.dept, String(e.message || e).slice(0, 120)); return [rec]; } }
 function prqAfterX_(rec) {
   const d = rec.d; const tm = mailOf_(d.t);
+  if (d.st === 'rej') { platMail_(tm, 'لم تتم الموافقة على طلب إذنكِ', mailBox_('إذنٌ مُيسَّر', 'معلمتي الغالية أ. ' + d.t + '،<br>نعتذر، لم تتم الموافقة على طلب إذنكِ ليوم ' + rec.date + (d.rej && d.rej.note ? '، والسبب: <b>' + d.rej.note + '</b>' : '') + '.<br>لا يُخصم هذا الطلب من رصيدكِ.')); return [rec]; }
   if (d.st === 'ret') { platMail_(tm, 'طلب إذنكِ يحتاج تعديلاً', mailBox_('إذنٌ مُيسَّر', 'معلمتي الغالية أ. ' + d.t + '،<br>أُعيد طلب إذنكِ ليوم ' + rec.date + ' للتعديل' + (d.ret.note ? ': <b>' + d.ret.note + '</b>' : '') + '.<br>افتحي «إذنٌ مُيسَّر» في الميزان لتعديله وإرساله.')); return [rec]; }
   if (d.st !== 'ok') { prqNotify_(rec); return [rec]; }
   // الاعتماد النهائي: يُسجَّل في الانضباط الوظيفي تلقائياً (بلا إدخال ثالث)
@@ -953,7 +956,7 @@ function prqAct_(u, p) {
   const done = [];
   try {
     const t = rows_(SH.rec);
-    ids.forEach(id => { try { const i = prqFind_(t, id); if (i < 0) throw new Error('غير موجود'); const r = prqApply_(u, t, i, p.act === 'ret' ? 'ret' : 'ok', p.phrase || prqPhrase_(u.id), p.note); if (r) done.push(r); } catch (e) { skipped.push(String(e.message || e)); } });
+    ids.forEach(id => { try { const i = prqFind_(t, id); if (i < 0) throw new Error('غير موجود'); const r = prqApply_(u, t, i, p.act === 'ret' || p.act === 'rej' ? p.act : 'ok', p.phrase || prqPhrase_(u.id), p.note); if (r) done.push(r); } catch (e) { skipped.push(String(e.message || e)); } });
   } finally { lock.releaseLock(); }
   done.forEach(r => prqAfter_(r).forEach(x => out.push(x)));
   if (done.some(r => r.d.st === 'ok')) sabSoon_('TDS');

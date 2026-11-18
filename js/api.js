@@ -121,6 +121,7 @@ const DEMO = {
       const out = [], skipped = [];
       p.ids.forEach(id => { const r = d.recs.find(x => x.id === id); if (!r || !L[r.d.st]) return; if (!lv || lv < L[r.d.st]) { skipped.push('بانتظار مرحلة أخرى'); return; }
         if (p.act === 'ret') { r.d.ret = { by: me.name, w: who, note: p.note || '' }; r.d.st = 'ret'; }
+        else if (p.act === 'rej') { r.d.rej = { by: me.name, w: who, note: p.note || '' }; r.d.st = 'rej'; }
         else { r.d.steps = (r.d.steps || []).filter(s => L[s.w] < lv).concat([{ by: me.name, w: who, at: new Date().toISOString().slice(0, 10), ph: p.phrase }]); r.d.st = who === 'coord' ? 'vp' : who === 'vp' ? 'pr' : 'ok';
           if (r.d.st === 'ok') { r.d.seen = false; const td = { id: 'd' + Math.random().toString(36).slice(2, 9), dept: r.dept, item: 'TDS', date: r.date, sum: 'استئذان 1 (إذنٌ مُيسَّر)', by: 'إذنٌ مُيسَّر', at: r.date, d: { t: r.d.t, abs: [], perm: [{ date: r.date, h: r.d.h, type: r.d.kind === 'إذن عمل' ? 'إذن عمل' : 'شخصي' }], prq: r.id } }; d.recs.push(td); out.push(td); } }
         out.push(r); });
