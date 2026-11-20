@@ -24,10 +24,22 @@ function A_home(el) {
     ${kpi('زياراتي للمعلمات (الفصل الأول)', `${vp.done.length} / ${vp.pool.length}`, `المتبقي ${vp.remain.length}`, 'var(--navy)')}
     ${kpi('الزيارات الصفية للمنسقات', Rs.reduce((a, x) => a + x.R.K.visits, 0), 'خلال الفترة', 'var(--gold)')}
   </div>
-  <div class="card" style="margin-top:16px"><h2>حالة الأقسام في ${esc(p.name)}</h2><div class="tbl"><table class="t">
-    <tr><th>القسم</th><th>المنسقة</th><th>السجلات</th><th>البنود الموثّقة</th><th>الزيارات</th><th>المعلمات المُزارات</th><th>خطة التطوير</th><th>التقرير</th><th></th></tr>
+  <div class="card" style="margin-top:16px"><h2>حالة الأقسام في ${esc(p.name)} <span class="sub">الأخضر أداء مرتفع والأحمر منخفض · الزيارات بالمعدل لكل معلمة</span></h2>
+    <div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لا يوجد</span></div>
+    <div class="tbl"><table class="t cmh">
+    <tr><th style="text-align:right;min-width:150px">القسم والمنسقة</th><th>البنود الموثّقة</th><th>الزيارات لكل معلمة</th><th>المعلمات المُزارات</th><th>خطة التطوير</th><th>السجلات</th><th>التقرير</th><th></th></tr>
     ${Rs.map(({ d, R, rp }) => { const docs = SECTIONS.filter(s => s.k !== 'SN' && S.records.some(r => r.dept === d && r.item === s.k && inP(r.date, p))).length;
-      return `<tr><td><b>${esc(d)}</b></td><td>${esc(coordOf(d))}</td><td>${R.K.records}</td><td><div class="row"><div class="bar" style="width:70px"><i style="width:${docs / 15 * 100}%"></i></div>${docs}/15</div></td><td>${R.K.visits}</td><td>${fmtPct(R.K.visitedPct)}</td><td>${fmtPct(R.K.planPct)}</td><td>${statusChip(rp)}</td><td><button class="btn sm sec" data-rep="${esc(d)}">التقرير</button></td></tr>`; }).join('')}
+      const nT = R.NT || 0, pt = nT ? Math.round(R.K.visits / nT * 10) / 10 : 0, vp = Math.round((R.K.visitedPct || 0) * 100), pl = R.K.planPct == null ? null : Math.min(100, Math.round(R.K.planPct * 100));
+      const t = (v, a, b, c) => v >= a ? 'tl4' : v >= b ? 'tl3' : v >= c ? 'tl2' : v > 0 ? 'tl1' : 'tl0';
+      const st = rp ? rp.status : 'لم يُنشأ', sc = st === 'معتمد' ? 'tl4' : st === 'موقّع من المنسقة' ? 'tl3' : st === 'مسودة' ? 'tl2' : 'tl0';
+      return `<tr><td style="white-space:nowrap"><b>${esc(d)}</b><br><small style="color:var(--muted)">${esc(coordOf(d))}</small></td>
+        <td class="tlc ${t(docs / 15 * 100, 90, 75, 50)}">${docs} من 15</td>
+        <td class="tlc ${nT ? t(pt, 2, 1.5, 1) : 'tl0'}">${nT ? (pt || '—') : '—'}${nT && R.K.visits ? `<br><small style="font-weight:500">${R.K.visits} ÷ ${nT}</small>` : ''}</td>
+        <td class="tlc ${t(vp, 90, 70, 40)}">${vp ? vp + '%' : '—'}</td>
+        <td class="tlc ${pl == null ? 'tl0' : t(pl, 75, 50, 25)}">${pl == null ? '—' : pl + '%'}</td>
+        <td style="text-align:center">${R.K.records}</td>
+        <td class="tlc ${sc}" style="font-size:12px">${esc(st)}</td>
+        <td><button class="btn sm sec" data-rep="${esc(d)}">فتح التقرير</button></td></tr>`; }).join('')}
   </table></div></div>`;
   $$('[data-rep]', el).forEach(b => b.onclick = () => { S.view = 'a_reports'; S.adminDept = b.dataset.rep; refresh(); });
 }
