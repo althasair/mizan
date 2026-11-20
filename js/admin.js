@@ -199,7 +199,22 @@ function bindAdminRep(rp, dept, p) {
 }
 
 /* ------------------------------------------------------------------ حسابات المنسقات */
+const ACC_PIN = '1111111111111111';
 function A_accounts(el) {
+  let ok = false; try { ok = sessionStorage.getItem('mzAccOk') === '1'; } catch (e) { ok = !!S.accOk; }
+  if (!ok && !S.accOk) return accLock(el);
+  return A_accounts_(el);
+}
+function accLock(el) {
+  setTitle('الحسابات والأرقام السرية');
+  el.innerHTML = `<div class="card" style="max-width:420px;margin:40px auto;text-align:center"><div style="font-size:34px">🔒</div><h2 style="justify-content:center">صفحة محمية</h2>
+  <div style="font-size:13px;color:var(--muted);margin-bottom:12px">أدخلي الرقم السري لعرض الحسابات والأرقام السرية</div>
+  <input id="accP" type="password" inputmode="numeric" dir="ltr" autocomplete="off" style="width:100%;text-align:center;font-size:18px;letter-spacing:3px;padding:10px;border:1px solid var(--line);border-radius:10px">
+  <div id="accE" style="color:#b42318;font-size:12.5px;min-height:18px;margin-top:6px"></div><button class="btn" id="accB" style="width:100%">دخول</button></div>`;
+  const go = () => { if ($('#accP').value.trim() === ACC_PIN) { S.accOk = true; try { sessionStorage.setItem('mzAccOk', '1'); } catch (e) {} show(); } else { $('#accE').textContent = 'الرقم السري غير صحيح'; $('#accP').value = ''; $('#accP').focus(); } };
+  $('#accB').onclick = go; $('#accP').onkeydown = e => { if (e.key === 'Enter') go(); }; setTimeout(() => $('#accP') && $('#accP').focus(), 50);
+}
+function A_accounts_(el) {
   setTitle('الحسابات والأرقام السرية');
   if (typeof isPrincipal === 'function' && isPrincipal()) { el.innerHTML = '<div class="empty">هذه الصفحة للنائب الأكاديمي فقط.</div>'; return; }
   el.innerHTML = `<div class="card"><div class="row"><h2 style="margin:0">الأرقام السرية</h2><span class="sp"></span><button class="btn" id="pinShow">عرض الأرقام السرية</button></div>
