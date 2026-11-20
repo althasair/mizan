@@ -127,6 +127,7 @@ const DEMO = {
         out.push(r); });
       this.save(d); return { ok: 1, records: out, skipped };
     }
+    if (a === 'cfSign') { const r = d.recs.find(x => x.id === p.id); if (r) { r.d.csig = new Date().toISOString().slice(0, 10); this.save(d); } return { ok: 1, record: r }; }
     if (a === 'prqSeen') { const r = d.recs.find(x => x.id === p.id); if (r) { r.d.seen = true; this.save(d); } return { ok: 1 }; }
     if (a === 'logout') { sessionStorage.removeItem('mizan_demo_u'); return { ok: 1 }; }
     throw new Error('عملية غير معروفة');

@@ -175,7 +175,7 @@ function listRecords_(u) {
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
     d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
   return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(sabAdm_()).concat(indibat_())
-    .filter(x => u.role === 'admin' || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
+    .filter(x => u.role === 'admin' || (x.item === 'CF' && u.role === 'coord' && x.d && x.d.ok && x.d.tk === u.id) || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
 }
 function repObj_(r) {
@@ -775,6 +775,7 @@ function route_(req) {
     case 'prqSubmit': { const r = prqSubmit_(u, req); sabSoon_('PRQ'); return r; }
     case 'prqAct': { const r = prqAct_(u, req); sabSoon_('PRQ'); return r; }
     case 'prqSeen': return prqSeen_(u, req);
+    case 'cfSign': return cfSign_(u, req);
     case 'logout': CacheService.getScriptCache().remove('tok_' + req.token); return { ok: true };
   }
   fail_('عملية غير معروفة');
@@ -961,6 +962,15 @@ function prqAct_(u, p) {
   done.forEach(r => prqAfter_(r).forEach(x => out.push(x)));
   if (done.some(r => r.d.st === 'ok')) sabSoon_('TDS');
   return { records: out, skipped: skipped, phrase: prqPhrase_(u.id) };
+}
+/* المنسقة توقّع استلام استمارة متابعة أدائها المعتمدة */
+function cfSign_(u, p) {
+  const t = rows_(SH.rec); const i = t.rows.findIndex(r => String(r[0]) === String(p.id)); if (i < 0) fail_('الاستمارة غير موجودة');
+  const row = t.rows[i]; if (row[2] !== 'CF') fail_('غير مسموح');
+  const d = JSON.parse(row[5] || '{}'); if (!d.ok || d.tk !== u.id) fail_('غير مسموح');
+  d.csig = Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd'); row[5] = JSON.stringify(d); row[8] = now_();
+  t.sh.getRange(i + 2, 6).setValue(row[5]); t.sh.getRange(i + 2, 9).setValue(row[8]);
+  log_(u, 'توقيع استلام استمارة المتابعة', row[1], d.sem || ''); return { record: recObj_(row) };
 }
 function prqSeen_(u, p) {
   const t = rows_(SH.rec); const i = prqFind_(t, p.id); if (i < 0) return { ok: true };

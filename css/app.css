@@ -488,3 +488,16 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .aps.on.r{background:#A4012D;border-color:#A4012D;color:#fff}.aps.on.n{background:#6B7280;border-color:#6B7280;color:#fff}.aps.on.b{background:#1E5AA8;border-color:#1E5AA8;color:#fff}
 .aps.on.auto{opacity:.7;border-style:dashed}
 .apl-note{font-size:12px;color:var(--muted);margin-top:8px}
+/* استمارة متابعة أداء المنسقة: التعبئة التلقائية */
+.cfh{font-size:11px;margin-top:3px;line-height:1.5}.cfh.auto{color:#0E7C78}.cfh.vp{color:#7A6A2E}.cfh.need{color:#A3202F;font-weight:700}.cfh.man{color:#5B4B8A}
+.cfds{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:12px}
+.cfd{border:1px solid var(--line);border-radius:14px;padding:12px 14px;background:#fff;display:flex;flex-direction:column;gap:8px}
+.cfd-h{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}.cfd-h b{display:block;color:var(--maroon);font-size:15px}.cfd-h small{color:var(--muted);font-size:12px;white-space:nowrap}
+.cfd-k{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}.cfd-k span{background:#F6F4F1;border-radius:10px;padding:6px 2px;font-size:11px;color:var(--muted)}
+.cfd-k b{display:block;font-size:18px;color:#333}.cfd-k .ok b{color:#1F7A4D}.cfd-k .warn b{color:#B26A00}.cfd-k .need b{color:#A3202F}
+.cfd-l{font-size:12px;display:flex;flex-direction:column;gap:2px}.cfd-l i{font-style:normal;font-weight:700;color:#1F7A4D}.cfd-l.w i{color:#B26A00}
+.cfd .btn{align-self:flex-start}
+.cff{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.cff-g{border:1px solid var(--line);border-radius:12px;padding:8px 10px}.cff-g>b{display:block;color:var(--maroon);margin-bottom:4px}
+.cff-i{font-size:12.5px;padding:3px 0;display:flex;flex-wrap:wrap;gap:4px;align-items:baseline}.cff-i span{font-weight:700;width:14px}
+.cff-i small{width:100%;padding-right:18px;color:var(--muted);font-size:11px}.cff-i.ok span{color:#1F7A4D}.cff-i.no span{color:#A3202F}.cff-i.out{opacity:.7}

@@ -300,7 +300,8 @@ async function A_files(el, kind) {
   <div class="tabs">${SEMS.map(s => `<button class="${s === sem ? 'on' : ''}" data-s="${s}">متابعة ملفات ${s}</button>`).join('')}</div>
   <div class="note">الاستمارة المعتمدة من الدليل الإرشادي لنائب المدير للشؤون الأكاديمية، وتُعبَّأ بصورة فصلية. التقدير بالقائمة (مستكمل · مستكمل جزئياً · غير مستكمل · لم يتم قياسه)، وتبقى خانة الملاحظات فارغة للمستكمل، وتظهر التوصيات المناسبة للمستكمل جزئياً وغير المستكمل مع إمكانية الكتابة الحرة.</div>
   ${kind === 'AF' ? `<div class="card noprint"><div class="row"><h2 style="margin:0">موظفات الإدارية الأكاديمية</h2><span class="sp"></span><button class="btn sec" id="addStf">+ إضافة موظفة</button></div><div style="font-size:12.5px;color:var(--muted);margin-top:6px">أضيفي الاسم والمسمى الوظيفي والبريد الإلكتروني مرة واحدة، وتبقى محفوظة لكِ وحدكِ.</div></div>` : ''}
-  <div class="card"><h2>${ttl} — ${sem}</h2><div class="tbl"><table class="t"><tr><th>الاسم</th><th>المسمى</th><th>تاريخ المتابعة</th><th>مستكمل</th><th>جزئياً</th><th>غير مستكمل</th><th>الإرسال</th><th></th></tr>
+  ${kind === 'CF' ? `<div class="card"><h2>لوحة الأقسام — ${sem} <span class="sub">للنائبة والمديرة فقط · تعبئة تلقائية من سجلات كل منسقة، والقرار لكِ</span></h2>${cfDash(el, T, sem)}</div>` : ''}
+  <div class="card"${kind === 'CF' ? ' style="display:none"' : ''}><h2>${ttl} — ${sem}</h2><div class="tbl"><table class="t"><tr><th>الاسم</th><th>المسمى</th><th>تاريخ المتابعة</th><th>مستكمل</th><th>جزئياً</th><th>غير مستكمل</th><th>الإرسال</th><th></th></tr>
   ${T.map(t => { const r = recOf(t), x = sumOf(r);
     return `<tr><td><b>${esc(t.name)}</b></td><td style="font-size:12.5px">${esc(t.role)}</td><td>${r ? dmy(r.date) : '<span class="chip">لم تُعبّأ</span>'}</td><td>${r ? `<span class="chip ok">${x.c}</span>` : ''}</td><td>${r ? `<span class="chip warn">${x.p}</span>` : ''}</td><td>${r ? `<span class="chip bad">${x.n}</span>` : ''}</td><td>${r && r.d.sent ? `<span class="chip ok">${dm(r.d.sent)}</span>` : r ? '<span class="chip">لم تُرسل</span>' : ''}</td>
       <td><button class="btn sm" data-o="${esc(t.key)}">${r ? 'فتح' : 'تعبئة'}</button>${kind === 'AF' ? ` <button class="btn sm ghost" data-e="${esc(t.key)}">تعديل البيانات</button>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="8"><div class="empty">${kind === 'AF' ? 'أضيفي موظفات الإدارية الأكاديمية أولاً (محضرة المختبر، مسؤولة مصادر التعلم، المرشدة الأكاديمية، منسقة مشاريع التعليم الإلكتروني، اختصاصية الأنشطة)' : 'لا توجد منسقات'}</div></td></tr>`}</table></div></div>`;
@@ -352,9 +353,13 @@ function fileForm(el, kind, T, sem) {
   const rec = S.records.find(r => r.item === kind && r.d.tk === T.key && r.d.sem === sem);
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { tk: T.key, sem, name: T.name, date: today(), mode: 'ميدانية', ev: {}, nt: {}, pos: [], neg: [], gen: '' };
   d.ev = d.ev || {}; d.nt = d.nt || {}; d.pos = d.pos || []; d.neg = d.neg || [];
-  const hints = kind === 'CF' ? coordHints(T, sem) : {};
+  const hints = {};
   const SC = FORMS.scaleF;
+  /* التعبئة التلقائية (للمنسقات): تملأ ما لم تُقدّره النائبة، ولا تكتب فوق تعديلها */
+  const AU = kind === 'CF' ? cfAuto(T, sem) : [];
+  if (kind === 'CF') { d.man = d.man || {}; d.auto = {}; AU.forEach((a, i) => { d.auto[i] = a.why; if (!d.ok && !d.man[i] && a.v) d.ev[i] = a.v; }); if (!d.ok && rec && !d.genMan) d.gen = ''; }
   const compose = () => {
+    if (kind === 'CF') return cfCompose(T, sem, d, D);
     const done = D.rows.map((x, i) => i).filter(i => d.ev[i] === 'مستكمل');
     const rest = D.rows.map((x, i) => i).filter(i => ['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[i]));
     const thanks = uniqA([...done.slice(0, 4).map(i => D.rows[i].t[0]), ...d.pos]).map(cleanEnd);
@@ -366,7 +371,7 @@ function fileForm(el, kind, T, sem) {
     return t;
   };
   const draw = () => {
-    let h = `<div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="fb">رجوع</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="fdel">حذف</button>' : ''}<button class="btn" id="fs">حفظ</button>${rec ? '<button class="btn sec" id="fp">معاينة الاستمارة</button><button class="btn tf" id="fsend">إرسال للموظفة</button>' : ''}</div>
+    let h = `<div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="fb">رجوع</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="fdel">حذف</button>' : ''}<button class="btn" id="fs">حفظ</button>${rec ? `<button class="btn sec" id="fp">معاينة الاستمارة</button>${kind === 'CF' ? (rec.d.ok ? `<span class="chip ok">معتمدة ${dm(rec.d.ok)}${rec.d.csig ? ' · وقّعتها المنسقة' : ''}</span><button class="btn tf" id="fsend">إعادة الإرسال</button>` : '<button class="btn tf" id="fok">✅ اعتماد وإرسال للمنسقة</button>') : '<button class="btn tf" id="fsend">إرسال للموظفة</button>'}` : ''}</div>
     <div class="card"><h2>${esc(D.title)} <span class="sub">${esc(sem)}</span></h2><form class="form" onsubmit="return false">
       <div class="fld"><label>المدرسة</label><input value="${esc(SCHOOL())}" disabled></div>
       <div class="fld"><label>الاسم</label><input value="${esc(T.name)}" disabled></div>
@@ -374,14 +379,15 @@ function fileForm(el, kind, T, sem) {
       <div class="fld"><label>اليوم</label><input id="fDay" value="${esc(dayOf(d.date))}" disabled></div>
       <div class="fld"><label>نوع المتابعة</label><select id="fM">${['ميدانية', 'عن بعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
     </form></div>
-    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">${kind === 'CF' ? 'الأدلة والمتابعة' : 'المهام الأكاديمية ومتابعة تنفيذها'}</h2><span class="sp"></span><button class="btn sm sec" id="allC" type="button">تعيين الكل «مستكمل»</button></div>
+    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">${kind === 'CF' ? 'الأدلة والمتابعة' : 'المهام الأكاديمية ومتابعة تنفيذها'}</h2><span class="sp"></span>${kind === 'CF' ? '<button class="btn sm sec" id="cfRe" type="button">🔄 تحديث التعبئة التلقائية</button> ' : ''}<button class="btn sm sec" id="allC" type="button">تعيين الكل «مستكمل»</button></div>${kind === 'CF' ? `<div class="note" style="margin-bottom:8px">عُبّئت الاستمارة تلقائياً من سجلات المنسقة في ${esc(sem)}، وبجانب كل دليل ما بُني عليه التقدير. القرار لكِ: غيّري أي تقدير، ويُحفظ تعديلكِ ولا يكتب التحديث التلقائي فوقه. البنود التي لا سجل لها تظهر «يحتاج تأكيدكِ».</div>` : ''}
     <div class="tbl"><table class="t"><tr>${kind === 'CF' ? '<th>المجال</th><th>المؤشرات</th><th>الأدلة</th>' : '<th>الرقم</th><th>المهام الأكاديمية</th>'}<th style="width:150px">المتابعة</th><th>الملاحظات والتوصيات</th></tr>
     ${D.rows.map((x, i) => { const v = d.ev[i] || ''; const need = ['مستكمل جزئياً', 'غير مستكمل'].includes(v);
-      const hint = hints[x.e] ? `<div style="font-size:11px;color:var(--tiffany-d)">📊 ${esc(hints[x.e])}</div>` : '';
+      const a = AU[i], hint = !a ? '' : d.man[i] ? `<div class="cfh man">✏️ عدّلتِه — ${esc(a.why)}</div>` : a.src === 'need' && !v ? `<div class="cfh need">⚠ يحتاج تأكيدكِ — ${esc(a.why)}</div>` : a.src === 'vp' ? `<div class="cfh vp">✋ ${esc(a.why)}</div>` : `<div class="cfh auto">📊 ${esc(a.why)}</div>`;
       return `<tr>${kind === 'CF' ? (x.first ? `<td rowspan="${x.span}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.dom)}</td><td rowspan="${x.span}" style="font-size:12px">${esc(x.ind)}</td>` : '') : `<td style="text-align:center">${x.n}</td>`}
         <td style="font-size:13px">${esc(x.e)}${hint}</td>
         <td><select data-ev="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:4px">${['', ...SC].map(s => `<option ${v === s ? 'selected' : ''} value="${s}">${s || 'اختاري…'}</option>`).join('')}</select></td>
         <td>${need ? `<input list="dlN${i}" data-nt="${i}" value="${esc(d.nt[i] || x.r[0])}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12.5px">${dl('dlN' + i, x.r)}` : v === 'مستكمل' ? `<span style="font-size:11.5px;color:var(--muted)">تبقى فارغة في الاستمارة · يُضاف الشكر في التوصيات</span>` : ''}</td></tr>`; }).join('')}</table></div></div>
+    ${kind === 'CF' ? cfFileHTML(T, sem).html : ''}
     <div class="grid g2">
       <div class="card"><h2>إشادات وشكر <span class="sub">تُضاف إلى بداية التوصيات العامة</span></h2>${D.pos.map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-pos="${esc(x)}" ${d.pos.includes(x) ? 'checked' : ''}> ${esc(x)}</label>`).join('')}<input id="posX" placeholder="إشادة أخرى (كتابة حرة) ثم Enter" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px">${d.pos.filter(x => !D.pos.includes(x)).map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-pos="${esc(x)}" checked> ${esc(x)}</label>`).join('')}</div>
       <div class="card"><h2>نقاط تحتاج إلى تحسين <span class="sub">تتحول إلى توصيات</span></h2>${D.neg.map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-neg="${esc(x)}" ${d.neg.includes(x) ? 'checked' : ''}> ${esc(x)}</label>`).join('')}<input id="negX" placeholder="ملاحظة أخرى (كتابة حرة) ثم Enter" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px">${d.neg.filter(x => !D.neg.includes(x)).map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-neg="${esc(x)}" checked> ${esc(x)}</label>`).join('')}</div>
@@ -393,9 +399,11 @@ function fileForm(el, kind, T, sem) {
       $$('[data-nt]', el).forEach(i => d.nt[i.dataset.nt] = i.value.trim());
       Object.keys(d.nt).forEach(k => { if (!['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k])) delete d.nt[k]; });
       d.pos = $$('[data-pos]', el).filter(c => c.checked).map(c => c.dataset.pos); d.neg = $$('[data-neg]', el).filter(c => c.checked).map(c => c.dataset.neg); d.gen = $('#gen').value; };
-    const regen = () => { grab(); d.gen = compose(); };
+    const regen = () => { grab(); d.gen = compose(); d.genMan = 0; };
+    $('#gen').oninput = () => { d.genMan = 1; };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
-    $$('[data-ev]', el).forEach(s => s.onchange = () => { regen(); draw(); });
+    $$('[data-ev]', el).forEach(s => s.onchange = () => { if (kind === 'CF') d.man[s.dataset.ev] = 1; regen(); draw(); });
+    if ($('#cfRe')) $('#cfRe').onclick = () => { grab(); AU.forEach((a, i) => { if (d.man[i]) return; if (a.v) d.ev[i] = a.v; else delete d.ev[i]; }); d.gen = compose(); draw(); toast('تم تحديث التعبئة التلقائية دون المساس بتعديلاتكِ ✓'); };
     $$('[data-pos],[data-neg]', el).forEach(c => c.onchange = () => { regen(); draw(); });
     const addFree = (id, arr) => { $(id).onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); grab(); d[arr].push(e.target.value.trim()); d.gen = compose(); draw(); } }; };
     addFree('#posX', 'pos'); addFree('#negX', 'neg');
@@ -408,6 +416,7 @@ function fileForm(el, kind, T, sem) {
     $('#fs').onclick = async () => { await save(); toast('تم الحفظ ✓'); show(); };
     if ($('#fp')) $('#fp').onclick = async () => { const r = await save(); await showPaper(el, D.title, await withCSig(fileInner(D, T, r, kind), T, kind), '<button class="btn tf" id="pSend">إرسال للموظفة</button>'); $('#pBack').onclick = () => show(); $('#pSend').onclick = () => sendFile(D, T, r, kind); };
     if ($('#fsend')) $('#fsend').onclick = async () => { const r = await save(); sendFile(D, T, r, kind); };
+    if ($('#fok')) $('#fok').onclick = async () => { if (!confirm('اعتماد الاستمارة؟ ستظهر للمنسقة في حسابها ويصلها إشعار بالبريد.')) return; grab(); d.ok = today(); const r = await save(); toast('تم الاعتماد ✓'); await sendFile(D, T, r, kind); show(); };
     if ($('#fdel')) $('#fdel').onclick = async () => { if (!confirm('حذف هذه الاستمارة؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); S.fopen = null; show(); };
   };
   draw();
@@ -418,7 +427,7 @@ function fileInner(D, T, r, kind) {
     return `<tr>${kind === 'CF' ? (x.first ? `<td class="dm" rowspan="${x.span}">${x.di + 1}.</td><td class="dm" rowspan="${x.span}">${esc(x.dom)}</td><td rowspan="${x.span}" class="j" style="font-size:9.5px">${esc(x.ind)}</td>` : '') : (i === 0 ? `<td class="dm" rowspan="${D.rows.length}">${esc(D.role)}</td>` : '') + `<td style="text-align:center;width:5%">${x.n}</td>`}
       <td style="font-size:10px">${esc(x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
   const head = kind === 'CF' ? '<tr><th>م</th><th>المجال</th><th>المؤشرات</th><th>الأدلة</th><th>المتابعة</th></tr>' : '<tr><th>المسمى المستهدف</th><th>الرقم</th><th>المهام الأكاديمية</th><th>متابعة تنفيذ المهام</th><th>الملاحظات والتوصيات</th></tr>';
-  const sigs = D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>${s}<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
+  const sigs = kind === 'CF' ? `<td></td><td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td><td></td>` : D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>${s}<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
   return `<h1>${esc(D.title)}</h1><div class="sub">${esc(d.sem)} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     <tr><td class="k">المدرسة</td><td colspan="3">${esc(SCHOOL())}</td></tr>
