@@ -62,7 +62,7 @@ function A_compare(el) {
   const pers = S.periods.filter(q => q.from <= today()); const pi = pers.findIndex(q => q.name === p.name); const prevP = pi > 0 ? pers[pi - 1] : null;
   const val = (R, d, q, m) => { const v = m[2](R, d, q); return S.cmpN && m[4] ? Math.round(v / nT(d) * 10) / 10 : v; };
   const rows = D.map(d => { const R = buildReport(ctxFor(d, p)); const R0 = prevP ? buildReport(ctxFor(d, prevP)) : null;
-    return { d, c: coordOf(d), v: M.map(m => val(R, d, p, m)), v0: R0 ? M.map(m => val(R0, d, prevP, m)) : null, rec: R.K.records }; });
+    return { d, c: coordOf(d), raw: M.map(m => m[2](R, d, p)), nt: nT(d), v: M.map(m => val(R, d, p, m)), v0: R0 ? M.map(m => val(R0, d, prevP, m)) : null, rec: R.K.records }; });
   const mx = M.map((m, j) => Math.max(...rows.map(r => r.v[j]), m[3] ? 100 : 1));
   const avg = M.map((m, j) => rows.length ? rows.reduce((a, r) => a + r.v[j], 0) / rows.length : 0);
   rows.forEach(r => { r.sc = Math.round(r.v.reduce((a, x, j) => a + (mx[j] ? x / mx[j] : 0), 0) / M.length * 100);
@@ -72,11 +72,11 @@ function A_compare(el) {
   const sorted = [...rows].sort((a, b) => S.cmpS < 0 ? b.sc - a.sc : b.v[S.cmpS] - a.v[S.cmpS]);
   const lvl = (x, j) => { const f = M[j][3] ? x / 100 : (mx[j] ? x / mx[j] : 0); return x <= 0 ? 'tl0' : f >= .75 ? 'tl4' : f >= .5 ? 'tl3' : f >= .25 ? 'tl2' : 'tl1'; };
   const lvS = v => v >= 60 ? 'tl4' : v >= 45 ? 'tl3' : v >= 30 ? 'tl2' : v > 0 ? 'tl1' : 'tl0';
-  const fmt = (x, j) => M[j][3] ? x + '%' : x;
+  const fmt = (x, j) => { const v = Math.round((+x || 0) * 10) / 10; return M[j][3] ? Math.round(v) + '%' : v; };
   const tot = j => rows.reduce((a, r) => a + r.v[j], 0);
   const tot0 = j => rows.reduce((a, r) => a + (r.v0 ? r.v0[j] : 0), 0);
   // مؤشرات المدرسة
-  const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] ? Math.round(avg[j]) : tot(j); const t0 = prevP ? (M[j][3] ? Math.round(tot0(j) / Math.max(1, rows.length)) : tot0(j)) : null;
+  const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] ? Math.round(avg[j]) : (S.cmpN && M[j][4] ? Math.round(rows.reduce((a, r) => a + r.raw[j], 0) / Math.max(1, rows.reduce((a, r) => a + r.nt, 0)) * 10) / 10 : rows.reduce((a, r) => a + r.raw[j], 0)); const t0 = prevP ? (M[j][3] ? Math.round(tot0(j) / Math.max(1, rows.length)) : tot0(j)) : null;
     return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : ''}</span></div>`; }).join('');
   // قراءة تحليلية
   const best = sorted[0], mostUp = rows.filter(r => r.sc0 != null).sort((a, b) => (b.sc - b.sc0) - (a.sc - a.sc0))[0];
