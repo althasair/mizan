@@ -14,11 +14,14 @@ function cfCtx(T, sem) {
   let Rs = []; try { Rs = T.depts.map(dp => buildReport(ctxFor(dp, Pf))); } catch (e) { Rs = []; }
   const K = k => Rs.reduce((a, x) => a + (+((x.K || {})[k]) || 0), 0);
   const avg = k => { const v = Rs.map(x => (x.K || {})[k]).filter(x => x != null && !isNaN(x)); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
-  return { R, Pf, inS, recs, K, avg };
+  const T2 = k => Rs.reduce((a, x) => a + (+((x.T || {})[k]) || 0), 0);
+  // الزيارات وشمولها كما في تقرير القسم: معلمات القسم (ومن تتابعهن المنسقة) فقط
+  const vis = T2('v_n'), nT = Rs.reduce((a, x) => a + (x.NT || 0), 0), cov = nT ? T2('v_k') / nT : null, wsDone = T2('pd_done_n');
+  return { R, Pf, inS, recs, K, avg, vis, cov, wsDone };
 }
 const cfPct = x => Math.round(x * 100) + '%';
 function cfAuto(T, sem) {
-  const C = cfCtx(T, sem), { recs, K, avg, R } = C;
+  const C = cfCtx(T, sem), { recs, K, avg, R, vis, cov: cov0, wsDone } = C;
   const ok = why => ({ v: 'مستكمل', why, src: 'auto' }), part = why => ({ v: 'مستكمل جزئياً', why, src: 'auto' });
   const need = why => ({ v: '', why, src: 'need' }), vp = why => ({ v: 'مستكمل', why, src: 'vp' }), nm = why => ({ v: 'لم يتم قياسه', why, src: 'auto' });
   const one = (n, why, empty) => n ? ok(why) : need(empty);
@@ -36,8 +39,7 @@ function cfAuto(T, sem) {
     A[3] = !req ? nm('لم تنتهِ فترة تقرير بعد في هذا الفصل') : !sg ? need(`لا تقارير موقّعة من ${req} مطلوبة`) : sg * 2 < req ? part(`التقارير الموقّعة: ${sg} من ${req}`) : ok(`التقارير الموقّعة: ${sg} من ${req}`); }
   // 2) التعليم والتعلم
   A[4] = vp('لا تُسجَّل مراجعة الخطط اليومية في المنصة — تقديركِ');
-  { const VV = recs('V'), v = VV.length, tch = (S.staff || []).filter(x => T.depts.includes(x.dept) && x.name !== T.name && !/منسق/.test(x.role || '')).map(x => x.name);
-    const seen = new Set(VV.map(r => r.d.t)), cov = tch.length ? tch.filter(n => seen.has(n)).length / tch.length : avg('visitedPct');
+  { const v = vis, cov = cov0;
     A[5] = !v ? need('لا زيارات صفية مسجلة في الفصل') : cov != null && cov < 0.5 ? part(`الزيارات: ${v} · شمول المعلمات ${cfPct(cov)}`) : ok(`الزيارات: ${v}` + (cov != null ? ` · شمول المعلمات ${cfPct(cov)}` : '')); }
   { const n = recs('V', r => r.d.r1).length; A[6] = one(n, `زيارات بتوصيات موثقة: ${n}`, 'لا توجد استمارات إشراف بتوصيات موثقة'); }
   { const n = recs('LR', r => typeof lrIsEL === 'function' ? lrIsEL(r.d.k) : /الإلكتروني/.test(r.d.k || '')).length || K('elearn');
@@ -51,10 +53,10 @@ function cfAuto(T, sem) {
   { const pd = (S.pd || []).filter(x => T.depts.some(dp => String(x.dept).split('|').includes(dp)) && x.need).length;
     A[11] = pd ? ok(`احتياجات تدريبية مدرجة في خطة التطوير المهني: ${pd}`) : vp('لا يُسجَّل حصر الاحتياجات في المنصة — تقديركِ'); }
   A[12] = vp('لا يُسجَّل تصنيف المعلمات في المنصة — تقديركِ');
-  { const pp = avg('planPct'), ws = recs('WS').length;
+  { const pp = avg('planPct'), ws = wsDone;
     A[13] = !ws ? need('لا توجد ورش منفذة من خطة التطوير في الفصل') : pp != null && pp < 0.5 ? part(`الالتزام بخطة التطوير: ${cfPct(pp)} · ورش منفذة: ${ws}`) : ok((pp != null ? `الالتزام بخطة التطوير: ${cfPct(pp)} · ` : '') + `ورش منفذة: ${ws}`); }
-  { const ws = recs('WS').length, ex = recs('EX').length; A[14] = one(ws + ex, `برامج داخلية: ${ws} · خارجية: ${ex}`, 'لا توجد برامج تدريبية موثقة'); }
-  { const ws = recs('WS').length, im = recs('WS', r => r.d.o).length + recs('CP').length;
+  { const ws = wsDone, ex = recs('EX').length; A[14] = one(ws + ex, `برامج داخلية: ${ws} · خارجية: ${ex}`, 'لا توجد برامج تدريبية موثقة'); }
+  { const ws = wsDone, im = recs('WS', r => r.d.o).length + recs('CP').length;
     A[15] = im ? ok(`ورش بأثر موثق وإجراءات توصيات مشتركة: ${im}`) : ws ? part(`ورش منفذة: ${ws} دون قياس أثر موثق`) : need('لا يوجد قياس أثر للتطوير'); }
   // 5) الجوانب المهنية والشخصية
   { const ex = recs('EX', r => !r.d.t || r.d.t === T.name).length, tw = S.records.filter(r => r.item === 'TWS' && r.d && r.d.t === T.name && C.inS(r)).length;
@@ -96,14 +98,16 @@ const CF_REC = [
   'الالتزام برصيد الاستئذان الشهري والمواظبة',
 ];
 function cfFacts(T, sem) {
-  const { recs, K, avg } = cfCtx(T, sem), out = [];
+  const { recs, K, avg, vis, cov: cov0 } = cfCtx(T, sem), out = [];
   const R = semRange(sem), inS = r => (r.date || '') >= R.from && (r.date || '') <= R.to;
   // عدد أنشطة القسم وترتيبه بين الأقسام
   const byD = {}; S.records.filter(r => r.item === 'AC' && inS(r)).forEach(r => byD[r.dept] = (byD[r.dept] || 0) + 1);
-  const ac = T.depts.reduce((a, dp) => a + (byD[dp] || 0), 0), rank = Object.values(byD).filter(n => n > ac).length + 1;
+  // الترتيب بين الأقسام بالمعدل لكل معلمة، حتى لا يظلم القسمَ الصغيرَ قلةُ معلماته
+  const nTd = dp => Math.max(1, (S.staff || []).filter(x => x.dept === dp && !/منسق/.test(x.role || '')).length);
+  const ac = T.depts.reduce((a, dp) => a + (byD[dp] || 0), 0), myRate = ac / T.depts.reduce((a, dp) => a + nTd(dp), 0);
+  const rank = Object.entries(byD).filter(([dp, n]) => !T.depts.includes(dp) && n / nTd(dp) > myRate).length + 1;
   if (ac >= 3) out.push(`وثّق القسم (${ac}) نشاطاً ومبادرة${rank <= 3 ? '، وهو من أعلى الأقسام في المدرسة' : ''}، وهذا يدل على حيوية القسم وحرصها على إثراء تعلّم الطالبات`);
-  const VV = recs('V'), v = VV.length, tch = (S.staff || []).filter(x => T.depts.includes(x.dept) && x.name !== T.name && !/منسق/.test(x.role || '')).map(x => x.name);
-  const cov = tch.length ? tch.filter(n => VV.some(r => r.d.t === n)).length / tch.length : avg('visitedPct');
+  const v = vis, cov = cov0;
   if (v && cov != null && cov >= 0.99) out.push(`شملت زياراتها الصفية (${v}) جميع معلمات القسم، وهذا يدل على متابعتها الدقيقة للممارسات الصفية`);
   const ws = recs('WS', r => /تم|نُفّذ|منفذ/.test(r.d.g || '') || r.d.h).map(r => (r.d.b && r.d.b !== REF.OUT_OF_PLAN ? r.d.b : r.d.c) || '').filter(Boolean);
   if (ws.length) out.push(`نفّذ القسم ${ws.length > 1 ? 'ورشتي' : 'ورشة'} «${ws.slice(0, 2).join('» و«')}»، وهذا يدل على حرصها على التطوير المهني لمعلمات القسم`);

@@ -86,14 +86,17 @@ function A_dash(el) {
   const W = tWorks(R); const ini = {}, act = {}, prj = {}, prg = {}, cmp = {}, pv = {}, ws = {}, pa = {}, ach = {};
   const KM = { 'مبادرة': ini, 'نشاط': act, 'مشروع': prj, 'برنامج': prg, 'مسابقة': cmp };
   Object.entries(W).forEach(([t, L]) => L.forEach(w => add(KM[w.kind] || act, t)));
-  by('TPV').forEach(r => add(pv, r.d.t)); by('TWS').filter(r => /قدّمت/.test(r.d.role || '')).forEach(r => add(ws, r.d.t));
+  by('TPV').forEach(r => add(pv, r.d.t)); { const sk = new Set(); by('TWS').filter(r => /قدّمت/.test(r.d.role || '')).forEach(r => { const k = r.d.t + '|' + (r.d.date || r.date) + '|' + twNorm(r.d.title); if (sk.has(k)) return; sk.add(k); add(ws, r.d.t); }); }
   by('TPA').forEach(r => add(pa, r.d.t, +r.d.n > 0 ? +r.d.n : 1)); by('TACH').forEach(r => add(ach, r.d.t));
   const coordOf = d => { const c = S.coords.find(c => (c.dept || []).includes(d)); return c ? c.name : ''; };
-  const cm = k => { const m = {}; R.filter(r => r.item === k).forEach(r => add(m, coordOf(r.dept))); return m; };
+  const cm = k => { const m = {}; if (k === 'WS') { const sk = new Set(); R.filter(r => r.item === 'WS' && /^تمت/.test(r.d.g || '')).forEach(r => { const key = r.dept + '|' + twNorm(r.d.b === REF.OUT_OF_PLAN ? r.d.c : (r.d.c || r.d.b)); if (sk.has(key)) return; sk.add(key); add(m, coordOf(r.dept)); }); return m; } R.filter(r => r.item === k).forEach(r => add(m, coordOf(r.dept), k === 'MT' && +r.d.cnt > 1 ? +r.d.cnt : 1)); return m; };
   const cAll = {}; R.filter(r => SECTIONS.some(s => s.k === r.item)).forEach(r => add(cAll, coordOf(r.dept)));
   const cRep = {}; S.reports.filter(x => x.status === 'معتمد').forEach(x => add(cRep, coordOf(x.dept)));
   const deptOf = n => (S.staff.find(s => s.name === n) || {}).dept || '';
   const sum = m => Object.values(m).reduce((a, b) => a + b, 0); const nIni = sum(ini), nAct = sum(act);
+  /* العمل الواحد يُحسب مرة واحدة: الورشة بتاريخها وعنوانها، والإنجاز باسمه، مهما تعددت سجلات الحاضرات أو تكرر تسجيله من المعلمة والمنسقة */
+  const wsKeys = new Set([...by('TWS').map(r => (r.d.date || r.date) + '|' + twNorm(r.d.title)), ...by('WS').filter(r => /^تمت/.test(r.d.g || '')).map(r => r.date + '|' + twNorm(r.d.b === REF.OUT_OF_PLAN ? r.d.c : (r.d.c || r.d.b)))]);
+  const achKeys = new Set([...by('TACH'), ...by('ACH')].map(r => twNorm(r.d.name)).filter(Boolean));
   const vpPool = tPool(); const semR = semRange(curSem()); const vpSeen = new Set(R.filter(r => r.item === 'VPV' && r.date >= semR.from && r.date <= semR.to).map(r => r.d.t).filter(n => vpPool.some(p => p.name === n)));
   const vpPct = vpPool.length ? vpSeen.size / vpPool.length * 100 : 0; const PC = prCoverage();
   const repAll = S.reports.length, repOk = S.reports.filter(x => x.status === 'معتمد').length;
@@ -107,8 +110,8 @@ function A_dash(el) {
   const mx = Math.max(1, ...deptCov.map(x => x[1]));
   el.innerHTML = `<div class="note">لوحة شاملة لكل ما في المنصة خلال العام الأكاديمي ${REF.YEAR || ''}، وتتحدث تلقائيًا مع كل تسجيل.</div>
   <div class="grid g4">
-    ${tile(nIni, 'المبادرات', '#62102A')}${tile(nAct, 'الأنشطة', '#B8903A')}${tile(by('TPV').length, 'الزيارات التبادلية', '#0E8C88')}${tile(by('TWS').length + by('WS').length, 'الورش والتطوير', '#1F3A5F')}
-    ${tile(by('TPA').reduce((a, r) => a + (+r.d.n > 0 ? +r.d.n : 1), 0), 'التواصل مع أولياء الأمور', '#7A4FA3')}${tile(by('TACH').length + by('ACH').length, 'الإنجازات والمشاركات', '#2E7D52')}${tile(by('MT').length, 'الاجتماعات الأكاديمية', '#8A6A2E')}${tile(by('V').length, 'حضور المنسقات الصفي', '#5A6B7D')}
+    ${tile(nIni, 'المبادرات', '#62102A')}${tile(nAct, 'الأنشطة', '#B8903A')}${tile(by('TPV').length, 'الزيارات التبادلية', '#0E8C88')}${tile(wsKeys.size, 'الورش والتطوير (دون تكرار)', '#1F3A5F')}
+    ${tile(by('TPA').length, 'تواصل مع أولياء الأمور', '#7A4FA3')}${tile(achKeys.size, 'الإنجازات والمشاركات (دون تكرار)', '#2E7D52')}${tile(by('MT').reduce((a, r) => a + (+r.d.cnt > 1 ? +r.d.cnt : 1), 0), 'الاجتماعات الأكاديمية', '#8A6A2E')}${tile(by('V').length, 'حضور المنسقات الصفي', '#5A6B7D')}
   </div>
   <div class="grid g4" style="margin-top:14px">
     <div class="card">${ring(vpPct, '#62102A', 'حضور النائب الأكاديمي', vpSeen.size + ' من ' + vpPool.length + ' · ' + curSem() + ' · المتبقي ' + Math.round(100 - vpPct) + '%')}</div>

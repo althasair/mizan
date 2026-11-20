@@ -134,10 +134,8 @@ function A_boards(el) {
   const add = (m, k, n = 1) => { if (k && k !== REF.ALL_MEMBERS) m[k] = (m[k] || 0) + n; };
   const str = {}, act = {}, enr = {}, ini = {}; const actL = {}, iniL = {};
   R.filter(r => r.item === 'V' || r.item === 'OV').forEach(r => { add(str, r.d.t, (r.d.f1 ? 1 : 0) + (r.d.f2 ? 1 : 0)); });
-  const isIni = r => /مبادر/.test(r.d.ty || '') || /مبادر/.test(r.d.name || '');
-  R.filter(r => r.item === 'TA').forEach(r => { const ini2 = r.d.kind === 'مبادرة'; const M = ini2 ? ini : act, ML = ini2 ? iniL : actL; add(M, r.d.t); (ML[r.d.t] = ML[r.d.t] || []).push(String(r.d.name || '').slice(0, 45)); });
-  R.filter(r => r.item === 'AC').forEach(r => { const M = isIni(r) ? ini : act, ML = isIni(r) ? iniL : actL;
-    [r.d.e1, r.d.e2, r.d.e3].forEach(t => { if (!t || t === REF.ALL_MEMBERS) return; add(M, t, Math.max(1, +r.d.times || 1)); (ML[t] = ML[t] || []).push(String(r.d.name || '').replace(/\s*—.*$/, '').slice(0, 45)); }); });
+  // أعمال المعلمات بلا تكرار: سجل المعلمة هو الأصل، وسجل المنسقة يُحسب فقط إن لم يكن له سجل منعكس عندها
+  Object.entries(tWorks(R)).forEach(([t, L]) => L.forEach(w => { const i2 = w.kind === 'مبادرة'; const M = i2 ? ini : act, ML = i2 ? iniL : actL; add(M, t); (ML[t] = ML[t] || []).push(String(w.name || '').replace(/\s*—.*$/, '').slice(0, 45)); }));
   // الحصص الإثرائية والتعزيز من سبع سنابل (ملفات Forms المرفوعة هناك — قراءة فقط من نفس المتصفح)
   let SB = null; try { SB = JSON.parse(localStorage.getItem('sab3_sanabil_v1') || 'null'); } catch (e) {}
   const toStaff = n => { if (!n) return ''; const k = nameKey(n); const st = S.staff.find(x => nameKey(x.full || x.name) === k || nameKey(x.name) === k) || S.staff.find(x => nrm(x.name) === nrm(n)); return st ? st.name : String(n).trim(); };
