@@ -76,22 +76,48 @@ function A_tacts(el) {
   setTitle('مبادرات المعلمات وأنشطتهن (من سبع سنابل)');
   const p = P(); S.taF = S.taF || { kind: '', dept: '', all: false };
   const F = S.taF;
-  const L = S.records.filter(r => r.item === 'TA' && (F.all || inP(r.date, p)) && (!F.kind || r.d.kind === F.kind) && (!F.dept || r.dept === F.dept)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const depts = [...new Set(S.records.filter(r => r.item === 'TA').map(r => r.dept))];
+  const base = S.records.filter(r => r.item === 'TA' && (F.all || inP(r.date, p)));
+  const L = base.filter(r => (!F.kind || r.d.kind === F.kind) && (!F.dept || r.dept === F.dept)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const TCH = S.staff.filter(s => s.role === 'معلمة' || s.role === 'منسقة');
+  const depts = [...new Set([...TCH.map(s => s.dept), ...base.map(r => r.dept)])].filter(Boolean);
   const byT = {}; L.forEach(r => { const o = byT[r.d.t] = byT[r.d.t] || { i: 0, a: 0, n: 0, dept: r.dept }; o[r.d.kind === 'مبادرة' ? 'i' : 'a']++; o.n += +r.d.n || 0; });
+  const tl = (v, a, b, c) => v >= a ? 'tl4' : v >= b ? 'tl3' : v >= c ? 'tl2' : v > 0 ? 'tl1' : 'tl0';
+  const per = F.all ? 'كل العام' : p.name;
+  const D = depts.map(d => { const T = TCH.filter(s => s.dept === d).map(s => s.name); const R = L.filter(r => r.dept === d); const act = new Set(R.map(r => r.d.t));
+    return { d, nT: T.length, nA: T.filter(t => act.has(t)).length, pc: T.length ? Math.round(T.filter(t => act.has(t)).length / T.length * 100) : 0, i: R.filter(r => r.d.kind === 'مبادرة').length, a: R.filter(r => r.d.kind !== 'مبادرة').length, st: R.reduce((x, r) => x + (+r.d.n || 0), 0), miss: T.filter(t => !act.has(t)), na: act.size }; })
+    .filter(x => x.nT || x.i || x.a).sort((x, y) => y.pc - x.pc || (y.i + y.a) - (x.i + x.a));
+  const mxW = Math.max(1, ...D.map(x => x.i + x.a)), mxS = Math.max(1, ...D.map(x => x.st));
+  const Tl = Object.entries(byT).sort((a, b) => (b[1].i + b[1].a) - (a[1].i + a[1].a));
+  const mxT = Math.max(1, ...Tl.map(([, o]) => o.i + o.a));
   const prio = REF.PRIO.map(x => L.filter(r => r.d.p === x).length);
+  const nT = TCH.filter(s => !F.dept || s.dept === F.dept).length;
+  const miss = D.filter(x => !F.dept || x.d === F.dept).flatMap(x => x.miss.map(t => [t, x.d]));
   el.innerHTML = `
-  <div class="grid g4">${kpi('المبادرات', L.filter(r => r.d.kind === 'مبادرة').length, F.all ? 'كل العام' : p.name, 'var(--maroon)')}${kpi('الأنشطة', L.filter(r => r.d.kind === 'نشاط').length, F.all ? 'كل العام' : p.name, 'var(--navy)')}${kpi('المعلمات المسجّلات', Object.keys(byT).length, 'من ' + S.staff.filter(s => s.role === 'معلمة').length, 'var(--tiffany-d)')}${kpi('الطالبات المستفيدات', L.reduce((a, r) => a + (+r.d.n || 0), 0), '', 'var(--gold)')}</div>
-  <div class="card noprint" style="margin-top:14px"><div class="row" style="flex-wrap:wrap;gap:8px">
-    <select id="fk"><option value="">المبادرات والأنشطة</option><option ${F.kind === 'مبادرة' ? 'selected' : ''}>مبادرة</option><option ${F.kind === 'نشاط' ? 'selected' : ''}>نشاط</option></select>
-    <select id="fd"><option value="">كل الأقسام</option>${depts.map(x => `<option ${F.dept === x ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-    <label><input type="checkbox" id="fa" ${F.all ? 'checked' : ''}> كل العام (وليس ${esc(p.name)} فقط)</label><span class="sp"></span><button class="btn sec" onclick="window.print()">طباعة</button></div></div>
+  <div class="note">تُجمع هنا المبادرات والأنشطة التي سجّلتها المعلمات في سبع سنابل والميزان. الأخضر يعني مشاركة واسعة والأحمر يعني مشاركة قليلة، واضغطي اسم القسم لعرض تفاصيله.</div>
+  <div class="row noprint" style="margin:10px 0;gap:8px;flex-wrap:wrap">
+    <div class="tabs" style="margin:0"><button class="${F.all ? '' : 'on'}" data-al="0">${esc(p.name)}</button><button class="${F.all ? 'on' : ''}" data-al="1">كل العام</button></div>
+    <div class="tabs" style="margin:0"><button class="${!F.kind ? 'on' : ''}" data-k="">الكل</button><button class="${F.kind === 'مبادرة' ? 'on' : ''}" data-k="مبادرة">المبادرات</button><button class="${F.kind === 'نشاط' ? 'on' : ''}" data-k="نشاط">الأنشطة</button></div>
+    ${F.dept ? `<button class="btn sm ghost" id="tdAll">✕ ${esc(F.dept)} — عرض كل الأقسام</button>` : ''}<span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
+  <div class="cmhero"><div><h2>مبادرات المعلمات وأنشطتهن — ${esc(per)}</h2><div class="sub">${F.dept ? esc(F.dept) : 'جميع الأقسام'}</div></div><div class="cmks">
+    <div class="cmk"><b>${L.filter(r => r.d.kind === 'مبادرة').length}</b><span>مبادرة</span></div><div class="cmk"><b>${L.filter(r => r.d.kind !== 'مبادرة').length}</b><span>نشاط</span></div>
+    <div class="cmk"><b>${Object.keys(byT).length}<small style="font-size:13px;color:#dfe5f3"> من ${nT}</small></b><span>معلمة شاركت</span></div><div class="cmk"><b>${L.reduce((x, r) => x + (+r.d.n || 0), 0)}</b><span>طالبة مستفيدة</span></div></div></div>
+  ${F.dept ? '' : `<div class="card"><h2>مشاركة الأقسام <span class="sub">مرتّبة حسب نسبة المعلمات المشاركات</span></h2>
+    <div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لا يوجد</span></div>
+    <div class="tbl"><table class="t cmh"><tr><th style="min-width:170px">القسم</th><th>المعلمات المشاركات</th><th>المبادرات</th><th>الأنشطة</th><th>الطالبات المستفيدات</th></tr>
+    ${D.map(x => `<tr class="acvr" data-dp="${esc(x.d)}" style="cursor:pointer"><td><b>${esc(x.d)}</b></td>
+      <td class="tlc ${x.nT ? tl(x.pc, 80, 60, 30) : (x.na ? 'tl3' : 'tl0')}">${x.nT ? `${x.pc}%<br><small style="font-weight:500">${x.nA} من ${x.nT}</small>` : x.na ? x.na + ' معلمة' : '—'}</td>
+      <td class="tlc ${tl(x.i / mxW * 4, 1.5, 1, .5)}">${x.i || '—'}</td><td class="tlc ${tl(x.a / mxW, .6, .4, .2)}">${x.a || '—'}</td><td class="tlc ${tl(x.st / mxS, .6, .35, .15)}">${x.st || '—'}</td></tr>`).join('')}</table></div></div>`}
+  <div class="card"><h2>توزيع الأعمال على أولويات المدرسة</h2><div class="tapr">${REF.PRIO.map((x, i) => `<div class="tapc"><b>${prio[i]}</b><span>${L.length ? Math.round(prio[i] / L.length * 100) : 0}%</span><div>${esc(x.replace(/^الأولوية \d: /, ''))}</div></div>`).join('')}</div></div>
   <div class="grid g2">
-    <div class="card"><h2>حسب المعلمة</h2>${Object.entries(byT).sort((a, b) => (b[1].i + b[1].a) - (a[1].i + a[1].a)).map(([t, o], i) => `<div class="row" style="margin:6px 0"><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span><span class="sp"><b>${esc(t)}</b> <small style="color:var(--muted)">${esc(o.dept)}</small></span><span class="chip">مبادرات ${o.i}</span><span class="chip">أنشطة ${o.a}</span></div>`).join('') || '<div class="empty">لا توجد تسجيلات</div>'}</div>
-    <div class="card"><h2>حسب الأولوية</h2>${REF.PRIO.map((x, i) => `<div class="row" style="margin:6px 0"><span style="width:230px;font-size:13px">${esc(x.replace(/^الأولوية \d: /, ''))}</span><div class="bar sp"><i style="width:${L.length ? prio[i] / L.length * 100 : 0}%"></i></div><b>${prio[i]}</b></div>`).join('')}</div>
+    <div class="card"><h2>المعلمات المشاركات <span class="sub">${Tl.length}</span></h2><div class="tbl"><table class="t cmh"><tr><th style="text-align:right">المعلمة</th><th>مبادرات</th><th>أنشطة</th><th>المجموع</th></tr>
+      ${Tl.map(([t, o]) => `<tr><td style="white-space:nowrap"><b>${esc(t)}</b> <small style="color:var(--muted)">${esc(o.dept)}</small></td><td style="text-align:center">${o.i || '—'}</td><td style="text-align:center">${o.a || '—'}</td><td class="tlc ${tl((o.i + o.a) / mxT, .6, .35, .15)}">${o.i + o.a}</td></tr>`).join('') || '<tr><td colspan="4"><div class="empty">لا توجد مشاركات</div></td></tr>'}</table></div></div>
+    <div class="card"><h2>معلمات لم يسجّلن بعد <span class="sub">${miss.length}</span></h2>${miss.length ? `<div style="display:flex;flex-wrap:wrap;gap:6px">${miss.map(([t, d]) => `<span class="tlc tl0" style="border-radius:20px;padding:3px 12px;font-size:12.5px;white-space:nowrap">${esc(t)}${F.dept ? '' : ` <small style="font-weight:400">· ${esc(d)}</small>`}</span>`).join('')}</div>` : '<div class="empty">جميع المعلمات سجّلن ✓</div>'}</div>
   </div>
-  <div class="card"><h2>السجل (${L.length})</h2><div class="tbl"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th><th>القسم</th><th>النوع</th><th>الاسم</th><th>الفئة المستهدفة</th><th>الأولوية</th><th>العدد</th><th class="noprint"></th></tr>
-    ${L.map(r => `<tr><td>${dm(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td style="font-size:12px">${esc(r.dept)}</td><td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : ''}">${esc(r.d.kind)}</span>${r.d.src ? `<br><small style="color:var(--muted)">${esc(r.d.src === TA_SRC[0] ? 'مستحدث' : 'قائم')}</small>` : ''}</td><td>${esc(r.d.name)}${r.d.desc ? `<div style="font-size:11.5px;color:var(--muted)">${esc(r.d.desc)}</div>` : ''}${r.d.ev ? ` <a href="${esc(r.d.ev)}" target="_blank" rel="noopener">الدليل</a>` : ''}</td><td style="font-size:12px">${esc(r.d.tg || '')}</td><td style="font-size:12px">${esc((r.d.p || '').replace(/^الأولوية \d: /, ''))}</td><td>${esc(r.d.n || '')}</td><td class="noprint"><button class="btn sm ghost" data-x="${r.id}">حذف</button></td></tr>`).join('') || '<tr><td colspan="9"><div class="empty">لا توجد تسجيلات في هذه الفترة</div></td></tr>'}</table></div></div>`;
-  $('#fk').onchange = e => { F.kind = e.target.value; show(); }; $('#fd').onchange = e => { F.dept = e.target.value; show(); }; $('#fa').onchange = e => { F.all = e.target.checked; show(); };
+  <div class="card"><h2>السجل التفصيلي <span class="sub">${L.length}</span></h2><div class="tbl"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th>${F.dept ? '' : '<th>القسم</th>'}<th>النوع</th><th>الاسم</th><th>الفئة المستهدفة</th><th>الأولوية</th><th>العدد</th><th class="noprint"></th></tr>
+    ${L.map(r => `<tr><td style="white-space:nowrap">${dm(r.date)}</td><td style="white-space:nowrap"><b>${esc(r.d.t)}</b></td>${F.dept ? '' : `<td style="font-size:12px;white-space:nowrap">${esc(r.dept)}</td>`}<td><span class="chip ${r.d.kind === 'مبادرة' ? 'tf' : ''}">${esc(r.d.kind)}</span></td><td>${esc(r.d.name)}${r.d.ev ? ` <a href="${esc(r.d.ev)}" target="_blank" rel="noopener">الدليل</a>` : ''}</td><td style="font-size:12px">${esc(r.d.tg || '')}</td><td style="font-size:12px">${esc((r.d.p || '').replace(/^الأولوية \d: /, ''))}</td><td>${esc(r.d.n || '')}</td><td class="noprint"><button class="btn sm ghost" data-x="${r.id}">حذف</button></td></tr>`).join('') || '<tr><td colspan="9"><div class="empty">لا توجد تسجيلات في هذه الفترة</div></td></tr>'}</table></div></div>`;
+  $$('[data-al]', el).forEach(b => b.onclick = () => { F.all = b.dataset.al === '1'; show(); });
+  $$('[data-k]', el).forEach(b => b.onclick = () => { F.kind = b.dataset.k; show(); });
+  $$('[data-dp]', el).forEach(b => b.onclick = () => { F.dept = b.dataset.dp; show(); window.scrollTo(0, 0); });
+  if ($('#tdAll')) $('#tdAll').onclick = () => { F.dept = ''; show(); };
   $$('[data-x]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذا السجل نهائياً؟')) return; await call('delete', { id: b.dataset.x }); S.records = S.records.filter(x => x.id !== b.dataset.x); show(); });
 }
