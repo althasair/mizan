@@ -454,14 +454,16 @@ async function A_cvisits(el) {
   const tOf = d => S.staff.filter(x => x.dept === d && x.role !== 'منسقة').map(x => x.name);
   const days = d => d ? Math.round((new Date(today()) - new Date(d)) / 864e5) : null;
   const tl = (v, a, b, c) => v >= a ? 'tl4' : v >= b ? 'tl3' : v >= c ? 'tl2' : v > 0 ? 'tl1' : 'tl0';
-  const rows = depts.map(d => { const L = V.filter(r => r.dept === d); const T = tOf(d); const vis = new Set(L.map(r => r.d.t));
-    const cov = T.length ? Math.round(T.filter(t => vis.has(t)).length / T.length * 100) : (L.length ? 100 : 0);
+  const PP = f.all ? { name: 'كل الفترات', from: '2000-01-01', to: '2099-12-31' } : p;
+  const rows = depts.map(d => { const Rr = buildReport(ctxFor(d, PP)); const T = Rr.teachers; const L = V.filter(r => r.dept === d && T.includes(r.d.t)); const vis = new Set(L.map(r => r.d.t));
+    const n = Rr.K.visits, nT = Rr.NT, cov = nT ? Math.round(Rr.K.visitedPct * 100) : 0;
     const fu = L.filter(r => /متابعة/.test(r.d.ty || '')).length; const done = L.filter(r => /تم تنفيذ/.test(r.d.st || '')).length; const part = L.filter(r => /جزئي/.test(r.d.st || '')).length;
     const last = L[0] ? L[0].date : (VA.filter(r => r.dept === d).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || {}).date;
-    return { d, c: coordName(d, L[0]), n: L.length, pt: T.length ? Math.round(L.length / T.length * 10) / 10 : 0, cov, nT: T.length, nV: T.filter(t => vis.has(t)).length, miss: T.filter(t => !vis.has(t)), fu, done, part, last, ld: days(last), wait: L.filter(r => !r.d.vpfb).length }; })
+    return { d, c: coordName(d, L[0]), n, pt: nT ? Math.round(n / nT * 10) / 10 : 0, cov, nT, nV: vis.size, miss: T.filter(t => !vis.has(t)), fu, done, part, last, ld: days(last), wait: L.filter(r => !r.d.vpfb).length }; })
     .sort((a, b) => b.pt - a.pt || b.cov - a.cov);
-  const tot = V.length, wait = V.filter(r => !r.d.vpfb).length;
-  const avgCov = rows.length ? Math.round(rows.reduce((a, r) => a + r.cov, 0) / rows.length) : 0;
+  const sum = k => rows.reduce((a, r) => a + r[k], 0);
+  const tot = sum('n'), totT = sum('nT'), wait = V.filter(r => !r.d.vpfb).length;
+  const avgCov = totT ? Math.round(sum('nV') / totT * 100) : 0;
   const L = V.filter(r => (!f.dept || r.dept === f.dept) && (!f.st || (f.st === 'no' ? !r.d.vpfb : !!r.d.vpfb)));
   const tyChip = t => /متابعة/.test(t || '') ? 'tl2' : /الأولى/.test(t || '') ? 'tl3' : 'tl4';
   const sel = rows.find(r => r.d === f.dept);
@@ -469,18 +471,18 @@ async function A_cvisits(el) {
   <div class="note">متابعة زيارات المنسقات الصفية لمعلمات أقسامهن: من زارت، ومن لم تُزر بعد، وما تحتاج ملاحظتكِ. اختاري قسماً من الجدول لعرض زياراته، ثم «فتح» لقراءة الاستمارة وكتابة ملاحظتكِ.</div>
   <div class="row noprint" style="margin:10px 0;gap:8px"><div class="tabs" style="margin:0"><button class="${f.all ? '' : 'on'}" data-all="0">${esc(p.name)}</button><button class="${f.all ? 'on' : ''}" data-all="1">كل الفترات</button></div></div>
   <div class="cmhero"><div><h2>زيارات المنسقات — ${f.all ? 'كل الفترات' : esc(p.name)}</h2><div class="sub">${rows.length} أقسام</div></div><div class="cmks">
-    <div class="cmk"><b>${tot}</b><span>زيارة صفية</span></div><div class="cmk"><b>${(() => { const n = rows.reduce((a, r) => a + r.nT, 0); return n ? Math.round(tot / n * 10) / 10 : 0; })()}</b><span>زيارة لكل معلمة</span></div><div class="cmk"><b>${avgCov}%</b><span>متوسط شمول المعلمات</span></div>
-    <div class="cmk"><b>${V.filter(r => /متابعة/.test(r.d.ty || '')).length}</b><span>زيارة متابعة</span></div><div class="cmk"><b>${V.filter(r => /تم تنفيذ/.test(r.d.st || '')).length}</b><span>توصيات نُفّذت</span></div>
-    <div class="cmk"><b>${tot - wait}</b><span>بملاحظتي</span></div><div class="cmk"><b>${wait}</b><span>بانتظار ملاحظتي</span></div></div></div>
+    <div class="cmk"><b>${tot}</b><span>زيارة صفية</span></div><div class="cmk"><b>${totT ? Math.round(tot / totT * 10) / 10 : 0}</b><span>زيارة لكل معلمة</span></div><div class="cmk"><b>${avgCov}%</b><span>شمول المعلمات</span></div>
+    <div class="cmk"><b>${sum('fu')}</b><span>زيارة متابعة</span></div><div class="cmk"><b>${sum('done')}</b><span>زيارات نُفّذت توصياتها</span></div>
+    <div class="cmk"><b>${V.length - wait}</b><span>بملاحظتي</span></div><div class="cmk"><b>${wait}</b><span>بانتظار ملاحظتي</span></div></div></div>
   <div class="card"><h2>أداء المنسقات في الزيارات <span class="sub">تُقاس بالمعلمة الواحدة لا بعدد الزيارات الكلي، حتى لا يظلم القسمَ الصغيرَ قلةُ معلماته · اضغطي اسم القسم لعرض زياراته</span></h2>
     <div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لا يوجد</span></div>
-    <div class="tbl"><table class="t cmh"><tr><th style="min-width:160px">القسم والمنسقة</th><th>معدل الزيارات لكل معلمة</th><th>شمول المعلمات</th><th>زيارات المتابعة</th><th>توصيات نُفّذت</th><th>آخر زيارة</th><th>بانتظار ملاحظتي</th></tr>
+    <div class="tbl"><table class="t cmh"><tr><th style="min-width:160px">القسم والمنسقة</th><th>معدل الزيارات لكل معلمة</th><th>شمول المعلمات</th><th>زيارات المتابعة</th><th>تنفيذ التوصيات (زيارات)</th><th>آخر زيارة</th><th>بانتظار ملاحظتي</th></tr>
     ${rows.map(r => `<tr class="acvr ${f.dept === r.d ? 'on' : ''}" data-dp="${esc(r.d)}" style="cursor:pointer"><td><b>${esc(r.d)}</b><br><small style="color:var(--muted)">${esc(r.c)}</small></td>
       <td class="tlc ${r.nT ? tl(r.pt, 2, 1.5, 1) : 'tl0'}">${r.nT ? `${r.pt || '—'}${r.n ? `<br><small style="font-weight:500">${r.n} زيارة ÷ ${r.nT} معلمات</small>` : ''}` : (r.n || '—')}</td>
       <td class="tlc ${r.nT ? tl(r.cov, 90, 70, 40) : 'tl0'}">${r.nT ? `${r.cov}%<br><small style="font-weight:500">${r.nV} من ${r.nT}</small>` : '—'}</td>
       <td class="tlc ${tl(r.fu, 3, 2, 1)}">${r.fu || '—'}</td>
       <td class="tlc ${r.done + r.part ? tl(r.done / (r.done + r.part) * 100, 75, 50, 25) : 'tl0'}">${r.done + r.part ? `${r.done}<small style="font-weight:500"> كلياً · ${r.part} جزئياً</small>` : '—'}</td>
-      <td class="tlc ${r.ld == null ? 'tl0' : r.ld <= 7 ? 'tl4' : r.ld <= 14 ? 'tl3' : r.ld <= 21 ? 'tl2' : 'tl1'}">${r.last ? dmy(r.last) + `<br><small style="font-weight:500">${r.ld === 0 ? 'اليوم' : 'قبل ' + r.ld + ' يوماً'}</small>` : '—'}</td>
+      <td class="tlc ${r.ld == null ? 'tl0' : r.ld <= 7 ? 'tl4' : r.ld <= 14 ? 'tl3' : r.ld <= 21 ? 'tl2' : 'tl1'}">${r.last ? dmy(r.last) + `<br><small style="font-weight:500">${r.ld === 0 ? 'اليوم' : r.ld === 1 ? 'أمس' : r.ld === 2 ? 'قبل يومين' : r.ld <= 10 ? 'قبل ' + r.ld + ' أيام' : 'قبل ' + r.ld + ' يوماً'}</small>` : '—'}</td>
       <td style="text-align:center">${r.wait ? `<span class="chip warn">${r.wait}</span>` : r.n ? '<span class="chip ok">✓</span>' : ''}</td></tr>`).join('')}</table></div></div>
   ${sel && sel.miss.length ? `<div class="card"><h2>معلمات لم تُزر بعد — ${esc(sel.d)} <span class="sub">${sel.miss.length} من ${sel.nT}</span></h2><div style="display:flex;flex-wrap:wrap;gap:6px">${sel.miss.map(t => `<span class="tlc tl0" style="border-radius:20px;padding:3px 12px;font-size:12.5px">${esc(t)}</span>`).join('')}</div></div>` : ''}
   <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0">${f.dept ? 'زيارات ' + esc(f.dept) : 'جميع الزيارات'} <span class="sub">${L.length}</span></h2><span class="sp"></span>

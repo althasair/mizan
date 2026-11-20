@@ -21,7 +21,7 @@ function A_home(el) {
   <div class="grid g4">
     ${kpi('تقارير موقّعة من المنسقات', `${signed} / ${D.length}`, `معتمدة: ${approved}`)}
     ${kpi('السجلات الموثّقة في الفترة', recs, 'لجميع الأقسام', 'var(--tiffany-d)')}
-    ${kpi('زياراتي للمعلمات (الفصل الأول)', `${vp.done.length} / ${vp.pool.length}`, `المتبقي ${vp.remain.length}`, 'var(--navy)')}
+    ${kpi('معلمات زرتُهن (الفصل الأول)', `${vp.pool.length - vp.remain.length} / ${vp.pool.length}`, `المتبقي ${vp.remain.length} · عدد الزيارات ${vp.done.length}`, 'var(--navy)')}
     ${kpi('الزيارات الصفية للمنسقات', Rs.reduce((a, x) => a + x.R.K.visits, 0), 'خلال الفترة', 'var(--gold)')}
   </div>
   <div class="card" style="margin-top:16px"><h2>حالة الأقسام في ${esc(p.name)} <span class="sub">الأخضر أداء مرتفع والأحمر منخفض · الزيارات بالمعدل لكل معلمة</span></h2>
@@ -52,19 +52,23 @@ function A_compare(el) {
   const nT = d => Math.max(1, S.staff.filter(s => s.dept === d && s.role !== 'منسقة').length + 1);
   // [الاسم المختصر, المجموعة, الدالة, نسبة؟, يقبل القسمة على عدد المعلمات؟]
   const M = [
-    ['الزيارات الصفية', 'الإشراف', (R) => R.K.visits, 0, 1], ['شمول المعلمات', 'الإشراف', R => Math.round(R.K.visitedPct * 100), 1, 0], ['التبادلية', 'الإشراف', R => R.K.peer, 0, 1],
-    ['خطة التطوير', 'التطوير', R => R.K.planPct == null ? 0 : Math.min(100, Math.round(R.K.planPct * 100)), 1, 0], ['الورش', 'التطوير', (R, d, q) => cnt(d, 'WS', q), 0, 1], ['الاجتماعات', 'التطوير', R => R.K.meetings, 0, 0],
+    ['الزيارات الصفية', 'الإشراف', (R) => R.K.visits, 0, 1], ['شمول المعلمات', 'الإشراف', R => Math.round(R.K.visitedPct * 100), 1, 0, R => [R.T.v_k || 0, R.NT || 0]], ['التبادلية', 'الإشراف', R => R.K.peer, 0, 1],
+    ['خطة التطوير', 'التطوير', R => R.K.planPct == null ? 0 : Math.min(100, Math.round(R.K.planPct * 100)), 1, 0, R => [R.T.pd_plan_done || 0, R.T.pd_plan_n || 0]], ['الورش المنفّذة', 'التطوير', R => R.T.pd_done_n || 0, 0, 1], ['الاجتماعات', 'التطوير', R => R.K.meetings, 0, 0],
     ['رفع التحصيل', 'التحصيل', (R, d, q) => cnt(d, 'RA', q), 0, 1], ['تحليل النتائج', 'التحصيل', (R, d, q) => cnt(d, 'AS', q), 0, 0],
     ['الأنشطة', 'الأنشطة والشراكة', R => R.K.activities, 0, 1], ['أولياء الأمور', 'الأنشطة والشراكة', R => R.K.parents, 0, 1], ['الإنجازات', 'الأنشطة والشراكة', R => R.K.achievements, 0, 1],
     ['التعليم الإلكتروني', 'الأنشطة والشراكة', R => R.K.elearn, 0, 1], ['التوصيات المشتركة', 'التطوير', R => R.K.cpActions, 0, 0],
   ];
   S.cmpN = S.cmpN == null ? 1 : S.cmpN; S.cmpS = S.cmpS == null ? -1 : S.cmpS; S.cmpM = Math.min(S.cmpM || 0, M.length - 1);
   const pers = S.periods.filter(q => q.from <= today()); const pi = pers.findIndex(q => q.name === p.name); const prevP = pi > 0 ? pers[pi - 1] : null;
-  const val = (R, d, q, m) => { const v = m[2](R, d, q); return S.cmpN && m[4] ? Math.round(v / nT(d) * 10) / 10 : v; };
+  const val = (R, d, q, m) => { const v = m[2](R, d, q); return S.cmpN && m[4] ? Math.round(v / Math.max(1, R.NT) * 10) / 10 : v; };
   const rows = D.map(d => { const R = buildReport(ctxFor(d, p)); const R0 = prevP ? buildReport(ctxFor(d, prevP)) : null;
-    return { d, c: coordOf(d), raw: M.map(m => m[2](R, d, p)), nt: nT(d), v: M.map(m => val(R, d, p, m)), v0: R0 ? M.map(m => val(R0, d, prevP, m)) : null, rec: R.K.records }; });
+    return { d, c: coordOf(d), nd: M.map(m => m[5] ? m[5](R) : null), raw: M.map(m => m[2](R, d, p)), nt: Math.max(1, R.NT), v: M.map(m => val(R, d, p, m)), v0: R0 ? M.map(m => val(R0, d, prevP, m)) : null, rec: R.K.records }; });
   const mx = M.map((m, j) => Math.max(...rows.map(r => r.v[j]), m[3] ? 100 : 1));
   const avg = M.map((m, j) => rows.length ? rows.reduce((a, r) => a + r.v[j], 0) / rows.length : 0);
+  /* قيمة المدرسة: النسب = مجموع البسط ÷ مجموع المقام، والأعداد لكل معلمة = مجموعها ÷ مجموع المعلمات، والأعداد الكلية = متوسط القسم */
+  const sumNT = Math.max(1, rows.reduce((a, r) => a + r.nt, 0));
+  const school = M.map((m, j) => { if (m[3]) { const n = rows.reduce((a, r) => a + r.nd[j][0], 0), dd = rows.reduce((a, r) => a + r.nd[j][1], 0); return dd ? Math.min(100, Math.round(n / dd * 100)) : 0; }
+    const t = rows.reduce((a, r) => a + r.raw[j], 0); return S.cmpN && m[4] ? Math.round(t / sumNT * 10) / 10 : Math.round(t / Math.max(1, rows.length) * 10) / 10; });
   rows.forEach(r => { r.sc = Math.round(r.v.reduce((a, x, j) => a + (mx[j] ? x / mx[j] : 0), 0) / M.length * 100);
     r.sc0 = r.v0 ? Math.round(r.v0.reduce((a, x, j) => a + (mx[j] ? Math.min(1, x / mx[j]) : 0), 0) / M.length * 100) : null;
     r.str = M.map((m, j) => j).filter(j => r.v[j] > 0 && r.v[j] >= avg[j] * 1.25).sort((a, b) => r.v[b] / mx[b] - r.v[a] / mx[a]).slice(0, 3);
@@ -76,8 +80,8 @@ function A_compare(el) {
   const tot = j => rows.reduce((a, r) => a + r.v[j], 0);
   const tot0 = j => rows.reduce((a, r) => a + (r.v0 ? r.v0[j] : 0), 0);
   // مؤشرات المدرسة
-  const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] ? Math.round(avg[j]) : (S.cmpN && M[j][4] ? Math.round(rows.reduce((a, r) => a + r.raw[j], 0) / Math.max(1, rows.reduce((a, r) => a + r.nt, 0)) * 10) / 10 : rows.reduce((a, r) => a + r.raw[j], 0)); const t0 = prevP ? (M[j][3] ? Math.round(tot0(j) / Math.max(1, rows.length)) : tot0(j)) : null;
-    return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : ''}</span></div>`; }).join('');
+  const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] || S.cmpN ? school[j] : rows.reduce((a, r) => a + r.raw[j], 0);
+    return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : M[j][3] ? '' : ' (المجموع)'}</span></div>`; }).join('');
   // قراءة تحليلية
   const best = sorted[0], mostUp = rows.filter(r => r.sc0 != null).sort((a, b) => (b.sc - b.sc0) - (a.sc - a.sc0))[0];
   const weakM = M.map((m, j) => ({ j, z: rows.filter(r => r.v[j] === 0).length })).filter(x => x.z >= Math.ceil(rows.length / 2)).map(x => M[x.j][0]);
@@ -102,7 +106,7 @@ function A_compare(el) {
     ${sorted.map((r, i) => `<tr><td><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span> <b>${esc(r.d)}</b><br><small style="color:var(--muted)">${esc(r.c)}</small></td>
       <td><span class="tlp ${lvS(r.sc)}">${r.sc}%</span></td>
       ${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td class="tlc ${lvl(r.v[j], j)}">${r.v[j] ? fmt(r.v[j], j) : '—'}</td>`).join('')).join('')}</tr>`).join('')}
-    <tr class="avg"><td><b>متوسط المدرسة</b></td><td></td>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td>${fmt(Math.round(avg[j] * 10) / 10, j)}</td>`).join('')).join('')}</tr></table></div></div>
+    <tr class="avg"><td><b>${S.cmpN ? 'المدرسة' : 'متوسط القسم'}</b></td><td></td>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td>${fmt(school[j], j)}</td>`).join('')).join('')}</tr></table></div></div>
   <div class="grid g2">
   <div class="card"><h2>ترتيب الأقسام في مؤشر واحد</h2><select id="cmM" class="noprint" style="margin-bottom:10px">${M.map((m, j) => `<option value="${j}" ${j === jm ? 'selected' : ''}>${m[1]} — ${m[0]}</option>`).join('')}</select>
     ${[...rows].sort((a, b) => b.v[jm] - a.v[jm]).map((r, i) => `<div class="cmbar"><span class="n">${esc(r.d)}</span><div class="b"><i class="${lvl(r.v[jm], jm)}" style="width:${mx[jm] ? r.v[jm] / mx[jm] * 100 : 0}%"></i><u style="right:${mx[jm] ? Math.min(100, avg[jm] / mx[jm] * 100) : 0}%" title="متوسط المدرسة"></u></div><b>${fmt(r.v[jm], jm)}</b></div>`).join('')}
@@ -473,7 +477,7 @@ function A_visits(el) {
   const sanN = V.san ? Object.keys(V.san).length : 0;
   el.innerHTML = `
   <div class="grid g4">
-    ${kpi('تمت زيارتهن', V.done.length, 'من ' + V.pool.length + ' معلمة لها نصاب', 'var(--ok)')}
+    ${kpi('تمت زيارتهن', V.pool.length - V.remain.length, 'من ' + V.pool.length + ' معلمة لها نصاب · ' + V.done.length + ' زيارة', 'var(--ok)')}
     ${kpi('المتبقي', V.remain.length, 'حتى نهاية الفصل الأول', 'var(--maroon)')}
     ${kpi('أسابيع الخطة', V.weeks.length, `بمعدل ${V.weeks.length ? Math.ceil(V.remain.length / V.weeks.length) : 0} زيارات أسبوعياً`, 'var(--navy)')}
     ${kpi('نتائج سنابل', sanN ? sanN + ' معلمة' : 'غير متاحة', sanN ? 'قراءة فقط من متصفحك' : 'افتحي سنابل في هذا المتصفح', 'var(--tiffany-d)')}

@@ -77,7 +77,8 @@ function A_tacts(el) {
   const p = P(); S.taF = S.taF || { kind: '', dept: '', all: false };
   const F = S.taF;
   const base = S.records.filter(r => r.item === 'TA' && (F.all || inP(r.date, p)));
-  const L = base.filter(r => (!F.kind || r.d.kind === F.kind) && (!F.dept || r.dept === F.dept)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const isIni = r => r.d.kind === 'مبادرة';
+  const L = base.filter(r => (!F.kind || (F.kind === 'مبادرة' ? isIni(r) : !isIni(r))) && (!F.dept || r.dept === F.dept)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
   const TCH = S.staff.filter(s => s.role === 'معلمة' || s.role === 'منسقة');
   const depts = [...new Set([...TCH.map(s => s.dept), ...base.map(r => r.dept)])].filter(Boolean);
   const byT = {}; L.forEach(r => { const o = byT[r.d.t] = byT[r.d.t] || { i: 0, a: 0, n: 0, dept: r.dept }; o[r.d.kind === 'مبادرة' ? 'i' : 'a']++; o.n += +r.d.n || 0; });
@@ -89,25 +90,26 @@ function A_tacts(el) {
   const mxW = Math.max(1, ...D.map(x => x.i + x.a)), mxS = Math.max(1, ...D.map(x => x.st));
   const Tl = Object.entries(byT).sort((a, b) => (b[1].i + b[1].a) - (a[1].i + a[1].a));
   const mxT = Math.max(1, ...Tl.map(([, o]) => o.i + o.a));
-  const prio = REF.PRIO.map(x => L.filter(r => r.d.p === x).length);
+  const psOf = r => (r.d.ps && r.d.ps.length ? r.d.ps : [r.d.p]).filter(Boolean);
+  const prio = REF.PRIO.map(x => L.filter(r => psOf(r).includes(x)).length);
   const nT = TCH.filter(s => !F.dept || s.dept === F.dept).length;
   const miss = D.filter(x => !F.dept || x.d === F.dept).flatMap(x => x.miss.map(t => [t, x.d]));
   el.innerHTML = `
   <div class="note">تُجمع هنا المبادرات والأنشطة التي سجّلتها المعلمات في سبع سنابل والميزان. الأخضر يعني مشاركة واسعة والأحمر يعني مشاركة قليلة، واضغطي اسم القسم لعرض تفاصيله.</div>
   <div class="row noprint" style="margin:10px 0;gap:8px;flex-wrap:wrap">
     <div class="tabs" style="margin:0"><button class="${F.all ? '' : 'on'}" data-al="0">${esc(p.name)}</button><button class="${F.all ? 'on' : ''}" data-al="1">كل العام</button></div>
-    <div class="tabs" style="margin:0"><button class="${!F.kind ? 'on' : ''}" data-k="">الكل</button><button class="${F.kind === 'مبادرة' ? 'on' : ''}" data-k="مبادرة">المبادرات</button><button class="${F.kind === 'نشاط' ? 'on' : ''}" data-k="نشاط">الأنشطة</button></div>
+    <div class="tabs" style="margin:0"><button class="${!F.kind ? 'on' : ''}" data-k="">الكل</button><button class="${F.kind === 'مبادرة' ? 'on' : ''}" data-k="مبادرة">المبادرات</button><button class="${F.kind === 'نشاط' ? 'on' : ''}" data-k="نشاط">الأنشطة والمسابقات والبرامج</button></div>
     ${F.dept ? `<button class="btn sm ghost" id="tdAll">✕ ${esc(F.dept)} — عرض كل الأقسام</button>` : ''}<span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
   <div class="cmhero"><div><h2>مبادرات المعلمات وأنشطتهن — ${esc(per)}</h2><div class="sub">${F.dept ? esc(F.dept) : 'جميع الأقسام'}</div></div><div class="cmks">
-    <div class="cmk"><b>${L.filter(r => r.d.kind === 'مبادرة').length}</b><span>مبادرة</span></div><div class="cmk"><b>${L.filter(r => r.d.kind !== 'مبادرة').length}</b><span>نشاط</span></div>
-    <div class="cmk"><b>${Object.keys(byT).length}<small style="font-size:13px;color:#dfe5f3"> من ${nT}</small></b><span>معلمة شاركت</span></div><div class="cmk"><b>${L.reduce((x, r) => x + (+r.d.n || 0), 0)}</b><span>طالبة مستفيدة</span></div></div></div>
+    <div class="cmk"><b>${L.filter(r => r.d.kind === 'مبادرة').length}</b><span>مبادرة</span></div><div class="cmk"><b>${L.filter(r => r.d.kind !== 'مبادرة').length}</b><span>نشاطاً ومسابقة وبرنامجاً</span></div>
+    <div class="cmk"><b>${Object.keys(byT).filter(t => TCH.some(x => x.name === t && (!F.dept || x.dept === F.dept))).length}<small style="font-size:13px;color:#dfe5f3"> من ${nT}</small></b><span>معلمة شاركت</span></div><div class="cmk"><b>${L.reduce((x, r) => x + (+r.d.n || 0), 0)}</b><span>طالبة مستفيدة</span></div></div></div>
   ${F.dept ? '' : `<div class="card"><h2>مشاركة الأقسام <span class="sub">مرتّبة حسب نسبة المعلمات المشاركات</span></h2>
     <div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لا يوجد</span></div>
-    <div class="tbl"><table class="t cmh"><tr><th style="min-width:170px">القسم</th><th>المعلمات المشاركات</th><th>المبادرات</th><th>الأنشطة</th><th>الطالبات المستفيدات</th></tr>
+    <div class="tbl"><table class="t cmh"><tr><th style="min-width:170px">القسم</th><th>المعلمات المشاركات</th><th>المبادرات</th><th>الأنشطة والمسابقات</th><th>الطالبات المستفيدات</th></tr>
     ${D.map(x => `<tr class="acvr" data-dp="${esc(x.d)}" style="cursor:pointer"><td><b>${esc(x.d)}</b></td>
       <td class="tlc ${x.nT ? tl(x.pc, 80, 60, 30) : (x.na ? 'tl3' : 'tl0')}">${x.nT ? `${x.pc}%<br><small style="font-weight:500">${x.nA} من ${x.nT}</small>` : x.na ? x.na + ' معلمة' : '—'}</td>
       <td class="tlc ${tl(x.i / mxW * 4, 1.5, 1, .5)}">${x.i || '—'}</td><td class="tlc ${tl(x.a / mxW, .6, .4, .2)}">${x.a || '—'}</td><td class="tlc ${tl(x.st / mxS, .6, .35, .15)}">${x.st || '—'}</td></tr>`).join('')}</table></div></div>`}
-  <div class="card"><h2>توزيع الأعمال على أولويات المدرسة</h2><div class="tapr">${REF.PRIO.map((x, i) => `<div class="tapc"><b>${prio[i]}</b><span>${L.length ? Math.round(prio[i] / L.length * 100) : 0}%</span><div>${esc(x.replace(/^الأولوية \d: /, ''))}</div></div>`).join('')}</div></div>
+  <div class="card"><h2>توزيع الأعمال على أولويات المدرسة <span class="sub">النسبة من مجموع الأعمال (${L.length})، وقد يرتبط العمل الواحد بأكثر من أولوية</span></h2><div class="tapr">${REF.PRIO.map((x, i) => `<div class="tapc"><b>${prio[i]}</b><span>${L.length ? Math.round(prio[i] / L.length * 100) : 0}%</span><div>${esc(x.replace(/^الأولوية \d: /, ''))}</div></div>`).join('')}</div></div>
   <div class="grid g2">
     <div class="card"><h2>المعلمات المشاركات <span class="sub">${Tl.length}</span></h2><div class="tbl"><table class="t cmh"><tr><th style="text-align:right">المعلمة</th><th>مبادرات</th><th>أنشطة</th><th>المجموع</th></tr>
       ${Tl.map(([t, o]) => `<tr><td style="white-space:nowrap"><b>${esc(t)}</b> <small style="color:var(--muted)">${esc(o.dept)}</small></td><td style="text-align:center">${o.i || '—'}</td><td style="text-align:center">${o.a || '—'}</td><td class="tlc ${tl((o.i + o.a) / mxT, .6, .35, .15)}">${o.i + o.a}</td></tr>`).join('') || '<tr><td colspan="4"><div class="empty">لا توجد مشاركات</div></td></tr>'}</table></div></div>

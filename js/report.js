@@ -88,8 +88,11 @@ function buildReport(ctx) {
   const WSall = R('WS').map(r => ({ r, x: d(r), w: SEC.WS.when(d(r)) || r.date }));
   const WS = WSall.filter(o => inP(o.w, P));
   const done = WS.filter(o => (o.x.g || '').startsWith('تمت')), post = WS.filter(o => o.x.g && !(o.x.g || '').startsWith('تمت'));
-  const planN = ctx.pd.filter(p => p.dept.split('|').includes(dept) && inP(p.date, P)).length;
-  const planDone = WSall.filter(o => inP(o.x.planned, P) && (o.x.g || '').startsWith('تمت') && o.x.b !== REF.OUT_OF_PLAN).length;
+  // نسبة تنفيذ الخطة = بنود خطة القسم المقررة في الفترة التي نُفّذت ÷ بنود الخطة المقررة في الفترة (كل بند يُحسب مرة واحدة)
+  const nrm = x => String(x || '').trim().replace(/\s+/g, ' ');
+  const planItems = ctx.pd.filter(p => String(p.dept || '').split('|').includes(dept) && inP(p.date, P));
+  const planN = planItems.length;
+  const planDone = planItems.filter(p => WSall.some(o => (o.x.g || '').startsWith('تمت') && nrm(o.x.b) === nrm(p.title))).length;
   const attK = done.filter(o => o.x.k !== '' && o.x.k != null && +o.x.j > 0);
   const att = attK.length ? attK.reduce((a, o) => a + (+o.x.k), 0) / attK.reduce((a, o) => a + (+o.x.j), 0) : null;
   T.pd_done_n = done.length; T.pd_plan_n = planN; T.pd_plan_done = planDone; T.pd_att = att;
