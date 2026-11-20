@@ -4,7 +4,7 @@
 const isTeacher = () => S.user && S.user.role === 'teacher';
 const TA_KIND = { ini: 'مبادرة', act: 'نشاط' };
 const TA_SRC = ['نشاط استحدثته مع طالباتي', 'نشاط قائم في المدرسة شاركتُ فيه'];
-const myTA = kind => S.records.filter(r => r.item === 'TA' && (!kind || r.d.kind === kind)).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+const myTA = kind => S.records.filter(r => r.item === 'TA' && (!kind || (kind === 'مبادرة' ? r.d.kind === 'مبادرة' : r.d.kind !== 'مبادرة'))).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 const meStaff = () => S.staff.find(s => s.name === S.user.name) || {};
 
 function T_navHTML() {
@@ -21,7 +21,7 @@ function T_home(el) {
     ${kpi('مبادراتي في الفترة', I.filter(inPer).length, 'الإجمالي ' + I.length, 'var(--maroon)')}
     ${kpi('أنشطتي في الفترة', A.filter(inPer).length, 'الإجمالي ' + A.length, 'var(--navy)')}
     ${kpi('الطالبات المستفيدات', [...I, ...A].filter(inPer).reduce((a, r) => a + (+r.d.n || 0), 0), 'في الفترة', 'var(--tiffany-d)')}
-    ${kpi('الأولويات التي خدمتُها', new Set([...I, ...A].filter(inPer).map(r => r.d.p).filter(Boolean)).size, 'من 4 أولويات', 'var(--gold)')}
+    ${kpi('الأولويات التي خدمتُها', new Set([...I, ...A].filter(inPer).flatMap(r => r.d.ps && r.d.ps.length ? r.d.ps : [r.d.p]).filter(Boolean)).size, 'من 4 أولويات', 'var(--gold)')}
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card" style="cursor:pointer" id="goI"><h2>${ICON.star} مبادراتي</h2><p style="color:var(--muted)">مبادرة من فكرتك تخدم الطالبات أو المدرسة: هدفها، الفئة المستهدفة، والأولوية التي تخدمها.</p><button class="btn">+ تسجيل مبادرة</button></div>
