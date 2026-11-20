@@ -77,7 +77,7 @@ function A_compare(el) {
   const groups = [...new Set(M.map(m => m[1]))];
   const ring = v => { const r = 15, c = 2 * Math.PI * r; return `<div class="cmring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="#eceff5" stroke-width="5"/><circle cx="21" cy="21" r="${r}" fill="none" stroke="#c9a24a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c * v / 100} ${c}" transform="rotate(-90 21 21)"/></svg><b>${v}%</b></div>`; };
   const [ml] = M[S.cmpM]; const jm = S.cmpM;
-  const spark = v => { const W = 90, H = 26, m = Math.max(1, ...v); if (v.length < 2) return ''; const pts = v.map((x, i) => `${(i / (v.length - 1)) * W},${H - 3 - (x / m) * (H - 6)}`).join(' ');
+  const spark_ = v => { const W = 90, H = 26, m = Math.max(1, ...v); if (v.length < 2) return ''; const pts = v.map((x, i) => `${(i / (v.length - 1)) * W},${H - 3 - (x / m) * (H - 6)}`).join(' ');
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#7a1f34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${v.map((x, i) => `<circle cx="${(i / (v.length - 1)) * W}" cy="${H - 3 - (x / m) * (H - 6)}" r="2.4" fill="#7a1f34"/>`).join('')}</svg>`; };
   el.innerHTML = `
   <div class="row noprint" style="margin-bottom:10px;gap:8px"><div class="tabs" style="margin:0"><button class="${S.cmpN ? '' : 'on'}" data-n="0">الأعداد الكلية</button><button class="${S.cmpN ? 'on' : ''}" data-n="1">لكل معلمة (عدالة بين الأقسام)</button></div><span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
@@ -94,8 +94,12 @@ function A_compare(el) {
   <div class="card"><h2>ترتيب الأقسام في مؤشر واحد</h2><select id="cmM" class="noprint" style="margin-bottom:10px">${M.map((m, j) => `<option value="${j}" ${j === jm ? 'selected' : ''}>${m[1]} — ${m[0]}</option>`).join('')}</select>
     ${[...rows].sort((a, b) => b.v[jm] - a.v[jm]).map((r, i) => `<div class="cmbar"><span class="n">${esc(r.d)}</span><div class="b"><i style="width:${mx[jm] ? r.v[jm] / mx[jm] * 100 : 0}%"></i><u style="right:${mx[jm] ? Math.min(100, avg[jm] / mx[jm] * 100) : 0}%" title="متوسط المدرسة"></u></div><b>${fmt(r.v[jm], jm)}</b></div>`).join('')}
     <div style="font-size:11.5px;color:var(--muted);margin-top:6px">الخط الذهبي = متوسط المدرسة (${fmt(Math.round(avg[jm] * 10) / 10, jm)})</div></div>
-  <div class="card"><h2>تطوّر «${ml}» عبر الفترات</h2><div class="tbl"><table class="t"><tr><th>القسم</th>${pers.map(q => `<th>${q.name}</th>`).join('')}<th>المنحنى</th></tr>
-    ${D.map(d => { const v = pers.map(q => val(buildReport(ctxFor(d, q)), d, q, M[jm])); return `<tr><td>${esc(d)}</td>${v.map(x => `<td>${fmt(x, jm)}</td>`).join('')}<td>${spark(v)}</td></tr>`; }).join('')}</table></div></div>
+  <div class="card"><h2>تطوّر «${ml}» عبر الفترات <span class="sub">الشريط تحت الرقم يقارن الفترات ببعضها</span></h2><div class="tbl"><table class="t cmtr"><tr><th>القسم</th>${pers.map(q => `<th>${q.name}${q.to >= today() ? '<br><small>(جارٍ)</small>' : ''}</th>`).join('')}<th>التغيّر</th></tr>
+    ${(() => { const V = D.map(d => ({ d, v: pers.map(q => val(buildReport(ctxFor(d, q)), d, q, M[jm])) })); const top = Math.max(1, ...V.flatMap(x => x.v));
+      return V.map(({ d, v }) => { const df = v.length > 1 ? Math.round((v[v.length - 1] - v[v.length - 2]) * 10) / 10 : 0;
+        const ch = v.length < 2 ? '' : df > 0 ? `<span class="cmch up">↑ زاد ${df}</span>` : df < 0 ? `<span class="cmch dn">↓ قلّ ${-df}</span>` : '<span class="cmch eq">= ثابت</span>';
+        return `<tr><td>${esc(d)}</td>${v.map(x => `<td class="hc">${x ? `<b>${fmt(x, jm)}</b><i class="h3" style="width:${Math.max(8, Math.round(x / top * 100))}%"></i>` : '<span class="z">—</span>'}</td>`).join('')}<td>${ch}</td></tr>`; }).join(''); })()}</table></div>
+    ${pers.some(q => q.to >= today()) ? '<div style="font-size:11.5px;color:var(--muted);margin-top:6px">الفترة الجارية لم تنتهِ بعد، فقد يكون رقمها أقل مؤقتاً.</div>' : ''}</div>
   </div>
   <div class="card"><h2>بطاقات الأقسام <span class="sub">نقاط التميّز (أعلى من المتوسط بوضوح) وما يحتاج متابعة (منعدم أو أقل من نصف المتوسط)</span></h2><div class="cmcards">
     ${sorted.map(r => `<div class="cmc"><div class="hd"><b>${esc(r.d)}</b><span>${r.sc}%</span></div><small>${esc(r.c)} · ${r.rec} سجلاً</small>
