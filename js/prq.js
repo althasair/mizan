@@ -221,7 +221,7 @@ function A_prq(el) {
   const byT = {}; okMo.forEach(r => { const o = byT[r.d.t] = byT[r.d.t] || { dept: r.dept, p: 0, w: 0, n: 0 }; o[r.d.kind === 'إذن عمل' ? 'w' : 'p'] += +r.d.h || 0; o.n++; });
   const months = [...new Set(all.map(r => String(r.date).slice(0, 7)).concat([today().slice(0, 7)]))].sort().reverse();
   const row = (r, act) => { const u0 = prqUsed(r.d.t, String(r.date).slice(0, 7)); const tot = u0 + (r.d.kind === 'إذن عمل' ? 0 : +r.d.h || 0);
-    return `<tr><td>${act ? `<input type="checkbox" data-pk="${r.id}" checked>` : ''}</td><td><b>${esc(r.d.t)}</b><br><small style="color:var(--muted)">${esc(r.dept)}</small></td><td>${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}<br><b>${prqNum(r.d.h)} س</b></td>
+    return `<tr><td>${act ? `<input type="checkbox" data-pk="${r.id}" checked>` : ''}</td><td style="white-space:nowrap"><b>${esc(r.d.t)}</b><br><small style="color:var(--muted)">${esc(r.dept)}</small></td><td style="white-space:nowrap">${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}<br><b>${prqNum(r.d.h)} س</b></td>
       <td>${esc(r.d.reason)}${r.d.note ? `<br><small>${esc(r.d.note)}</small>` : ''}<br><span class="chip" style="font-size:11px">${esc(r.d.kind)}</span></td>
       <td style="font-size:12px">${r.d.kind === 'إذن عمل' ? 'لا يُحسب' : `<b style="color:${tot > PRQ_LIMIT ? '#A3202F' : 'inherit'}">${prqNum(tot)}</b> من ${PRQ_LIMIT} بعد هذا الإذن`}</td><td>${prqChain(r)}</td>
       <td style="white-space:nowrap"><button class="btn sm" data-pa="${r.id}">✓ اعتماد</button> <button class="btn sm ghost" data-pr="${r.id}" style="color:#B8521A">إعادة للتعديل</button> <button class="btn sm ghost" data-prj="${r.id}" style="color:#A3202F">✕ رفض</button></td></tr>`; };
@@ -229,15 +229,15 @@ function A_prq(el) {
   el.innerHTML = `
   <div class="prq-top"><div class="prq-v">﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا﴾</div><small>النساء 58</small></div>
   <div class="card"><h2>عبارة الاعتماد <span class="sub">تظهر للمعلمة مع رسالة الموافقة</span></h2>
-    ${thu ? `<div class="chip" style="padding:8px 14px;background:var(--maroon);color:#fff;font-size:14px">${esc(PRQ_THU)}</div><div style="font-size:12px;color:var(--muted);margin-top:6px">عبارة يوم الخميس ثابتة، وتعود العبارات للاختيار بقية الأيام.</div>` : `<div class="row" style="flex-wrap:wrap;gap:8px">${PRQ_PH.map(x => `<label class="chip" style="cursor:pointer;padding:6px 12px;${x === ph ? 'background:var(--maroon);color:#fff' : ''}"><input type="radio" name="pph" value="${esc(x)}" ${x === ph ? 'checked' : ''} style="display:none"> ${esc(x)}</label>`).join('')}</div>
+    ${thu ? `<div class="chip" style="padding:8px 14px;background:var(--maroon);color:#fff;font-size:14px">${esc(PRQ_THU)}</div><div style="font-size:12px;color:var(--muted);margin-top:6px">عبارة يوم الخميس ثابتة، وتعود العبارات للاختيار بقية الأيام.</div>` : `<select id="pphS" style="min-width:280px;padding:7px 10px;border:1px solid var(--line);border-radius:10px;font-size:14px">${PRQ_PH.map(x => `<option ${x === ph ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
     ${'Notification' in window && Notification.permission !== 'granted' ? '<button class="btn sec sm" id="pNot" style="float:left">🔔 تفعيل إشعارات هذا الجهاز</button>' : ''}<label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label>`}</div>
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
   ${prqToday(lv === 1 ? S.user.dept : null)}
   ${lv >= 2 ? prqDash(mo, months) : lv === 1 ? prqDeptRep(mo, months, S.user.dept) : ''}`;
-  const curPh = () => prqIsThu() ? PRQ_THU : (($('input[name="pph"]:checked', el) || {}).value || PRQ_PH[0]);
-  $$('input[name="pph"]', el).forEach(i => i.onchange = () => { S.prqPh = i.value; if ($('#pfix').checked) prqPhSet(i.value); show(); });
+  const curPh = () => prqIsThu() ? PRQ_THU : (($('#pphS', el) || {}).value || PRQ_PH[0]);
+  if ($('#pphS')) $('#pphS').onchange = e => { S.prqPh = e.target.value; if ($('#pfix') && $('#pfix').checked) prqPhSet(e.target.value); };
   if ($('#pNot')) $('#pNot').onclick = () => { try { Notification.requestPermission().then(p => { toast(p === 'granted' ? 'تم تفعيل الإشعارات على هذا الجهاز ✓' : 'لم يُسمح بالإشعارات من المتصفح', p !== 'granted'); if (p === 'granted') { prqBell(); show(); } }); } catch (e) { toast('هذا المتصفح لا يدعم الإشعارات', 1); } };
   if ($('#pfix')) $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
@@ -313,6 +313,7 @@ function prqRing(rem, sz) {
     <circle cx="18" cy="18" r="15.9" fill="none" stroke="${c}" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="${(p * 100).toFixed(1)} 100" pathLength="100" transform="rotate(-90 18 18)"/>
     <text x="18" y="21.5" text-anchor="middle" font-size="10" font-weight="700" fill="${c}">${prqNum(rem)}</text></svg>`;
 }
+const prqTl = r => r < .1 ? 'tl4' : r < .2 ? 'tl3' : r < .35 ? 'tl2' : r < .5 ? 'tl1' : 'tl0';
 function prqDash(mo, months) {
   const MN = MONTHS[+mo.slice(5, 7) - 1];
   const D = {};
@@ -331,19 +332,22 @@ function prqDash(mo, months) {
   const card = (t, v, sub, c) => `<div class="card na-t" style="border-top:4px solid ${c}"><b style="color:${c}">${v}</b><span>${t}</span>${sub ? `<small style="color:var(--muted);font-size:11.5px">${sub}</small>` : ''}</div>`;
   return `<div class="card"><div class="row"><h2 style="margin:0">لوحة استهلاك ساعات الاستئذان — ${MN} ${mo.slice(0, 4)}</h2><span class="sp"></span>
       <select id="pMo">${months.map(m => `<option value="${m}" ${m === mo ? 'selected' : ''}>${MONTHS[+m.slice(5, 7) - 1]} ${m.slice(0, 4)}</option>`).join('')}</select><button class="btn sec noprint" onclick="window.print()">طباعة</button></div>
-    <div class="note" style="margin-top:6px">تُقارن الأقسام بنسبة الاستهلاك إلى رصيدها الكامل (عدد معلمات القسم × ${PRQ_LIMIT} ساعات)، لا بعدد الساعات، حتى لا يظلم القسمَ الكبيرَ كثرةُ معلماته. والدائرة لكل معلمة تمثل المتبقي من رصيدها الشهري: كاملة خضراء عند عدم الاستئذان، وتنقص كلما استُهلك منها.</div></div>
+    <div class="note" style="margin-top:6px">تُقارن الأقسام بنسبة ما استهلكته من رصيدها (عدد المعلمات × ${PRQ_LIMIT} ساعات)، فلا يظلم القسمَ الكبيرَ عددُ معلماته.</div></div>
   <div class="grid g4 na-kpi">
     ${card('ساعة شخصية مستهلكة', prqNum(tot), `من رصيد ${cap} ساعة (${pct(cap ? tot / cap : 0)})`, '#7A1F3D')}
     ${card('إذناً محتسباً', nReq, `${who} معلمة من ${staffN} استأذنّ`, '#0A6F6B')}
     ${card('الأكثر استئذاناً (بالنسبة)', most ? esc(most.dn) : '—', most ? `${pct(most.rate)} من رصيد القسم · ${prqNum(Math.round(most.avg * 10) / 10)} ساعة للمعلمة` : 'لا استئذان', '#A3202F')}
     ${card('الأقل استئذاناً (بالنسبة)', least ? esc(least.dn) : '—', least ? (least.used ? `${pct(least.rate)} من رصيد القسم` : 'لم تستأذن أي معلمة 🌿') : '', '#17734A')}
   </div>
-  <div class="card"><h2>ترتيب الأقسام حسب نسبة الاستهلاك</h2>
-    ${deps.map(d => `<div class="pd-row"><div class="pd-n"><b>${esc(d.dn)}</b><small>${d.T.length == 1 ? "معلمة واحدة" : d.T.length == 2 ? "معلمتان" : d.T.length + " معلمات"} · ${prqNum(d.used)} من ${d.cap} ساعة</small></div>
-      <div class="na-bar" style="flex:1;margin:0 10px"><i style="width:${Math.min(100, d.rate * 100)}%;background:${d.rate >= .5 ? '#A3202F' : d.rate >= .25 ? '#C99A2E' : '#17734A'}"></i></div><b class="pd-p">${pct(d.rate)}</b></div>`).join('')}
-  </div>
-  <div class="pd-grid">${deps.map(d => `<div class="card pd-card"><div class="row"><h3 style="margin:0">${esc(d.dn)}</h3><span class="sp"></span><span class="chip" style="font-size:11.5px">${pct(d.rate)} · ${prqNum(d.used)}/${d.cap} س</span></div>
-      <div class="pd-ts">${d.T.map(t => { const rem = Math.max(0, PRQ_LIMIT - t.u); return `<div class="pd-t">${prqRing(rem, 46)}<div><b>${esc(t.n)}</b><small>${t.u ? (rem ? `متبقي ${prqNum(rem)} ${rem === 1 ? 'ساعة' : rem === 2 ? 'ساعتان' : 'ساعات'}` : 'استُنفد الرصيد') : 'الرصيد كامل'}${t.w ? ` · إذن عمل ${prqNum(t.w)} س` : ''}</small></div></div>`; }).join('')}</div></div>`).join('')}</div>`;
+  <div class="card"><h2>الأقسام حسب نسبة الاستهلاك <span class="sub">الأخضر استئذان قليل والأحمر كثير</span></h2>
+    <div class="tllg"><span class="tlc tl4">أقل من 10%</span><span class="tlc tl3">10–20%</span><span class="tlc tl2">20–35%</span><span class="tlc tl1">35–50%</span><span class="tlc tl0">أكثر من 50%</span></div>
+    <div class="tbl"><table class="t cmh"><tr><th style="text-align:right;min-width:160px">القسم</th><th>نسبة الاستهلاك</th><th>الساعات المستهلكة</th><th>معلمات استأذنّ</th><th>متوسط المعلمة</th></tr>
+    ${deps.map(d => `<tr><td><b>${esc(d.dn)}</b></td><td class="tlc ${prqTl(d.rate)}">${pct(d.rate)}</td><td style="text-align:center">${prqNum(d.used)} <small style="color:var(--muted)">من ${d.cap}</small></td><td style="text-align:center">${d.who} <small style="color:var(--muted)">من ${d.T.length}</small></td><td style="text-align:center">${prqNum(Math.round(d.avg * 10) / 10)} س</td></tr>`).join('')}</table></div></div>
+  <div class="card"><h2>رصيد المعلمات <span class="sub">الأخضر رصيد كامل، والأحمر رصيد مُستنفد · تظهر من استأذنت فقط</span></h2>
+    <div class="pd2">${deps.filter(d => d.who).map(d => `<div class="pd2c"><div class="pd2h"><b>${esc(d.dn)}</b><span class="tlc ${prqTl(d.rate)}">${pct(d.rate)}</span></div>
+      <table class="t cmh"><tr><th style="text-align:right">المعلمة</th><th>استهلكت</th><th>المتبقي</th></tr>${d.T.filter(t => t.u > 0 || t.w > 0).map(t => { const rem = Math.max(0, PRQ_LIMIT - t.u);
+        return `<tr><td style="white-space:nowrap">${esc(t.n)}${t.w ? ` <small style="color:var(--muted)">· عمل ${prqNum(t.w)} س</small>` : ''}</td><td style="text-align:center">${prqNum(t.u)} س</td><td class="tlc ${prqTl(t.u / PRQ_LIMIT)}">${rem ? prqNum(rem) + ' س' : 'استُنفد'}</td></tr>`; }).join('')}</table>
+      <small style="color:var(--muted)">${d.T.length - d.who ? `${d.T.length - d.who} من المعلمات رصيدهن كامل 🌿` : ''}</small></div>`).join('') || '<div class="empty">لم تستأذن أي معلمة هذا الشهر 🌿</div>'}</div></div>`;
 }
 
 

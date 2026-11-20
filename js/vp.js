@@ -411,7 +411,7 @@ function fileForm(el, kind, T, sem) {
     return t;
   };
   const draw = () => {
-    let h = `<div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="fb">رجوع</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="fdel">حذف</button>' : ''}<button class="btn" id="fs">حفظ</button>${rec ? `<button class="btn sec" id="fp">معاينة الاستمارة</button>${kind === 'CF' ? (rec.d.ok ? `<span class="chip ok">معتمدة ${dm(rec.d.ok)}${rec.d.csig ? ' · وقّعتها المنسقة' : ''}</span><button class="btn tf" id="fsend">إعادة الإرسال</button>` : '<button class="btn tf" id="fok">✅ اعتماد وإرسال للمنسقة</button>') : '<button class="btn tf" id="fsend">إرسال للموظفة</button>'}` : ''}</div>
+    let h = `<div class="row noprint" style="margin-bottom:10px"><button class="btn sec" id="fb">رجوع</button><span class="sp"></span>${rec ? '<button class="btn ghost" id="fdel">حذف</button>' : ''}<button class="btn" id="fs">حفظ</button>${rec ? `<button class="btn sec" id="fp">معاينة الاستمارة</button><button class="btn sec" id="fpr">🖨️ طباعة على الترويسة</button>${kind === 'CF' ? (rec.d.ok ? `<span class="chip ok">معتمدة ${dm(rec.d.ok)}${rec.d.csig ? ' · وقّعتها المنسقة' : ''}</span><button class="btn tf" id="fsend">إعادة الإرسال</button>` : '<button class="btn tf" id="fok">✅ اعتماد وإرسال للمنسقة</button>') : '<button class="btn tf" id="fsend">إرسال للموظفة</button>'}` : ''}</div>
     <div class="card"><h2>${esc(D.title)} <span class="sub">${esc(sem)}</span></h2><form class="form" onsubmit="return false">
       <div class="fld"><label>المدرسة</label><input value="${esc(SCHOOL())}" disabled></div>
       <div class="fld"><label>الاسم</label><input value="${esc(T.name)}" disabled></div>
@@ -459,6 +459,7 @@ function fileForm(el, kind, T, sem) {
     $('#fs').onclick = async () => { await save(); toast('تم الحفظ ✓'); show(); };
     if ($('#fp')) $('#fp').onclick = async () => { const r = await save(); await showPaper(el, D.title, await withCSig(fileInner(D, T, r, kind), T, kind), '<button class="btn tf" id="pSend">إرسال للموظفة</button>'); $('#pBack').onclick = () => show(); $('#pSend').onclick = () => sendFile(D, T, r, kind); };
     if ($('#fsend')) $('#fsend').onclick = async () => { const r = await save(); sendFile(D, T, r, kind); };
+    if ($('#fpr')) $('#fpr').onclick = async () => { const r = await save(); await showPaper(el, D.title, await withCSig(fileInner(D, T, r, kind), T, kind), ''); $('#pBack').onclick = () => show(); setTimeout(() => window.print(), 700); };
     if ($('#fok')) $('#fok').onclick = async () => { if (!confirm('اعتماد الاستمارة؟ ستظهر للمنسقة في حسابها ويصلها إشعار بالبريد.')) return; grab(); d.ok = today(); const r = await save(); toast('تم الاعتماد ✓'); await sendFile(D, T, r, kind); show(); };
     if ($('#fdel')) $('#fdel').onclick = async () => { if (!confirm('حذف هذه الاستمارة؟')) return; await call('delete', { id: rec.id }); S.records = S.records.filter(x => x.id !== rec.id); S.fopen = null; show(); };
   };
@@ -470,7 +471,7 @@ function fileInner(D, T, r, kind) {
     return `<tr>${kind === 'CF' ? (x.first ? `<td class="dm" rowspan="${x.span}">${x.di + 1}.</td><td class="dm" rowspan="${x.span}">${esc(x.dom)}</td><td rowspan="${x.span}" class="j" style="font-size:9.5px">${esc(x.ind)}</td>` : '') : (i === 0 ? `<td class="dm" rowspan="${D.rows.length}">${esc(D.role)}</td>` : '') + `<td style="text-align:center;width:5%">${x.n}</td>`}
       <td style="font-size:10px">${esc(x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
   const head = kind === 'CF' ? '<tr><th>م</th><th>المجال</th><th>المؤشرات</th><th>الأدلة</th><th>المتابعة</th></tr>' : '<tr><th>المسمى المستهدف</th><th>الرقم</th><th>المهام الأكاديمية</th><th>متابعة تنفيذ المهام</th><th>الملاحظات والتوصيات</th></tr>';
-  const sigs = kind === 'CF' ? `<td></td><td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td><td></td>` : D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>${s}<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
+  const sigs = kind === 'CF' ? `<td></td><td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td><td></td>` : D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
   return `<h1>${esc(D.title)}</h1><div class="sub">${esc(d.sem)} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     <tr><td class="k">المدرسة</td><td colspan="3">${esc(SCHOOL())}</td></tr>
