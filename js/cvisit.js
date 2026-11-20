@@ -445,18 +445,60 @@ async function cvSend(r) {
 async function A_cvisits(el) {
   await loadForms(); setTitle('زيارات المنسقات الصفية');
   if (S.acv) { const r = S.records.find(x => x.id === S.acv); if (r) return acvOpen(el, r); S.acv = null; }
-  const V = S.records.filter(r => r.item === 'V' && r.d && r.d.t).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const depts = [...new Set(V.map(r => r.dept))].sort((a, b) => a.localeCompare(b, 'ar'));
-  const f = S.acvF || { dept: '', st: '' };
+  const p = P(); const f = S.acvF || { dept: '', st: '', all: 0 };
+  const inPer = r => f.all || (r.date >= p.from && r.date <= p.to);
+  const VA = S.records.filter(r => r.item === 'V' && r.d && r.d.t);
+  const V = VA.filter(inPer).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  const coordName = (d, r) => (r && r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(d)) || {}).name || '—';
+  const depts = [...new Set([...(S.coords || []).filter(c => c.active !== false).flatMap(c => c.dept), ...V.map(r => r.dept)])].filter(Boolean);
+  const tOf = d => S.staff.filter(x => x.dept === d && x.role !== 'منسقة').map(x => x.name);
+  const days = d => d ? Math.round((new Date(today()) - new Date(d)) / 864e5) : null;
+  const tl = (v, a, b, c) => v >= a ? 'tl4' : v >= b ? 'tl3' : v >= c ? 'tl2' : v > 0 ? 'tl1' : 'tl0';
+  const rows = depts.map(d => { const L = V.filter(r => r.dept === d); const T = tOf(d); const vis = new Set(L.map(r => r.d.t));
+    const cov = T.length ? Math.round(T.filter(t => vis.has(t)).length / T.length * 100) : (L.length ? 100 : 0);
+    const fu = L.filter(r => /متابعة/.test(r.d.ty || '')).length; const done = L.filter(r => /تم تنفيذ/.test(r.d.st || '')).length; const part = L.filter(r => /جزئي/.test(r.d.st || '')).length;
+    const last = L[0] ? L[0].date : (VA.filter(r => r.dept === d).sort((a, b) => (b.date || '').localeCompare(a.date || ''))[0] || {}).date;
+    return { d, c: coordName(d, L[0]), n: L.length, cov, nT: T.length, nV: T.filter(t => vis.has(t)).length, miss: T.filter(t => !vis.has(t)), fu, done, part, last, ld: days(last), wait: L.filter(r => !r.d.vpfb).length }; })
+    .sort((a, b) => b.n - a.n);
+  const tot = V.length, wait = V.filter(r => !r.d.vpfb).length;
+  const avgCov = rows.length ? Math.round(rows.reduce((a, r) => a + r.cov, 0) / rows.length) : 0;
   const L = V.filter(r => (!f.dept || r.dept === f.dept) && (!f.st || (f.st === 'no' ? !r.d.vpfb : !!r.d.vpfb)));
-  el.innerHTML = `<div class="grid g4">${kpi('استمارات المنسقات', V.length, 'كل الأقسام', 'var(--navy)')}${kpi('بملاحظتي', V.filter(r => r.d.vpfb).length, 'يظهر عليها توقيعي', 'var(--ok)')}${kpi('بانتظار ملاحظتي', V.filter(r => !r.d.vpfb).length, '', 'var(--maroon)')}</div>
-  <div class="card"><div class="row"><select id="afD"><option value="">كل الأقسام</option>${depts.map(x => `<option ${x === f.dept ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>
-    <select id="afS"><option value="">الكل</option><option value="no" ${f.st === 'no' ? 'selected' : ''}>بانتظار ملاحظتي</option><option value="yes" ${f.st === 'yes' ? 'selected' : ''}>بملاحظتي</option></select></div>
-  <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>التاريخ</th><th>القسم</th><th>المنسقة</th><th>المعلمة</th><th>النوع</th><th>الشعبة</th><th>ملاحظتي</th><th></th></tr>
-  ${L.map(r => `<tr><td>${dmy(r.date)}</td><td>${esc(r.dept)}</td><td>${esc(r.by || '')}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.d.kj || r.d.ty || '')}</td><td>${esc(r.d.s || '')}</td><td>${r.d.vpfb ? '<span class="chip ok">مكتوبة</span>' : '<span class="chip warn">لا توجد</span>'}</td><td><button class="btn sm sec" data-ao="${r.id}">فتح</button></td></tr>`).join('') || '<tr><td colspan="8"><div class="empty">لا توجد استمارات</div></td></tr>'}</table></div></div>`;
-  $('#afD').onchange = $('#afS').onchange = () => { S.acvF = { dept: $('#afD').value, st: $('#afS').value }; show(); };
+  const tyChip = t => /متابعة/.test(t || '') ? 'tl2' : /الأولى/.test(t || '') ? 'tl3' : 'tl4';
+  const sel = rows.find(r => r.d === f.dept);
+  el.innerHTML = `
+  <div class="note">متابعة زيارات المنسقات الصفية لمعلمات أقسامهن: من زارت، ومن لم تُزر بعد، وما تحتاج ملاحظتكِ. اختاري قسماً من الجدول لعرض زياراته، ثم «فتح» لقراءة الاستمارة وكتابة ملاحظتكِ.</div>
+  <div class="row noprint" style="margin:10px 0;gap:8px"><div class="tabs" style="margin:0"><button class="${f.all ? '' : 'on'}" data-all="0">${esc(p.name)}</button><button class="${f.all ? 'on' : ''}" data-all="1">كل الفترات</button></div></div>
+  <div class="cmhero"><div><h2>زيارات المنسقات — ${f.all ? 'كل الفترات' : esc(p.name)}</h2><div class="sub">${rows.length} أقسام</div></div><div class="cmks">
+    <div class="cmk"><b>${tot}</b><span>زيارة صفية</span></div><div class="cmk"><b>${avgCov}%</b><span>متوسط شمول المعلمات</span></div>
+    <div class="cmk"><b>${V.filter(r => /متابعة/.test(r.d.ty || '')).length}</b><span>زيارة متابعة</span></div><div class="cmk"><b>${V.filter(r => /تم تنفيذ/.test(r.d.st || '')).length}</b><span>توصيات نُفّذت</span></div>
+    <div class="cmk"><b>${tot - wait}</b><span>بملاحظتي</span></div><div class="cmk"><b>${wait}</b><span>بانتظار ملاحظتي</span></div></div></div>
+  <div class="card"><h2>أداء المنسقات في الزيارات <span class="sub">الأخضر أداء مرتفع والأحمر منخفض · اضغطي اسم القسم لعرض زياراته</span></h2>
+    <div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لا يوجد</span></div>
+    <div class="tbl"><table class="t cmh"><tr><th style="min-width:160px">القسم والمنسقة</th><th>الزيارات</th><th>شمول المعلمات</th><th>زيارات المتابعة</th><th>توصيات نُفّذت</th><th>آخر زيارة</th><th>بانتظار ملاحظتي</th></tr>
+    ${rows.map(r => `<tr class="acvr ${f.dept === r.d ? 'on' : ''}" data-dp="${esc(r.d)}" style="cursor:pointer"><td><b>${esc(r.d)}</b><br><small style="color:var(--muted)">${esc(r.c)}</small></td>
+      <td class="tlc ${tl(r.n, Math.max(4, r.nT), Math.max(2, r.nT * .6), 1)}">${r.n || '—'}</td>
+      <td class="tlc ${r.nT ? tl(r.cov, 90, 70, 40) : 'tl0'}">${r.nT ? `${r.cov}%<br><small style="font-weight:500">${r.nV} من ${r.nT}</small>` : '—'}</td>
+      <td class="tlc ${tl(r.fu, 3, 2, 1)}">${r.fu || '—'}</td>
+      <td class="tlc ${r.done + r.part ? tl(r.done / (r.done + r.part) * 100, 75, 50, 25) : 'tl0'}">${r.done + r.part ? `${r.done}<small style="font-weight:500"> كلياً · ${r.part} جزئياً</small>` : '—'}</td>
+      <td class="tlc ${r.ld == null ? 'tl0' : r.ld <= 7 ? 'tl4' : r.ld <= 14 ? 'tl3' : r.ld <= 21 ? 'tl2' : 'tl1'}">${r.last ? dmy(r.last) + `<br><small style="font-weight:500">${r.ld === 0 ? 'اليوم' : 'قبل ' + r.ld + ' يوماً'}</small>` : '—'}</td>
+      <td style="text-align:center">${r.wait ? `<span class="chip warn">${r.wait}</span>` : r.n ? '<span class="chip ok">✓</span>' : ''}</td></tr>`).join('')}</table></div></div>
+  ${sel && sel.miss.length ? `<div class="card"><h2>معلمات لم تُزر بعد — ${esc(sel.d)} <span class="sub">${sel.miss.length} من ${sel.nT}</span></h2><div style="display:flex;flex-wrap:wrap;gap:6px">${sel.miss.map(t => `<span class="tlc tl0" style="border-radius:20px;padding:3px 12px;font-size:12.5px">${esc(t)}</span>`).join('')}</div></div>` : ''}
+  <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0">${f.dept ? 'زيارات ' + esc(f.dept) : 'جميع الزيارات'} <span class="sub">${L.length}</span></h2><span class="sp"></span>
+    ${f.dept ? '<button class="btn sm ghost" id="acAll">عرض كل الأقسام</button>' : ''}
+    <div class="tabs" style="margin:0"><button class="${!f.st ? 'on' : ''}" data-st="">الكل</button><button class="${f.st === 'no' ? 'on' : ''}" data-st="no">بانتظار ملاحظتي</button><button class="${f.st === 'yes' ? 'on' : ''}" data-st="yes">بملاحظتي</button></div></div>
+  <div class="tbl" style="margin-top:10px"><table class="t acvt"><tr><th>التاريخ</th>${f.dept ? '' : '<th>القسم</th>'}<th>المعلمة</th><th>الزيارة</th><th>الشعبة</th><th>التوصيات</th><th>ملاحظتي</th><th></th></tr>
+  ${L.map(r => `<tr><td style="white-space:nowrap">${dmy(r.date)}</td>${f.dept ? '' : `<td style="white-space:nowrap">${esc(r.dept)}</td>`}<td style="white-space:nowrap"><b>${esc(r.d.t)}</b></td>
+    <td><span class="tlc ${tyChip(r.d.ty)}" style="border-radius:20px;padding:2px 10px;font-size:12px;white-space:nowrap">${esc(r.d.ty || '')}${r.d.kj ? ' · ' + esc(r.d.kj) : ''}</span></td><td>${esc(r.d.s || '')}</td>
+    <td style="font-size:12px;white-space:nowrap">${/تم تنفيذ/.test(r.d.st || '') ? '<span class="chip ok">نُفّذت</span>' : /جزئي/.test(r.d.st || '') ? '<span class="chip warn">جزئياً</span>' : '<span style="color:var(--muted)">—</span>'}</td>
+    <td>${r.d.vpfb ? '<span class="chip ok">✓ مكتوبة</span>' : '<span class="chip" style="background:#f1f3f7;color:#6b7280">لم تُكتب</span>'}</td><td><button class="btn sm ${r.d.vpfb ? 'sec' : ''}" data-ao="${r.id}">${r.d.vpfb ? 'فتح' : 'فتح وكتابة ملاحظة'}</button></td></tr>`).join('') || '<tr><td colspan="8"><div class="empty">لا توجد زيارات في هذه الفترة</div></td></tr>'}</table></div></div>`;
+  const set = o => { S.acvF = Object.assign({}, f, o); show(); };
+  $$('[data-all]', el).forEach(b => b.onclick = () => set({ all: +b.dataset.all }));
+  $$('[data-st]', el).forEach(b => b.onclick = () => set({ st: b.dataset.st }));
+  $$('[data-dp]', el).forEach(b => b.onclick = () => set({ dept: f.dept === b.dataset.dp ? '' : b.dataset.dp }));
+  if ($('#acAll')) $('#acAll').onclick = () => set({ dept: '' });
   $$('[data-ao]', el).forEach(b => b.onclick = () => { S.acv = b.dataset.ao; show(); window.scrollTo(0, 0); });
 }
+const ACV_PH = ['زيارة متكاملة ومتابعة دقيقة، وتوصيات واضحة قابلة للتطبيق', 'أثمّن دقة رصد نقاط القوة وربطها بالأدلة من الحصة', 'التوصيات مناسبة، وأوصي بتحديد موعد لزيارة المتابعة', 'أوصي بربط التوصيات بمعايير تقييم المعلم بصورة أوضح', 'أوصي بالتركيز على أثر التوصيات في تعلم الطالبات في زيارة المتابعة', 'أوصي بتوثيق التغذية الراجعة المقدمة للمعلمة بعد الزيارة'];
 async function acvOpen(el, r) {
   const imgs = await lhImgs();
   const co = (S.coords || []).find(c => c.name === r.by) || (S.coords || []).find(c => (c.dept || []).includes(r.dept));
@@ -467,10 +509,11 @@ async function acvOpen(el, r) {
   setTitle('استمارة الإشراف — ' + r.d.t);
   el.innerHTML = `<div class="row noprint" style="margin-bottom:12px"><button class="btn sec" id="aBack">رجوع</button><span class="sp"></span><button class="btn sec" onclick="window.print()">طباعة / حفظ PDF</button></div>
     <div class="card noprint"><h2>ملاحظتي على الزيارة</h2><p style="margin:0 0 6px;color:var(--muted);font-size:12.5px">تظهر في الاستمارة تحت «ملاحظات النائب الأكاديمي»، ويظهر توقيعكِ عليها بعد الحفظ. وتراها المنسقة عند فتح الاستمارة.</p>
-      <textarea id="aFb" rows="4" style="width:100%;text-align:justify">${esc(r.d.vpfb || '')}</textarea>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px">${ACV_PH.map((x, i) => `<button type="button" class="btn sm ghost" data-ph="${i}" style="font-size:12px">+ ${esc(x)}</button>`).join('')}</div><textarea id="aFb" rows="4" style="width:100%;text-align:justify">${esc(r.d.vpfb || '')}</textarea>
       <div class="row" style="margin-top:8px"><button class="btn" id="aSave">حفظ الملاحظة</button>${r.d.vpfb ? '<button class="btn ghost" id="aDel">حذف الملاحظة</button>' : ''}</div></div>
     <style>${FORM_CSS}</style><div class="paper" style="padding:0">${paperWrap(paper, imgs)}</div>`;
   $('#aBack').onclick = () => { S.acv = null; show(); };
+  $$('[data-ph]', el).forEach(b => b.onclick = () => { const t = $('#aFb'); const x = ACV_PH[+b.dataset.ph]; t.value = (t.value.trim() ? t.value.trim().replace(/[.،]?$/, '، ') : '') + x + '.'; t.focus(); });
   const put = async fb => { const j = await call('vpFeedback', { id: r.id, fb }); const i = S.records.findIndex(x => x.id === r.id); if (i >= 0 && j.record) S.records[i] = j.record; toast(fb ? 'حُفظت الملاحظة ✓' : 'حُذفت الملاحظة'); show(); };
   $('#aSave').onclick = () => { const v = $('#aFb').value.trim(); if (!v) return toast('اكتبي الملاحظة أولاً', 1); put(v); };
   if ($('#aDel')) $('#aDel').onclick = () => { if (confirm('حذف ملاحظتكِ؟ يختفي توقيعكِ من الاستمارة.')) put(''); };
