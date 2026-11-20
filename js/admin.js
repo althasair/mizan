@@ -46,7 +46,7 @@ function A_compare(el) {
     ['الأنشطة', 'الأنشطة والشراكة', R => R.K.activities, 0, 1], ['أولياء الأمور', 'الأنشطة والشراكة', R => R.K.parents, 0, 1], ['الإنجازات', 'الأنشطة والشراكة', R => R.K.achievements, 0, 1],
     ['التعليم الإلكتروني', 'الأنشطة والشراكة', R => R.K.elearn, 0, 1], ['التوصيات المشتركة', 'التطوير', R => R.K.cpActions, 0, 0],
   ];
-  S.cmpN = S.cmpN || 0; S.cmpS = S.cmpS == null ? -1 : S.cmpS; S.cmpM = Math.min(S.cmpM || 0, M.length - 1);
+  S.cmpN = S.cmpN == null ? 1 : S.cmpN; S.cmpS = S.cmpS == null ? -1 : S.cmpS; S.cmpM = Math.min(S.cmpM || 0, M.length - 1);
   const pers = S.periods.filter(q => q.from <= today()); const pi = pers.findIndex(q => q.name === p.name); const prevP = pi > 0 ? pers[pi - 1] : null;
   const val = (R, d, q, m) => { const v = m[2](R, d, q); return S.cmpN && m[4] ? Math.round(v / nT(d) * 10) / 10 : v; };
   const rows = D.map(d => { const R = buildReport(ctxFor(d, p)); const R0 = prevP ? buildReport(ctxFor(d, prevP)) : null;
@@ -81,7 +81,7 @@ function A_compare(el) {
   const spark_ = v => { const W = 90, H = 26, m = Math.max(1, ...v); if (v.length < 2) return ''; const pts = v.map((x, i) => `${(i / (v.length - 1)) * W},${H - 3 - (x / m) * (H - 6)}`).join(' ');
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#7a1f34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${v.map((x, i) => `<circle cx="${(i / (v.length - 1)) * W}" cy="${H - 3 - (x / m) * (H - 6)}" r="2.4" fill="#7a1f34"/>`).join('')}</svg>`; };
   el.innerHTML = `
-  <div class="row noprint" style="margin-bottom:10px;gap:8px"><div class="tabs" style="margin:0"><button class="${S.cmpN ? '' : 'on'}" data-n="0">الأعداد الكلية</button><button class="${S.cmpN ? 'on' : ''}" data-n="1">لكل معلمة (عدالة بين الأقسام)</button></div><span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
+  <div class="row noprint" style="margin-bottom:10px;gap:8px"><div class="tabs" style="margin:0"><button class="${S.cmpN ? 'on' : ''}" data-n="1">لكل معلمة (المعدل)</button><button class="${S.cmpN ? '' : 'on'}" data-n="0">الأعداد الكلية</button></div><span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
   <div class="cmhero"><div><h2>مقارنة الأقسام — ${esc(p.name)}</h2><div class="sub">${rows.length} قسماً · للنائبة والمديرة فقط${S.cmpN ? ' · القيم مقسومة على عدد معلمات القسم' : ''}</div></div><div class="cmks">${kp}</div></div>
   ${ins ? `<div class="card cmins"><h2>📌 قراءة تحليلية</h2><ul>${ins}</ul></div>` : ''}
   <div class="card"><h2>خريطة الأداء <span class="sub">اضغطي عنوان أي عمود للترتيب حسبه · الأخضر أداء مرتفع والأحمر أداء منخفض، مقارنةً بأعلى قسم في المؤشر نفسه</span></h2><div class="tllg"><span class="tlc tl4">مرتفع</span><span class="tlc tl3">جيد</span><span class="tlc tl2">متوسط</span><span class="tlc tl1">منخفض</span><span class="tlc tl0">لم يُوثّق</span></div><h2 style="display:none"><span></span></h2>
