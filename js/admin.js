@@ -36,25 +36,74 @@ function A_home(el) {
 function A_compare(el) {
   setTitle('مقارنة المنسقات والأقسام');
   const p = P(); const D = adminDepts();
-  const Rs = D.map(d => ({ d, R: buildReport(ctxFor(d, p)) }));
-  const metrics = [
-    ['السجلات', x => x.R.K.records], ['الزيارات الصفية', x => x.R.K.visits], ['المعلمات المُزارات %', x => Math.round(x.R.K.visitedPct * 100)],
-    ['خطة التطوير %', x => x.R.K.planPct == null ? 0 : Math.round(x.R.K.planPct * 100)], ['الاجتماعات', x => x.R.K.meetings], ['الأنشطة', x => x.R.K.activities],
-    ['أولياء الأمور', x => x.R.K.parents], ['التبادلية', x => x.R.K.peer], ['الإنجازات', x => x.R.K.achievements], ['التعليم الإلكتروني', x => x.R.K.elearn],
-    ['إجراءات التوصيات المشتركة', x => x.R.K.cpActions],
+  const cnt = (d, it, q) => S.records.filter(r => r.dept === d && r.item === it && inP(r.date, q)).length;
+  const nT = d => Math.max(1, S.staff.filter(s => s.dept === d && s.role !== 'منسقة').length + 1);
+  // [الاسم المختصر, المجموعة, الدالة, نسبة؟, يقبل القسمة على عدد المعلمات؟]
+  const M = [
+    ['الزيارات الصفية', 'الإشراف', (R) => R.K.visits, 0, 1], ['شمول المعلمات', 'الإشراف', R => Math.round(R.K.visitedPct * 100), 1, 0], ['التبادلية', 'الإشراف', R => R.K.peer, 0, 1],
+    ['خطة التطوير', 'التطوير', R => R.K.planPct == null ? 0 : Math.round(R.K.planPct * 100), 1, 0], ['الورش', 'التطوير', (R, d, q) => cnt(d, 'WS', q), 0, 1], ['الاجتماعات', 'التطوير', R => R.K.meetings, 0, 0],
+    ['رفع التحصيل', 'التحصيل', (R, d, q) => cnt(d, 'RA', q), 0, 1], ['تحليل النتائج', 'التحصيل', (R, d, q) => cnt(d, 'AS', q), 0, 0],
+    ['الأنشطة', 'الأنشطة والشراكة', R => R.K.activities, 0, 1], ['أولياء الأمور', 'الأنشطة والشراكة', R => R.K.parents, 0, 1], ['الإنجازات', 'الأنشطة والشراكة', R => R.K.achievements, 0, 1],
+    ['التعليم الإلكتروني', 'الأنشطة والشراكة', R => R.K.elearn, 0, 1], ['التوصيات المشتركة', 'التطوير', R => R.K.cpActions, 0, 0],
   ];
-  S.cmpM = S.cmpM || 0;
-  const [ml, mf] = metrics[S.cmpM]; const mx = Math.max(1, ...Rs.map(mf));
-  const pers = S.periods.filter(q => q.from <= today());
+  S.cmpN = S.cmpN || 0; S.cmpS = S.cmpS == null ? -1 : S.cmpS; S.cmpM = Math.min(S.cmpM || 0, M.length - 1);
+  const pers = S.periods.filter(q => q.from <= today()); const pi = pers.findIndex(q => q.name === p.name); const prevP = pi > 0 ? pers[pi - 1] : null;
+  const val = (R, d, q, m) => { const v = m[2](R, d, q); return S.cmpN && m[4] ? Math.round(v / nT(d) * 10) / 10 : v; };
+  const rows = D.map(d => { const R = buildReport(ctxFor(d, p)); const R0 = prevP ? buildReport(ctxFor(d, prevP)) : null;
+    return { d, c: coordOf(d), v: M.map(m => val(R, d, p, m)), v0: R0 ? M.map(m => val(R0, d, prevP, m)) : null, rec: R.K.records }; });
+  const mx = M.map((m, j) => Math.max(...rows.map(r => r.v[j]), m[3] ? 100 : 1));
+  const avg = M.map((m, j) => rows.length ? rows.reduce((a, r) => a + r.v[j], 0) / rows.length : 0);
+  rows.forEach(r => { r.sc = Math.round(r.v.reduce((a, x, j) => a + (mx[j] ? x / mx[j] : 0), 0) / M.length * 100);
+    r.sc0 = r.v0 ? Math.round(r.v0.reduce((a, x, j) => a + (mx[j] ? Math.min(1, x / mx[j]) : 0), 0) / M.length * 100) : null;
+    r.str = M.map((m, j) => j).filter(j => r.v[j] > 0 && r.v[j] >= avg[j] * 1.25).sort((a, b) => r.v[b] / mx[b] - r.v[a] / mx[a]).slice(0, 3);
+    r.need = M.map((m, j) => j).filter(j => r.v[j] === 0 || r.v[j] < avg[j] * 0.5).slice(0, 3); });
+  const sorted = [...rows].sort((a, b) => S.cmpS < 0 ? b.sc - a.sc : b.v[S.cmpS] - a.v[S.cmpS]);
+  const lvl = (x, j) => { const f = mx[j] ? x / mx[j] : 0; return x === 0 ? 'h0' : f >= .75 ? 'h4' : f >= .5 ? 'h3' : f >= .25 ? 'h2' : 'h1'; };
+  const fmt = (x, j) => M[j][3] ? x + '%' : x;
+  const tot = j => rows.reduce((a, r) => a + r.v[j], 0);
+  const tot0 = j => rows.reduce((a, r) => a + (r.v0 ? r.v0[j] : 0), 0);
+  // مؤشرات المدرسة
+  const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] ? Math.round(avg[j]) : tot(j); const t0 = prevP ? (M[j][3] ? Math.round(tot0(j) / Math.max(1, rows.length)) : tot0(j)) : null;
+    return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : ''}</span>${t0 != null ? `<i class="${t >= t0 ? 'up' : 'dn'}">${t >= t0 ? '▲' : '▼'} ${prevP.name}: ${fmt(t0, j)}</i>` : ''}</div>`; }).join('');
+  // قراءة تحليلية
+  const best = sorted[0], mostUp = rows.filter(r => r.sc0 != null).sort((a, b) => (b.sc - b.sc0) - (a.sc - a.sc0))[0];
+  const weakM = M.map((m, j) => ({ j, z: rows.filter(r => r.v[j] === 0).length })).filter(x => x.z >= Math.ceil(rows.length / 2)).map(x => M[x.j][0]);
+  const strongM = M.map((m, j) => ({ j, z: rows.filter(r => r.v[j] > 0).length })).filter(x => x.z === rows.length).map(x => M[x.j][0]);
+  const ins = [
+    best ? `<li>تتصدّر <b>${esc(best.d)}</b> (${esc(best.c)}) المؤشر المركّب بنسبة <b>${best.sc}%</b>${best.str.length ? '، وأبرز تميّزها في ' + best.str.map(j => M[j][0]).join('، ') : ''}.</li>` : '',
+    mostUp && mostUp.sc - mostUp.sc0 > 0 ? `<li>الأكثر تقدّماً عن ${esc(prevP.name)}: <b>${esc(mostUp.d)}</b> (+${mostUp.sc - mostUp.sc0} نقطة).</li>` : '',
+    strongM.length ? `<li>مؤشرات مفعّلة في جميع الأقسام: ${strongM.join('، ')}.</li>` : '',
+    weakM.length ? `<li>مؤشرات تحتاج متابعة على مستوى المدرسة (لم تُوثّق في نصف الأقسام أو أكثر): <b>${weakM.join('، ')}</b>.</li>` : '',
+  ].join('');
+  const groups = [...new Set(M.map(m => m[1]))];
+  const [ml] = M[S.cmpM]; const jm = S.cmpM;
+  const spark = v => { const W = 90, H = 26, m = Math.max(1, ...v); if (v.length < 2) return ''; const pts = v.map((x, i) => `${(i / (v.length - 1)) * W},${H - 3 - (x / m) * (H - 6)}`).join(' ');
+    return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#7a1f34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${v.map((x, i) => `<circle cx="${(i / (v.length - 1)) * W}" cy="${H - 3 - (x / m) * (H - 6)}" r="2.4" fill="#7a1f34"/>`).join('')}</svg>`; };
   el.innerHTML = `
-  <div class="card"><h2>مقارنة الأقسام في ${esc(p.name)}</h2>
-    <div class="tabs">${metrics.map((m, i) => `<button class="${i === S.cmpM ? 'on' : ''}" data-m="${i}">${m[0]}</button>`).join('')}</div>
-    ${[...Rs].sort((a, b) => mf(b) - mf(a)).map((x, i) => `<div class="row" style="margin:7px 0"><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span><span style="width:210px">${esc(x.d)}<br><small style="color:var(--muted)">${esc(coordOf(x.d))}</small></span><div class="bar sp m"><i style="width:${mf(x) / mx * 100}%"></i></div><b style="width:40px;text-align:center">${mf(x)}</b></div>`).join('')}
+  <div class="row noprint" style="margin-bottom:10px;gap:8px"><div class="tabs" style="margin:0"><button class="${S.cmpN ? '' : 'on'}" data-n="0">الأعداد الكلية</button><button class="${S.cmpN ? 'on' : ''}" data-n="1">لكل معلمة (عدالة بين الأقسام)</button></div><span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
+  <div class="cmhero"><div><h2>مقارنة الأقسام — ${esc(p.name)}</h2><div class="sub">${rows.length} قسماً · للنائبة والمديرة فقط${S.cmpN ? ' · القيم مقسومة على عدد معلمات القسم' : ''}</div></div><div class="cmks">${kp}</div></div>
+  ${ins ? `<div class="card cmins"><h2>📌 قراءة تحليلية</h2><ul>${ins}</ul></div>` : ''}
+  <div class="card"><h2>خريطة الأداء <span class="sub">اضغطي عنوان أي عمود للترتيب حسبه · كلما اشتدّ اللون ارتفع المؤشر مقارنةً بأعلى قسم</span></h2>
+    <div class="tbl"><table class="t cmh"><tr><th rowspan="2" style="min-width:150px">القسم</th><th rowspan="2" data-s="-1" class="srt ${S.cmpS < 0 ? 'on' : ''}">المؤشر المركّب</th>${groups.map(g => `<th colspan="${M.filter(m => m[1] === g).length}" class="grp">${g}</th>`).join('')}</tr>
+    <tr>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<th data-s="${j}" class="srt ${S.cmpS === j ? 'on' : ''}">${m[0]}</th>`).join('')).join('')}</tr>
+    ${sorted.map((r, i) => `<tr><td><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span> <b>${esc(r.d)}</b><br><small style="color:var(--muted)">${esc(r.c)}</small></td>
+      <td><div class="cmsc"><i style="width:${r.sc}%"></i><b>${r.sc}%</b></div>${r.sc0 != null ? `<small class="${r.sc >= r.sc0 ? 'up' : 'dn'}">${r.sc >= r.sc0 ? '▲' : '▼'} ${Math.abs(r.sc - r.sc0)}</small>` : ''}</td>
+      ${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td class="hc ${lvl(r.v[j], j)}">${fmt(r.v[j], j)}</td>`).join('')).join('')}</tr>`).join('')}
+    <tr class="avg"><td><b>متوسط المدرسة</b></td><td></td>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td>${fmt(Math.round(avg[j] * 10) / 10, j)}</td>`).join('')).join('')}</tr></table></div></div>
+  <div class="grid g2">
+  <div class="card"><h2>ترتيب الأقسام في مؤشر واحد</h2><select id="cmM" class="noprint" style="margin-bottom:10px">${M.map((m, j) => `<option value="${j}" ${j === jm ? 'selected' : ''}>${m[1]} — ${m[0]}</option>`).join('')}</select>
+    ${[...rows].sort((a, b) => b.v[jm] - a.v[jm]).map((r, i) => `<div class="cmbar"><span class="n">${esc(r.d)}</span><div class="b"><i style="width:${mx[jm] ? r.v[jm] / mx[jm] * 100 : 0}%"></i><u style="right:${mx[jm] ? Math.min(100, avg[jm] / mx[jm] * 100) : 0}%" title="متوسط المدرسة"></u></div><b>${fmt(r.v[jm], jm)}</b></div>`).join('')}
+    <div style="font-size:11.5px;color:var(--muted);margin-top:6px">الخط الذهبي = متوسط المدرسة (${fmt(Math.round(avg[jm] * 10) / 10, jm)})</div></div>
+  <div class="card"><h2>تطوّر «${ml}» عبر الفترات</h2><div class="tbl"><table class="t"><tr><th>القسم</th>${pers.map(q => `<th>${q.name}</th>`).join('')}<th>المنحنى</th></tr>
+    ${D.map(d => { const v = pers.map(q => val(buildReport(ctxFor(d, q)), d, q, M[jm])); return `<tr><td>${esc(d)}</td>${v.map(x => `<td>${fmt(x, jm)}</td>`).join('')}<td>${spark(v)}</td></tr>`; }).join('')}</table></div></div>
   </div>
-  <div class="card"><h2>تطور كل قسم عبر الفترات <span class="sub">${ml}</span></h2><div class="tbl"><table class="t"><tr><th>القسم</th>${pers.map(q => `<th>${q.name}</th>`).join('')}<th>الاتجاه</th></tr>
-    ${D.map(d => { const v = pers.map(q => mf({ R: buildReport(ctxFor(d, q)) })); const tr = v.length > 1 ? v[v.length - 1] - v[v.length - 2] : 0;
-      return `<tr><td>${esc(d)}</td>${v.map(x => `<td>${x}</td>`).join('')}<td>${tr > 0 ? '<span class="chip ok">▲ ' + tr + '</span>' : tr < 0 ? '<span class="chip bad">▼ ' + (-tr) + '</span>' : '<span class="chip">—</span>'}</td></tr>`; }).join('')}</table></div></div>`;
-  $$('[data-m]', el).forEach(b => b.onclick = () => { S.cmpM = +b.dataset.m; show(); });
+  <div class="card"><h2>بطاقات الأقسام <span class="sub">نقاط التميّز (أعلى من المتوسط بوضوح) وما يحتاج متابعة (منعدم أو أقل من نصف المتوسط)</span></h2><div class="cmcards">
+    ${sorted.map(r => `<div class="cmc"><div class="hd"><b>${esc(r.d)}</b><span>${r.sc}%</span></div><small>${esc(r.c)} · ${r.rec} سجلاً</small>
+      <div class="ln ok">${r.str.length ? r.str.map(j => `<span>✦ ${M[j][0]} (${fmt(r.v[j], j)})</span>`).join('') : '<span class="mt">لا يوجد تميّز واضح عن المتوسط بعد</span>'}</div>
+      <div class="ln nd">${r.need.length ? r.need.map(j => `<span>◦ ${M[j][0]}${r.v[j] ? ' (' + fmt(r.v[j], j) + ')' : ' — لم يُوثّق'}</span>`).join('') : '<span class="mt">لا يوجد</span>'}</div></div>`).join('')}</div></div>`;
+  $$('[data-n]', el).forEach(b => b.onclick = () => { S.cmpN = +b.dataset.n; show(); });
+  $$('[data-s]', el).forEach(b => b.onclick = () => { S.cmpS = +b.dataset.s; show(); });
+  $('#cmM').onchange = e => { S.cmpM = +e.target.value; show(); };
 }
 
 /* ------------------------------------------------------------------ لوحات التميز */
