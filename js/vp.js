@@ -284,7 +284,7 @@ function followTarget(kind) {
 function formDef(k) {
   if (k === 'coord') { const C = FORMS.coord; return { title: C.title, role: C.role, sig: C.sig, notes: C.notes, rows: C.domains.flatMap((dm, di) => dm.ev.map((e, j) => ({ dom: dm.d, ind: dm.ind, di, first: j === 0, span: dm.ev.length, e: e.e, t: e.t, r: e.r }))), pos: C.pos, neg: C.neg }; }
   const A = FORMS.admin.find(a => a.k === k); if (!A) return null;
-  const nums = k === 'lrc' ? [1, 3, 4, 5, 6, 7] : A.tasks.map((_, i) => i + 1);
+  const nums = A.tasks.map((_, i) => i + 1);
   return { title: A.title, role: A.role, sig: A.sig, rows: A.tasks.map((t, i) => ({ n: nums[i], e: t.e, t: t.t, r: t.r })), pos: FORMS.coord.pos, neg: FORMS.coord.neg };
 }
 async function A_files(el, kind) {
@@ -292,6 +292,7 @@ async function A_files(el, kind) {
   const ttl = kind === 'CF' ? 'متابعة ملفات المنسقات' : 'متابعة ملفات الإدارية الأكاديمية';
   setTitle(ttl);
   const sem = S.fsem || curSem();
+  if (kind === 'AF') await afSeed();
   if (S.fopen) { const T = followTarget(kind).find(x => x.key === S.fopen); if (T) return fileForm(el, kind, T, sem); S.fopen = null; }
   const T = followTarget(kind);
   const recOf = t => S.records.find(r => r.item === kind && r.d.tk === t.key && r.d.sem === sem);
@@ -299,7 +300,8 @@ async function A_files(el, kind) {
   el.innerHTML = `
   <div class="tabs">${SEMS.map(s => `<button class="${s === sem ? 'on' : ''}" data-s="${s}">متابعة ملفات ${s}</button>`).join('')}</div>
   <div class="note">الاستمارة المعتمدة من الدليل الإرشادي لنائب المدير للشؤون الأكاديمية، وتُعبَّأ بصورة فصلية. التقدير بالقائمة (مستكمل · مستكمل جزئياً · غير مستكمل · لم يتم قياسه)، وتبقى خانة الملاحظات فارغة للمستكمل، وتظهر التوصيات المناسبة للمستكمل جزئياً وغير المستكمل مع إمكانية الكتابة الحرة.</div>
-  ${kind === 'AF' ? `<div class="card noprint"><div class="row"><h2 style="margin:0">موظفات الإدارية الأكاديمية</h2><span class="sp"></span><button class="btn sec" id="addStf">+ إضافة موظفة</button></div><div style="font-size:12.5px;color:var(--muted);margin-top:6px">أضيفي الاسم والمسمى الوظيفي والبريد الإلكتروني مرة واحدة، وتبقى محفوظة لكِ وحدكِ.</div></div>` : ''}
+  ${kind === 'AF' ? afPicker(T, sem, recOf) : ''}
+  ${kind === 'AF' ? `<div class="card noprint" style="display:none"><div class="row"><h2 style="margin:0">موظفات الإدارية الأكاديمية</h2><span class="sp"></span><button class="btn sec" id="addStf">+ إضافة موظفة</button></div><div style="font-size:12.5px;color:var(--muted);margin-top:6px">أضيفي الاسم والمسمى الوظيفي والبريد الإلكتروني مرة واحدة، وتبقى محفوظة لكِ وحدكِ.</div></div>` : ''}
   ${kind === 'CF' ? `<div class="card"><h2>لوحة الأقسام — ${sem} <span class="sub">للنائبة والمديرة فقط · تعبئة تلقائية من سجلات كل منسقة، والقرار لكِ</span></h2>${cfDash(el, T, sem)}</div>` : ''}
   <div class="card"${kind === 'CF' ? ' style="display:none"' : ''}><h2>${ttl} — ${sem}</h2><div class="tbl"><table class="t"><tr><th>الاسم</th><th>المسمى</th><th>تاريخ المتابعة</th><th>مستكمل</th><th>جزئياً</th><th>غير مستكمل</th><th>الإرسال</th><th></th></tr>
   ${T.map(t => { const r = recOf(t), x = sumOf(r);
@@ -307,10 +309,11 @@ async function A_files(el, kind) {
       <td><button class="btn sm" data-o="${esc(t.key)}">${r ? 'فتح' : 'تعبئة'}</button>${kind === 'AF' ? ` <button class="btn sm ghost" data-e="${esc(t.key)}">تعديل البيانات</button>` : ''}</td></tr>`; }).join('') || `<tr><td colspan="8"><div class="empty">${kind === 'AF' ? 'أضيفي موظفات الإدارية الأكاديمية أولاً (محضرة المختبر، مسؤولة مصادر التعلم، المرشدة الأكاديمية، منسقة مشاريع التعليم الإلكتروني، اختصاصية الأنشطة)' : 'لا توجد منسقات'}</div></td></tr>`}</table></div></div>`;
   $$('[data-s]', el).forEach(b => b.onclick = () => { S.fsem = b.dataset.s; show(); });
   $$('[data-o]', el).forEach(b => b.onclick = () => { S.fopen = b.dataset.o; show(); });
+  if (kind === 'AF') { $$('[data-afr]', el).forEach(b => b.onclick = () => { S.afRole = b.dataset.afr; show(); }); $$('[data-afo]', el).forEach(b => b.onclick = () => { S.fopen = b.dataset.afo; show(); }); if ($('#addStf2')) $('#addStf2').onclick = () => staffModal(null, S.afRole); }
   if (kind === 'AF') { $('#addStf').onclick = () => staffModal(null); $$('[data-e]', el).forEach(b => b.onclick = () => staffModal(S.records.find(r => r.id === b.dataset.e))); }
 }
-function staffModal(rec) {
-  const d = rec ? rec.d : { name: '', form: 'lab', email: '' };
+function staffModal(rec, form) {
+  const d = rec ? rec.d : { name: '', form: form || 'lab', email: '' };
   const m = document.createElement('div'); m.className = 'modal';
   m.innerHTML = `<div class="box"><h3>${rec ? 'تعديل بيانات موظفة' : 'إضافة موظفة — الإدارية الأكاديمية'}</h3><form class="form" id="sf" style="grid-template-columns:1fr">
     <div class="fld"><label>الاسم</label><input data-n="name" value="${esc(d.name)}" required></div>
@@ -322,6 +325,25 @@ function staffModal(rec) {
   $('#sf', m).onsubmit = async e => { e.preventDefault(); const r = readForm($('#sf', m)); if (!r.name) return;
     const j = await call('save', { rec: { id: rec && rec.id, dept: 'الإدارية الأكاديمية', item: 'AST', date: today(), sum: r.name, d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); m.remove(); toast('تم الحفظ ✓'); show(); };
+}
+/* موظفات الإدارية الأكاديمية — من استمارات متابعة 2025-2026 (تُضاف مرة واحدة إن لم تكن موجودة) */
+const AF_SEED = [['lab', 'مريم ماشا'], ['lrc', 'ايمان العنزي'], ['counsel', 'شيخة خميس'], ['elearn', 'ايمان يوسف'], ['act', 'نوف الخيارين']];
+async function afSeed() {
+  if (S.afSeeded || !isAdmin()) return; S.afSeeded = true;
+  const has = n => S.records.some(r => r.item === 'AST' && r.d && r.d.name === n);
+  for (const [form, name] of AF_SEED) { if (has(name)) continue;
+    try { const j = await call('save', { rec: { dept: 'الإدارية الأكاديمية', item: 'AST', date: today(), sum: name, d: { name, form, email: '' } } }); if (j && j.record) S.records.push(j.record); } catch (e) {} }
+}
+/* اختيار المسمى ← الاسم ← الاستمارة مباشرة */
+function afPicker(T, sem, recOf) {
+  const roles = FORMS.admin; const cur = S.afRole && roles.some(a => a.k === S.afRole) ? S.afRole : null;
+  const L = cur ? T.filter(t => t.form === cur) : [];
+  return `<div class="card noprint"><h2>اختاري المسمى الوظيفي <span class="sub">ثم اسم الموظفة، فتظهر استمارتها مباشرة</span></h2>
+  <div class="chips" style="display:flex;flex-wrap:wrap;gap:8px">${roles.map(a => { const n = T.filter(t => t.form === a.k).length;
+    return `<button class="btn ${a.k === cur ? '' : 'sec'}" data-afr="${a.k}">${esc(a.rf)}${n ? ` <span style="opacity:.7">(${n})</span>` : ''}</button>`; }).join('')}</div>
+  ${cur ? `<div style="margin-top:14px;display:flex;flex-wrap:wrap;gap:8px;align-items:center">${L.map(t => { const r = recOf(t);
+    return `<button class="btn ghost" data-afo="${esc(t.key)}" style="border:1.5px solid var(--maroon)">👤 ${esc(t.name)} ${r ? `<span class="chip ok" style="margin-inline-start:6px">عُبّئت ${dm(r.date)}</span>` : `<span class="chip" style="margin-inline-start:6px">لم تُعبّأ — ${sem}</span>`}</button>`; }).join('') || '<span style="color:var(--muted)">لا توجد موظفة بهذا المسمى بعد</span>'}
+  <button class="btn sm sec" id="addStf2">+ إضافة اسم</button></div>` : ''}</div>`;
 }
 /* مؤشرات من المنصة لمساعدة النائب عند تقدير أدلة المنسقة (للاسترشاد فقط — لا تُطبع) */
 function coordHints(T, sem) {
