@@ -285,7 +285,7 @@ function formDef(k) {
   if (k === 'coord') { const C = FORMS.coord; return { title: C.title, role: C.role, sig: C.sig, notes: C.notes, rows: C.domains.flatMap((dm, di) => dm.ev.map((e, j) => ({ dom: dm.d, ind: dm.ind, di, first: j === 0, span: dm.ev.length, e: e.e, t: e.t, r: e.r }))), pos: C.pos, neg: C.neg }; }
   const A = FORMS.admin.find(a => a.k === k); if (!A) return null;
   const nums = A.tasks.map((_, i) => i + 1);
-  return { title: A.title, role: A.role, sig: A.sig, rows: A.tasks.map((t, i) => ({ n: nums[i], e: t.e, t: t.t, r: t.r })), pos: FORMS.coord.pos, neg: FORMS.coord.neg };
+  return { title: A.title, role: A.role, sig: A.sig, rows: A.tasks.map((t, i) => ({ n: nums[i], e: t.e, t: t.t, r: t.r, nn: uniqA([...(t.r || []), ...(t.n || [])]) })), pos: FORMS.afPos || FORMS.coord.pos, neg: FORMS.afNeg || FORMS.coord.neg };
 }
 async function A_files(el, kind) {
   await loadForms();
@@ -325,6 +325,23 @@ function staffModal(rec, form) {
   $('#sf', m).onsubmit = async e => { e.preventDefault(); const r = readForm($('#sf', m)); if (!r.name) return;
     const j = await call('save', { rec: { id: rec && rec.id, dept: 'الإدارية الأكاديمية', item: 'AST', date: today(), sum: r.name, d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); m.remove(); toast('تم الحفظ ✓'); show(); };
+}
+/* ملاحظات منسدلة لكل مهمة + صياغة التوصيات العامة تلقائياً منها */
+function afNoteCell(x, i, d) {
+  const v = d.nt[i] || ''; const free = (d.ntx && d.ntx[i]) || (v && !x.nn.includes(v));
+  const st = 'width:100%;min-width:240px;border:1px solid var(--line);border-radius:8px;padding:5px 6px;font-size:12.5px';
+  return `<select data-nts="${i}" style="${st}"><option value="">— بدون ملاحظة —</option>${x.nn.map(o => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}<option value="__x" ${free ? 'selected' : ''}>✍️ كتابة حرة…</option></select>${free ? `<input data-nt="${i}" value="${esc(v)}" placeholder="اكتبي الملاحظة" style="${st};margin-top:4px">` : ''}`;
+}
+function afCompose(T, sem, d, D) {
+  const TH = FORMS.afThanks || ['أتقدم بخالص الشكر والتقدير للأستاذة {name} {role} على جهودها المخلصة خلال {sem}'];
+  let t = TH[(+d.th || 0) % TH.length].replace('{name}', T.name).replace('{role}', T.role).replace('{sem}', sem);
+  const done = D.rows.map((x, i) => i).filter(i => d.ev[i] === 'مستكمل');
+  const pos = uniqA([...done.slice(0, 3).map(i => D.rows[i].t[0]), ...d.pos]).map(cleanEnd);
+  t += pos.length ? '، ولا سيما: ' + pos.join('، و') + '.' : '.';
+  const rcs = uniqA([...D.rows.map((x, i) => d.nt[i]).filter(Boolean), ...d.neg.map(x => 'معالجة ' + cleanEnd(x).replace(/^الحاجة إلى /, ''))]).map(cleanEnd);
+  if (rcs.length) t += '\n\nوأوصي بـ:\n' + rcs.map(x => '• ' + x + '.').join('\n');
+  t += '\n\nمع خالص التمنيات بدوام التميز والعطاء.';
+  return t;
 }
 /* موظفات الإدارية الأكاديمية — من استمارات متابعة 2025-2026 (تُضاف مرة واحدة إن لم تكن موجودة) */
 const AF_SEED = [['lab', 'مريم ماشا'], ['lrc', 'ايمان العنزي'], ['counsel', 'شيخة خميس'], ['elearn', 'ايمان يوسف'], ['act', 'نوف الخيارين']];
@@ -382,6 +399,7 @@ function fileForm(el, kind, T, sem) {
   if (kind === 'CF') { d.man = d.man || {}; d.auto = {}; AU.forEach((a, i) => { d.auto[i] = a.why; if (!d.ok && !d.man[i] && a.v) d.ev[i] = a.v; }); if (!d.ok && rec && !d.genMan) d.gen = ''; }
   const compose = () => {
     if (kind === 'CF') return cfCompose(T, sem, d, D);
+    if (kind === 'AF') return afCompose(T, sem, d, D);
     const done = D.rows.map((x, i) => i).filter(i => d.ev[i] === 'مستكمل');
     const rest = D.rows.map((x, i) => i).filter(i => ['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[i]));
     const thanks = uniqA([...done.slice(0, 4).map(i => D.rows[i].t[0]), ...d.pos]).map(cleanEnd);
@@ -408,25 +426,28 @@ function fileForm(el, kind, T, sem) {
       return `<tr>${kind === 'CF' ? (x.first ? `<td rowspan="${x.span}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.dom)}</td><td rowspan="${x.span}" style="font-size:12px">${esc(x.ind)}</td>` : '') : `<td style="text-align:center">${x.n}</td>`}
         <td style="font-size:13px">${esc(x.e)}${hint}</td>
         <td><select data-ev="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:4px">${['', ...SC].map(s => `<option ${v === s ? 'selected' : ''} value="${s}">${s || 'اختاري…'}</option>`).join('')}</select></td>
-        <td>${need ? `<input list="dlN${i}" data-nt="${i}" value="${esc(d.nt[i] || x.r[0])}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12.5px">${dl('dlN' + i, x.r)}` : v === 'مستكمل' ? `<span style="font-size:11.5px;color:var(--muted)">تبقى فارغة في الاستمارة · يُضاف الشكر في التوصيات</span>` : ''}</td></tr>`; }).join('')}</table></div></div>
+        <td>${kind === 'AF' ? afNoteCell(x, i, d) : need ? `<input list="dlN${i}" data-nt="${i}" value="${esc(d.nt[i] || x.r[0])}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12.5px">${dl('dlN' + i, x.r)}` : v === 'مستكمل' ? `<span style="font-size:11.5px;color:var(--muted)">تبقى فارغة في الاستمارة · يُضاف الشكر في التوصيات</span>` : ''}</td></tr>`; }).join('')}</table></div></div>
     ${kind === 'CF' ? cfFileHTML(T, sem).html : ''}
     <div class="grid g2">
       <div class="card"><h2>إشادات وشكر <span class="sub">تُضاف إلى بداية التوصيات العامة</span></h2>${D.pos.map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-pos="${esc(x)}" ${d.pos.includes(x) ? 'checked' : ''}> ${esc(x)}</label>`).join('')}<input id="posX" placeholder="إشادة أخرى (كتابة حرة) ثم Enter" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px">${d.pos.filter(x => !D.pos.includes(x)).map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-pos="${esc(x)}" checked> ${esc(x)}</label>`).join('')}</div>
       <div class="card"><h2>نقاط تحتاج إلى تحسين <span class="sub">تتحول إلى توصيات</span></h2>${D.neg.map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-neg="${esc(x)}" ${d.neg.includes(x) ? 'checked' : ''}> ${esc(x)}</label>`).join('')}<input id="negX" placeholder="ملاحظة أخرى (كتابة حرة) ثم Enter" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px">${d.neg.filter(x => !D.neg.includes(x)).map(x => `<label style="display:block;margin:4px 0"><input type="checkbox" data-neg="${esc(x)}" checked> ${esc(x)}</label>`).join('')}</div>
     </div>
-    <div class="card"><div class="row"><h2 style="margin:0">التوصيات العامة</h2><span class="sp"></span><button class="btn sm sec" id="gAuto" type="button">إعادة الصياغة التلقائية من التقديرات</button></div>
+    <div class="card"><div class="row"><h2 style="margin:0">التوصيات العامة</h2><span class="sp"></span>${kind === 'AF' ? `<select id="afTh" style="max-width:300px;border:1px solid var(--line);border-radius:8px;padding:4px;font-size:12.5px">${(FORMS.afThanks || []).map((x, k) => `<option value="${k}" ${(+d.th || 0) === k ? 'selected' : ''}>عبارة الشكر ${k + 1}: ${esc(x.replace(/\{[^}]+\}\s*/g, '').slice(0, 45))}…</option>`).join('')}</select> ` : ''}<button class="btn sm sec" id="gAuto" type="button">إعادة الصياغة التلقائية من التقديرات</button></div>
       <textarea id="gen" style="width:100%;min-height:200px;border:1px solid var(--line);border-radius:12px;padding:10px;margin-top:8px;line-height:1.9;text-align:justify">${esc(d.gen || compose())}</textarea></div>`;
     el.innerHTML = h;
     const grab = () => { d.date = $('#fD').value; d.mode = $('#fM').value; $$('[data-ev]', el).forEach(s => { if (s.value) d.ev[s.dataset.ev] = s.value; else delete d.ev[s.dataset.ev]; });
       $$('[data-nt]', el).forEach(i => d.nt[i.dataset.nt] = i.value.trim());
-      Object.keys(d.nt).forEach(k => { if (!['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k])) delete d.nt[k]; });
+      if (kind === 'AF') { if ($('#afTh')) d.th = +$('#afTh').value; } else Object.keys(d.nt).forEach(k => { if (!['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k])) delete d.nt[k]; });
       d.pos = $$('[data-pos]', el).filter(c => c.checked).map(c => c.dataset.pos); d.neg = $$('[data-neg]', el).filter(c => c.checked).map(c => c.dataset.neg); d.gen = $('#gen').value; };
     const regen = () => { grab(); d.gen = compose(); d.genMan = 0; };
     $('#gen').oninput = () => { d.genMan = 1; };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
-    $$('[data-ev]', el).forEach(s => s.onchange = () => { if (kind === 'CF') d.man[s.dataset.ev] = 1; regen(); draw(); });
+    $$('[data-ev]', el).forEach(s => s.onchange = () => { if (kind === 'CF') d.man[s.dataset.ev] = 1; regen(); const k = s.dataset.ev; if (kind === 'AF' && ['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k]) && !d.nt[k]) { d.nt[k] = D.rows[k].r[0]; d.gen = compose(); } draw(); });
     if ($('#cfRe')) $('#cfRe').onclick = () => { grab(); AU.forEach((a, i) => { if (d.man[i]) return; if (a.v) d.ev[i] = a.v; else delete d.ev[i]; }); d.gen = compose(); draw(); toast('تم تحديث التعبئة التلقائية دون المساس بتعديلاتكِ ✓'); };
     $$('[data-pos],[data-neg]', el).forEach(c => c.onchange = () => { regen(); draw(); });
+    $$('[data-nts]', el).forEach(s => s.onchange = () => { const i = s.dataset.nts; grab(); if (s.value === '__x') { d.ntx = d.ntx || {}; d.ntx[i] = 1; d.nt[i] = ''; } else { if (d.ntx) delete d.ntx[i]; if (s.value) d.nt[i] = s.value; else delete d.nt[i]; } if (!d.genMan) d.gen = compose(); draw(); });
+    $$('[data-nt]', el).forEach(t => t.onchange = () => { grab(); if (!d.genMan) d.gen = compose(); draw(); });
+    if ($('#afTh')) $('#afTh').onchange = () => { grab(); d.gen = compose(); d.genMan = 0; draw(); };
     const addFree = (id, arr) => { $(id).onkeydown = e => { if (e.key === 'Enter' && e.target.value.trim()) { e.preventDefault(); grab(); d[arr].push(e.target.value.trim()); d.gen = compose(); draw(); } }; };
     addFree('#posX', 'pos'); addFree('#negX', 'neg');
     $('#allC').onclick = () => { grab(); D.rows.forEach((x, i) => { if (!d.ev[i]) d.ev[i] = 'مستكمل'; }); d.gen = compose(); draw(); };
@@ -445,7 +466,7 @@ function fileForm(el, kind, T, sem) {
 }
 function fileInner(D, T, r, kind) {
   const d = r.d; const SC = FORMS.scaleF;
-  const rows = D.rows.map((x, i) => { const v = d.ev[i] || ''; const nt = ['مستكمل جزئياً', 'غير مستكمل'].includes(v) ? (d.nt[i] || '') : '';
+  const rows = D.rows.map((x, i) => { const v = d.ev[i] || ''; const nt = kind === 'AF' || ['مستكمل جزئياً', 'غير مستكمل'].includes(v) ? (d.nt[i] || '') : '';
     return `<tr>${kind === 'CF' ? (x.first ? `<td class="dm" rowspan="${x.span}">${x.di + 1}.</td><td class="dm" rowspan="${x.span}">${esc(x.dom)}</td><td rowspan="${x.span}" class="j" style="font-size:9.5px">${esc(x.ind)}</td>` : '') : (i === 0 ? `<td class="dm" rowspan="${D.rows.length}">${esc(D.role)}</td>` : '') + `<td style="text-align:center;width:5%">${x.n}</td>`}
       <td style="font-size:10px">${esc(x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
   const head = kind === 'CF' ? '<tr><th>م</th><th>المجال</th><th>المؤشرات</th><th>الأدلة</th><th>المتابعة</th></tr>' : '<tr><th>المسمى المستهدف</th><th>الرقم</th><th>المهام الأكاديمية</th><th>متابعة تنفيذ المهام</th><th>الملاحظات والتوصيات</th></tr>';
