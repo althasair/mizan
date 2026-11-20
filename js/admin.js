@@ -64,18 +64,18 @@ function A_compare(el) {
   const tot0 = j => rows.reduce((a, r) => a + (r.v0 ? r.v0[j] : 0), 0);
   // مؤشرات المدرسة
   const kp = [0, 1, 4, 6, 8, 9].map(j => { const t = M[j][3] ? Math.round(avg[j]) : tot(j); const t0 = prevP ? (M[j][3] ? Math.round(tot0(j) / Math.max(1, rows.length)) : tot0(j)) : null;
-    return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : ''}</span>${t0 != null ? `<i class="${t >= t0 ? 'up' : 'dn'}">${t >= t0 ? '▲' : '▼'} ${prevP.name}: ${fmt(t0, j)}</i>` : ''}</div>`; }).join('');
+    return `<div class="cmk"><b>${fmt(t, j)}</b><span>${M[j][0]}${S.cmpN && M[j][4] ? ' / معلمة' : ''}</span></div>`; }).join('');
   // قراءة تحليلية
   const best = sorted[0], mostUp = rows.filter(r => r.sc0 != null).sort((a, b) => (b.sc - b.sc0) - (a.sc - a.sc0))[0];
   const weakM = M.map((m, j) => ({ j, z: rows.filter(r => r.v[j] === 0).length })).filter(x => x.z >= Math.ceil(rows.length / 2)).map(x => M[x.j][0]);
   const strongM = M.map((m, j) => ({ j, z: rows.filter(r => r.v[j] > 0).length })).filter(x => x.z === rows.length).map(x => M[x.j][0]);
   const ins = [
     best ? `<li>تتصدّر <b>${esc(best.d)}</b> (${esc(best.c)}) المؤشر المركّب بنسبة <b>${best.sc}%</b>${best.str.length ? '، وأبرز تميّزها في ' + best.str.map(j => M[j][0]).join('، ') : ''}.</li>` : '',
-    mostUp && mostUp.sc - mostUp.sc0 > 0 ? `<li>الأكثر تقدّماً عن ${esc(prevP.name)}: <b>${esc(mostUp.d)}</b> (+${mostUp.sc - mostUp.sc0} نقطة).</li>` : '',
     strongM.length ? `<li>مؤشرات مفعّلة في جميع الأقسام: ${strongM.join('، ')}.</li>` : '',
     weakM.length ? `<li>مؤشرات تحتاج متابعة على مستوى المدرسة (لم تُوثّق في نصف الأقسام أو أكثر): <b>${weakM.join('، ')}</b>.</li>` : '',
   ].join('');
   const groups = [...new Set(M.map(m => m[1]))];
+  const ring = v => { const r = 15, c = 2 * Math.PI * r; return `<div class="cmring"><svg width="42" height="42" viewBox="0 0 42 42"><circle cx="21" cy="21" r="${r}" fill="none" stroke="#eceff5" stroke-width="5"/><circle cx="21" cy="21" r="${r}" fill="none" stroke="#c9a24a" stroke-width="5" stroke-linecap="round" stroke-dasharray="${c * v / 100} ${c}" transform="rotate(-90 21 21)"/></svg><b>${v}%</b></div>`; };
   const [ml] = M[S.cmpM]; const jm = S.cmpM;
   const spark = v => { const W = 90, H = 26, m = Math.max(1, ...v); if (v.length < 2) return ''; const pts = v.map((x, i) => `${(i / (v.length - 1)) * W},${H - 3 - (x / m) * (H - 6)}`).join(' ');
     return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}"><polyline points="${pts}" fill="none" stroke="#7a1f34" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>${v.map((x, i) => `<circle cx="${(i / (v.length - 1)) * W}" cy="${H - 3 - (x / m) * (H - 6)}" r="2.4" fill="#7a1f34"/>`).join('')}</svg>`; };
@@ -83,12 +83,12 @@ function A_compare(el) {
   <div class="row noprint" style="margin-bottom:10px;gap:8px"><div class="tabs" style="margin:0"><button class="${S.cmpN ? '' : 'on'}" data-n="0">الأعداد الكلية</button><button class="${S.cmpN ? 'on' : ''}" data-n="1">لكل معلمة (عدالة بين الأقسام)</button></div><span class="sp"></span><button class="btn sec" onclick="window.print()">🖨️ طباعة</button></div>
   <div class="cmhero"><div><h2>مقارنة الأقسام — ${esc(p.name)}</h2><div class="sub">${rows.length} قسماً · للنائبة والمديرة فقط${S.cmpN ? ' · القيم مقسومة على عدد معلمات القسم' : ''}</div></div><div class="cmks">${kp}</div></div>
   ${ins ? `<div class="card cmins"><h2>📌 قراءة تحليلية</h2><ul>${ins}</ul></div>` : ''}
-  <div class="card"><h2>خريطة الأداء <span class="sub">اضغطي عنوان أي عمود للترتيب حسبه · كلما اشتدّ اللون ارتفع المؤشر مقارنةً بأعلى قسم</span></h2>
+  <div class="card"><h2>خريطة الأداء <span class="sub">اضغطي عنوان أي عمود للترتيب حسبه · طول الشريط تحت الرقم يقارن القسم بأعلى قسم في المؤشر نفسه</span></h2>
     <div class="tbl"><table class="t cmh"><tr><th rowspan="2" style="min-width:150px">القسم</th><th rowspan="2" data-s="-1" class="srt ${S.cmpS < 0 ? 'on' : ''}">المؤشر المركّب</th>${groups.map(g => `<th colspan="${M.filter(m => m[1] === g).length}" class="grp">${g}</th>`).join('')}</tr>
     <tr>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<th data-s="${j}" class="srt ${S.cmpS === j ? 'on' : ''}">${m[0]}</th>`).join('')).join('')}</tr>
     ${sorted.map((r, i) => `<tr><td><span class="medal ${i < 3 ? 'g' + (i + 1) : ''}">${i + 1}</span> <b>${esc(r.d)}</b><br><small style="color:var(--muted)">${esc(r.c)}</small></td>
-      <td><div class="cmsc"><i style="width:${r.sc}%"></i><b>${r.sc}%</b></div>${r.sc0 != null ? `<small class="${r.sc >= r.sc0 ? 'up' : 'dn'}">${r.sc >= r.sc0 ? '▲' : '▼'} ${Math.abs(r.sc - r.sc0)}</small>` : ''}</td>
-      ${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td class="hc ${lvl(r.v[j], j)}">${fmt(r.v[j], j)}</td>`).join('')).join('')}</tr>`).join('')}
+      <td>${ring(r.sc)}</td>
+      ${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td class="hc">${r.v[j] ? `<b>${fmt(r.v[j], j)}</b><i class="${lvl(r.v[j], j)}" style="width:${Math.max(8, Math.round(r.v[j] / mx[j] * 100))}%"></i>` : '<span class="z">—</span>'}</td>`).join('')).join('')}</tr>`).join('')}
     <tr class="avg"><td><b>متوسط المدرسة</b></td><td></td>${groups.map(g => M.map((m, j) => [m, j]).filter(x => x[0][1] === g).map(([m, j]) => `<td>${fmt(Math.round(avg[j] * 10) / 10, j)}</td>`).join('')).join('')}</tr></table></div></div>
   <div class="grid g2">
   <div class="card"><h2>ترتيب الأقسام في مؤشر واحد</h2><select id="cmM" class="noprint" style="margin-bottom:10px">${M.map((m, j) => `<option value="${j}" ${j === jm ? 'selected' : ''}>${m[1]} — ${m[0]}</option>`).join('')}</select>
