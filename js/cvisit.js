@@ -151,11 +151,12 @@ const TR_FIX = [[/التقييم التكويني|التقويم التكوين�
 const trFix = t => TR_FIX.reduce((a, [re, b]) => a.replace(re, b), String(t || ''));
 /* الترجمة: العبارات المعتمدة من القائمة أولاً، ثم ترجمة آلية للعبارات الحرة مع تصحيح مصطلحاتها */
 async function cvTr(txt) {
-  const parts = String(txt || '').split(/\n+/).map(x => x.trim()).filter(Boolean); if (!parts.length) return '';
-  const key = x => x.replace(/[.;،\s]+$/, ''); const out = parts.map(x => VIS_AR[key(x)] || VIS_AR[key(x) + '.'] || null);
-  const need = parts.filter((x, i) => !out[i]);
-  if (need.length) { let L = []; try { L = (await API.call('tr', { list: need, from: 'en', to: 'ar' })).list || []; } catch (e) { L = []; } let j = 0; parts.forEach((x, i) => { if (!out[i]) out[i] = trFix(L[j++] || ''); }); }
-  return out.filter(Boolean).join('\n');
+  const lines = String(txt || '').split(/\n+/).map(x => x.trim()).filter(Boolean); if (!lines.length) return '';
+  const P = lines.map(l => l.split(/;\s*/).map(x => x.trim()).filter(Boolean)); const flat = P.flat();
+  const key = x => x.replace(/[.;،\s]+$/, ''); const out = flat.map(x => VIS_AR[key(x)] || VIS_AR[key(x) + '.'] || null);
+  const need = flat.filter((x, i) => !out[i]);
+  if (need.length) { let L = []; try { L = (await API.call('tr', { list: need, from: 'en', to: 'ar' })).list || []; } catch (e) { L = []; } let j = 0; flat.forEach((x, i) => { if (!out[i]) out[i] = trFix(L[j++] || ''); }); }
+  let k = 0; return P.map(ps => ps.map(() => out[k++]).filter(Boolean).join('؛ ')).filter(Boolean).join('\n');
 }
 const cvBi = (d, k, en, ar, ph, rows) => d.en ? `<textarea data-tre="${k}" dir="ltr" rows="${rows || 3}" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px;font-family:inherit;text-align:left" placeholder="${esc(ph[1])}">${esc(en || '')}</textarea>
   <div style="font-size:11px;color:var(--tiffany-d);margin-top:2px">الترجمة العربية (تُحفظ في التقرير الشهري، ويمكنكِ تعديلها)</div><textarea data-tra="${k}" ${k === 'strW' ? 'id="cStrW"' : k === 'impW' ? 'id="cImpW"' : k === 'pre' ? 'id="cPre"' : `data-imx="${k.slice(3)}"`} rows="${rows || 3}" style="width:100%;border:1px dashed var(--tiffany-d);background:#F6FBFA;border-radius:10px;padding:6px;font-size:12.5px">${esc(ar || '')}</textarea>` : '';
@@ -355,8 +356,8 @@ function cvForm(el, rec) {
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
       return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}${d.en && enOf(x.c) ? `<div dir="ltr" style="font-size:11px;color:var(--tiffany-d);text-align:left">${esc(enOf(x.c))}</div>` : ''}${x.ind ? `<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--tiffany-d);font-size:11.5px">ما يجب توفره (${x.ind.length})</summary><ul style="margin:4px 0;padding-inline-start:16px;font-size:11.5px;color:var(--muted)">${x.ind.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}</td>
         ${F.scale.map((_, k) => `<td class="ck" data-i="${i}" data-k="${k}" style="text-align:center;cursor:pointer;font-size:18px;color:var(--tiffany-d)">${d.rt[i] === k ? '✓' : ''}</td>`).join('')}
-        <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
-          <select data-add="${i}" ${d.en ? 'dir="ltr"' : ''} style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ ${d.en ? 'Suggested recommendation' : 'توصية مقترحة'} (${x.r.length})…</option>${x.r.map(t => cvOpt(d, t, false)).join('')}</select>${d.en && d.rc[i] ? `<div dir="ltr" style="font-size:11px;color:var(--tiffany-d);text-align:left">${esc(String(d.rc[i]).split('؛ ').map(z => enOf(z.trim()) || '').filter(Boolean).join('; '))}</div>` : ''}</td></tr>`; }).join('')}</table></div></div>
+        <td>${d.en ? `<textarea data-tre="rc${i}" dir="ltr" rows="${(d.en.rc || {})[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical;text-align:left" placeholder="Write in English or choose from the list">${esc((d.en.rc || {})[i] || '')}</textarea>` : ''}<textarea data-rc="${i}" ${d.en ? `data-tra="rc${i}"` : ''} rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
+          <select data-add="${i}" ${d.en ? 'dir="ltr"' : ''} style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ ${d.en ? 'Suggested recommendation' : 'توصية مقترحة'} (${x.r.length})…</option>${x.r.map(t => cvOpt(d, t, false)).join('')}</select></td></tr>`; }).join('')}</table></div></div>
 
     ${cvWsCard(d, WS)}
 
@@ -368,6 +369,7 @@ function cvForm(el, rec) {
     d.t = $('#cT').value.trim(); d.subj = $('#cSub').value.trim(); d.s = $('#cSec').value.trim(); d.date = $('#cD').value; d.topic = $('#cTop').value.trim();
     d.kj = $('#cKj').value; d.mode = $('#cMode').value; d.live = $('#cLive').value;
     $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
+    if (d.en) { d.en.rc = {}; $$('[data-tre^="rc"]', el).forEach(t => { const v = t.value.trim(); if (v) d.en.rc[t.dataset.tre.slice(2)] = v; }); }
     $$('[data-fs]', el).forEach(s => d.fu[s.dataset.fs].st = s.value); $$('[data-fn]', el).forEach(s => d.fu[s.dataset.fn].note = s.value.trim());
     cvNotesGrab(d, el); cvWsGrab(d, el, cvWorkshops(d.t, d.date, S.dept));
   };
@@ -378,7 +380,7 @@ function cvForm(el, rec) {
     if ($('#cSci')) $('#cSci').onchange = e => { grab(); d.sci = e.target.value ? 1 : 0; if (!d.sci) Object.keys(d.rt).forEach(i => { if (+i >= FORMS.visit.items.length) { delete d.rt[i]; delete d.rc[i]; } }); draw(); };
     $('#cSec').onchange = $('#cSub').onchange = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else d.rt[i] = k; draw(); });
-    $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
+    $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) { d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; if (d.en) { d.en.rc = d.en.rc || {}; const ce = (d.en.rc[i] || '').trim(), ev = enOf(sl.value) || sl.value; d.en.rc[i] = ce ? ce.replace(/[.;\s]+$/, '') + '; ' + ev : ev; } } draw(); });
     cvNotesBind(el, d, fn => { grab(); if (fn) fn(); draw(); });
     $('#cb').onclick = () => { S.cvv = null; show(); };
     $('#csave').onclick = async () => { if (await save()) { toast('تم الحفظ ✓ — وانعكست الزيارة على تقرير القسم'); show(); } };
@@ -428,7 +430,7 @@ function cvInner(r) {
   ${cvWsPrint(d)}
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
-    return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
+    return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}${d.en && (d.en.rc || {})[i] ? `<div dir="ltr" style="text-align:left;color:#444">${esc(d.en.rc[i])}</div>` : ''}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '') + fuTxt + ((d.str || []).length ? '\n\nنقاط القوة:\n' + d.str.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '') + ((d.imp || []).length ? '\n\nالنقاط التي تحتاج إلى تحسين:\n' + d.imp.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '')).trim()}</div></div>
   ${d.en && ((d.en.str || []).length || (d.en.imp || []).length) ? `<div class="gen" dir="ltr" style="text-align:left"><div class="h">General Notes and Recommendations</div><div class="b" style="text-align:left">${esc(((d.en.pre || '') + ((d.en.str || []).length ? '\n\nStrengths:\n' + d.en.str.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '') + ((d.en.imp || []).length ? '\n\nAreas for improvement:\n' + d.en.imp.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '')).trim())}</div></div>` : ''}
   ${d.vpfb ? `<div class="gen"><div class="h">ملاحظات النائب الأكاديمي${d.vpfbAt ? ' (' + dmy(d.vpfbAt) + ')' : ''}</div><div class="b">${esc(d.vpfb)}</div></div>` : ''}
