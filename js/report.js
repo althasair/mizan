@@ -266,6 +266,8 @@ function buildReport(ctx) {
     // الحرص على التطوير الذاتي: ثلاث زيارات فأكثر في شهر واحد
     const byM = {}; PVt.forEach(r => { const k = r.d.t + '|' + String(r.date).slice(0, 7); byM[k] = (byM[k] || 0) + 1; });
     const keen = uniq(Object.entries(byM).filter(([, n]) => n >= 3).map(([k]) => k.split('|')[0]));
+    { const EX = mineD('TEX'); if (EX.length) { const by = {}; EX.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      add('ov_peer', `وفي تبادل الخبرات في الفعاليات والأنشطة: ` + Object.entries(by).map(([t, L]) => `أ. ${t} ` + L.map(r => `${lst(r.d.role).join(' و') || 'حاضرة'} في «${String(r.d.name || '').trim()}»${r.d.odept && r.d.odept !== dept ? ' (' + r.d.odept + ')' : ''}`).join('، و')).join('؛ ') + '.'); } }
     if (keen.length) add('ov_peer', `وتُعدّ ${keen.map(t => 'أ. ' + t).join(' و')} من الحريصات على التطوير الذاتي، إذ نفّذت ثلاث زيارات تبادلية فأكثر في شهر واحد، بارك الله جهودها.`);
     // توظيف جوانب التميز والاستفادة من الكفاءات
     const host = TT('TPV').filter(r => r.d.vdept === dept);
@@ -313,7 +315,7 @@ function buildReport(ctx) {
   }
   /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
   const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !r.d.q1 && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
-  const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA');
+  const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA'), tEX = TQ('TEX');
   const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {
     const parts = [];
@@ -328,7 +330,8 @@ function buildReport(ctx) {
     if (p === 2) {
       if (tPV.length) parts.push(`(${tPV.length}) من الزيارات التبادلية التي نفّذتها المعلمات`);
       if (tWS.length) parts.push(`(${tWS.length}) من الورش والممارسات المتميزة في تطوير الزملاء`);
-      n += tPV.length + tWS.length;
+      if (tEX.length) parts.push(`(${tEX.length}) من مشاركات المعلمات في فعاليات زميلاتهن وأنشطتهن تبادلاً للخبرات`);
+      n += tPV.length + tWS.length + tEX.length;
     }
     if (p === 4 && tPA.length) { parts.push(`تواصل المعلمات مع أولياء أمور (${tStu.size}) من الطالبات`); n += tPA.length; }
     if (p === 2) {

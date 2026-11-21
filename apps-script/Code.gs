@@ -50,7 +50,8 @@ function roleOf_(r) {
   if (k === 'سكرتارية') return 'sec';                          // السكرتارية: حصر الاستئذانات في «إذنٌ مُيسَّر» للاطلاع فقط                        // ضيوف التوجيه: اطّلاع فقط على سبع سنابل
   return k === 'معلمة' ? 'teacher' : 'coord';
 }
-const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'XCMP'];   // XCMP: توثيق تعويض الطالبات عن الحصص الفائتة بسبب الخروج للأنشطة
+const TEACHER_ITEMS = ['TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'TAS', 'XCMP', 'TEX'];   // TEX: تبادل الخبرات في الفعاليات والأنشطة
+//   // XCMP: توثيق تعويض الطالبات عن الحصص الفائتة بسبب الخروج للأنشطة
       // ما تسجّله المعلمة بنفسها: مبادرات وأنشطة، زيارات تبادلية، ورش وتطوير الزملاء، أولياء الأمور، إنجازات
 const CROSS_ITEMS = ['TPV', 'TWS'];                              // تظهر أيضاً لقسم المعلمة المزورة أو المقدِّمة
 function findUserByPin_(pin) {
@@ -194,7 +195,7 @@ function saveRecord_(u, rec) {
   if (isPrincipal_(u) && rec.item !== 'PRV') fail_('حسابكِ للاطلاع، ويسجّل حضوركِ الصفي فقط');
   if (rec.item === 'VPV' && isPrincipal_(u)) fail_('حضور النائب الأكاديمي للاطلاع فقط');
   if (rec.item === 'PRV' && !isPrincipal_(u)) fail_('حضور مديرة المدرسة للاطلاع فقط');
-  const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS', 'XCMP'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
+  const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS', 'XCMP', 'TEX'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
   if (u.role === 'teacher' || coordOwn) {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
     if (rec.item === 'TPA' && !rec.id) fail_('التواصل مع أولياء الأمور يُسجَّل في منصة سبع سنابل فقط، ويصل منها تلقائياً إلى تقرير القسم');
@@ -253,7 +254,7 @@ function deleteRecord_(u, id) {
         if (isPrincipal_(u) && String(t.rows[i][2]) !== 'PRV') fail_('حسابكِ للاطلاع، ولا يحذف إلا حضوركِ الصفي');
         if (u.role !== 'admin' && PROTECTED_ITEMS.indexOf(String(t.rows[i][2])) >= 0) fail_('حذف الأنشطة والمبادرات متاح للنائب الأكاديمي فقط');
         if (u.role === 'teacher') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if ((TEACHER_ITEMS.indexOf(String(t.rows[i][2])) < 0 && String(t.rows[i][2]) !== 'PRQ') || od.t !== u.name) fail_('لا تملكين صلاحية على هذا السجل'); }
-        else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (!(['TPV', 'TWS', 'TAS'].indexOf(String(t.rows[i][2])) >= 0 && od.t === u.name)) fail_('هذا السجل تسجّله المعلمة بنفسها'); }
+        else if (u.role === 'coord' && TEACHER_ITEMS.indexOf(String(t.rows[i][2])) >= 0) { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {} if (!(['TPV', 'TWS', 'TAS', 'TEX'].indexOf(String(t.rows[i][2])) >= 0 && od.t === u.name)) fail_('هذا السجل تسجّله المعلمة بنفسها'); }
         if (String(t.rows[i][2]) === 'PRQ' || String(t.rows[i][2]) === 'TDS') { let od = {}; try { od = JSON.parse(t.rows[i][5] || '{}'); } catch (e) {}
           if (!isVP_(u) && (od.prq || (String(t.rows[i][2]) === 'PRQ' && (od.t !== u.name || od.st === 'ok')))) fail_('الإذن المعتمد يُلغى عن طريق النائب الأكاديمي'); }
         if (u.role !== 'admin' && ['PRQ'].indexOf(String(t.rows[i][2])) < 0) assertNotLocked_(t.rows[i][1], iso_(t.rows[i][3]));
@@ -641,7 +642,7 @@ function sabAdm_() {
 /* ------------------------------------------------------------------ إحصاءات المعلمات إلى «سبع سنابل» */
 // الأنشطة والمبادرات (AC) والزيارات التبادلية (PV) والإنجازات (ACH) تُكتب في قاعدة سبع سنابل (shared/mizan)
 // فتظهر في لوحة الصدارة ونجوم المعلمات تلقائياً بعد كل حفظ في الميزان
-function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH', 'WS', 'EX', 'PA', 'LR', 'TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'PRQ'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
+function sabSoon_(item) { if (item && item !== '*' && ['AC', 'PV', 'ACH', 'WS', 'EX', 'PA', 'LR', 'TA', 'TPV', 'TWS', 'TPA', 'TACH', 'TDS', 'PRQ', 'TEX'].indexOf(item) < 0) return; try { syncSanabil(); } catch (e) {} }
 // k: a نشاط · i مبادرة · v حضور حصة تبادلية · w توظيف جوانب التميز (ورشة قدّمتها أو زيارة استضافتها) · h إنجاز/مشاركة
 //    p تطوير مهني (ورشة حضرتها أو برنامج خارجي) · o تواصل مع أولياء الأمور · r مصادر التعلم والتقنية
 function syncSanabil() {

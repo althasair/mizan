@@ -7,7 +7,7 @@
    4) سجل الاجتماع قد يمثّل عدة اجتماعات (cnt). */
 const DL_CATS = [
   { k: 'act', n: 'الأنشطة والمبادرات والمسابقات', e: '🎯', c: '#B8521A', it: ['AC', 'TA'], sub: r => dlKind(r) },
-  { k: 'pv', n: 'الزيارات التبادلية', e: '🤝', c: '#5B3E8F', it: ['PV', 'TPV'], sub: () => 'زيارة نفّذتها' },
+  { k: 'pv', n: 'الزيارات التبادلية', e: '🤝', c: '#5B3E8F', it: ['PV', 'TPV', 'TEX'], sub: r => r.item === 'TEX' ? 'فعالية تبادلية' : 'زيارة نفّذتها' },
   { k: 'cv', n: 'الحضور الصفي (زيارات لها)', e: '👁️', c: '#3E5C9A', it: ['V', 'OV', 'VPV', 'PRV', 'LVV'], sub: r => ({ V: 'المنسقة', OV: 'القيادة والتوجيه', VPV: 'النائب الأكاديمي', PRV: 'المديرة', LVV: r.d.k === 'pr' ? 'المديرة' : 'النائب الأكاديمي' })[r.item] },
   { k: 'pd', n: 'التطوير المهني', e: '🎓', c: '#0A6F6B', it: ['WS', 'EX', 'TWS'], sub: r => r.item === 'WS' ? 'قدّمت ورشة' : r.item === 'EX' ? 'برنامج خارجي' : r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت ورشة' : r.d.role === 'حضرتُ ورشة خارجية' ? 'برنامج خارجي' : 'حضرت ورشة داخلية' },
   { k: 'ra', n: 'إجراءات رفع التحصيل', e: '📈', c: '#7A1F3D', it: ['RA', 'SFB', 'SAC', 'SRF', 'SAN', 'XCMP'], sub: r => ({ RA: 'سجل المنسقة', SFB: 'تغذية راجعة وتقييم قصير', SAC: 'نشاط وتعلّم أقران', SRF: 'تعزيز الطالبات', SAN: 'تحليل النتائج', XCMP: 'تعويض عن الخروج' })[r.item] },
@@ -47,6 +47,7 @@ const dlWhat = r => { const d = r.d || {};
   if (r.item === 'PRQ') return `${d.kind || 'إذن'} ${typeof prqNum === 'function' ? prqNum(d.h) : d.h} ساعة — ${d.reason || ''}`;
   if (r.item === 'SBA' || r.item === 'SBC') return `${d.cls || ''}${d.sub ? ' — ' + (d.type || 'احتياط') + ' أ. ' + d.sub : ''}${d.abs ? ' — بدلاً عن أ. ' + d.abs : ''}`;
   if (r.item === 'XCMP') return `${d.ex || ''} — ${d.c || ''} (${d.how || ''})`;
+  if (r.item === 'TEX') return `${(d.role || []).join(' و') || 'حاضرة'} في «${d.name || ''}»${d.odept ? ' — ' + d.odept : ''}`;
   if (r.item === 'PV' || r.item === 'TPV') return `زارت أ. ${r.item === 'PV' ? d.t : d.v}`;
   if (['V', 'OV', 'VPV', 'PRV', 'LVV'].includes(r.item)) return [d.ty, d.kj, d.s].filter(Boolean).join(' — ') || 'زيارة صفية';
   const s = d.name || d.title || d.t1 || d.item || d.topic || d.det || d.c || d.b || d.e || d.ty || r.sum || '';

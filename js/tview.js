@@ -5,6 +5,10 @@
 const TPV_WHY = ['حاجة مهنية بتوجيه من المنسقة', 'تطوير ذاتي بمبادرة مني'];
 const TPV_PICK = ['إجادتها تفعيل استراتيجيات التعلم النشط', 'مراعاتها الفروق الفردية وتمايز المهام', 'إجادتها توظيف التكنولوجيا الحديثة', 'تميّزها في التقويم البنائي والتحقق من الفهم', 'تميّز أساليب التعزيز والتحفيز لديها', 'حسن تنظيم المجموعات وتوزيع الأدوار', 'إدارتها الصفية الهادئة وضبط السلوك', 'علاقتها الطيبة بالطالبات ومحبتهن لها', 'صياغتها أسئلة صفية مثيرة للتفكير', 'إدارتها زمن الحصة والانتقال بين الأنشطة', 'دمجها القيم وربط الدرس بالحياة', 'تكاملها مع المواد الأخرى', 'توظيفها مصادر التعلم والوسائل', 'تنميتها مهارات التفكير العليا', 'تقديمها تغذية راجعة فعّالة', 'تميّز تهيئة الدرس وغلقه', 'توصية المنسقة بحضور درسها'];
 const TPV_SAW = ['تهيئة مشوّقة ومرتبطة بالهدف', 'استراتيجية تعلم نشط جديدة', 'أسئلة متدرجة ومثيرة للتفكير', 'توظيف أداة تقنية أو تطبيق إلكتروني', 'أسلوب تعزيز وتحفيز مبتكر', 'تنظيم المجموعات وتوزيع الأدوار بوضوح', 'مهام متمايزة تراعي الفروق الفردية', 'أساليب تقويم بنائي سريعة', 'تغذية راجعة فورية ومحددة', 'إشراك جميع الطالبات في الحصة', 'ربط الدرس بالحياة والقيم', 'إدارة صفية هادئة وفعالة', 'استثمار زمن الحصة', 'غلق الدرس وتلخيصه بمشاركة الطالبات', 'بيئة صفية إيجابية وآمنة'];
+const TEX_KIND = ['فعالية', 'نشاط', 'مسابقة', 'معرض', 'طابور صباحي', 'يوم عالمي أو مناسبة', 'درس مشاهدة', 'ورشة', 'رحلة أو زيارة'];
+const TEX_ROLE = ['حاضرة', 'مشاركة وداعمة', 'منظمة'];
+const TEX_ORG = ['ممتاز', 'جيد جداً', 'جيد إلى حد ما', 'بحاجة إلى تنظيم أكثر'];
+const TEX_GAIN = ['فكرة أطبّقها مع طالباتي', 'أسلوب تنظيم أستفيد منه في فعالياتي', 'أسلوب لإشراك الطالبات وتحفيزهن', 'توظيف التقنية في النشاط', 'التكامل بين المواد', 'تعزيز القيم والهوية الوطنية', 'إشراك أولياء الأمور والمجتمع', 'بناء علاقة مع الزميلات ودعمهن'];
 const TPV_HOW = ['مباشرة', 'بعد تكييفه', 'يصعب تطبيقه'];
 const TPV_HARD = ['لا يخدم طبيعة مادتي', 'لا يناسب مستوى طالباتي أو أعدادهن', 'يحتاج أدوات أو تقنيات غير متوفرة', 'يحتاج زمناً أطول من زمن الحصة'];
 const TWS_ROLE = ['حضرتُ ورشة داخلية', 'حضرتُ ورشة خارجية', 'قدّمتُ لتطوير الزملاء'];
@@ -48,7 +52,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات التبادلية', 'scale', n('TPV'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${xmMine().length ? it('t_xcmp', 'تعويض طالباتي عن الخروج', 'cal', xmPend()) : ''}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات والفعاليات التبادلية', 'scale', n('TPV') + n('TEX'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${xmMine().length ? it('t_xcmp', 'تعويض طالباتي عن الخروج', 'cal', xmPend()) : ''}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
 }
 
 function T_home(el) {
@@ -64,7 +68,7 @@ function T_home(el) {
     ${kpi('إنجازاتي ومشاركاتي', mine('TACH').filter(inCur).length, 'في الفترة', 'var(--navy)')}
     ${kpi('أنشطتي ومبادراتي', mine('TA').filter(inCur).length, 'في الفترة', 'var(--gold)')}
   </div>
-  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات التبادلية', 'سجّلي زيارتكِ لزميلة: لماذا اخترتِها، وما استفدتِه، وما ستطبقينه.'], ['t_prq', 'إذنٌ مُيسَّر', 'اطلبي إذنكِ في دقيقة: الوقت والسبب فقط، ويصلكِ الاعتماد برسالة.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_tas', 'التكليفات والأعباء الوظيفية', 'ما كُلّفتِ به من ملفات ومهام وأعباء: اختاري من القائمة أو اكتبي بعباراتكِ.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
+  <div class="grid g2" style="margin-top:14px">${[['t_pv', 'الزيارات والفعاليات التبادلية', 'سجّلي زيارتكِ لزميلة، أو حضوركِ فعالية لزميلاتكِ ومشاركتكِ فيها: ما استفدتِه، وما ستطبقينه.'], ['t_prq', 'إذنٌ مُيسَّر', 'اطلبي إذنكِ في دقيقة: الوقت والسبب فقط، ويصلكِ الاعتماد برسالة.'], ['t_ws', 'الورش وتطوير الزملاء', 'ما حضرتِه من ورش داخلية وخارجية، وما قدّمتِه لزميلاتكِ.'], ['t_ach', 'الإنجازات والمشاركات', 'مشاركات طالباتكِ ومراكزهن في المسابقات.'], ['t_act', 'الأنشطة والبرامج والمبادرات', 'برنامج أو مشروع أو نشاط أو مبادرة: مدته، وعدد الطالبات، وأثره، والأولوية التي يخدمها.'], ['t_tas', 'التكليفات والأعباء الوظيفية', 'ما كُلّفتِ به من ملفات ومهام وأعباء: اختاري من القائمة أو اكتبي بعباراتكِ.'], ['t_ds', 'الانضباط الوظيفي', 'غياباتكِ واستئذاناتكِ في الشهر، مع حساب ساعات الاستئذان الشخصي.']].map(([v, t, s]) => `<div class="card" style="cursor:pointer" data-go="${v}"><h2>${esc(t)}</h2><p style="color:var(--muted);margin:0">${esc(s)}</p></div>`).join('')}</div>`;
   $$('[data-go]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go; S.edit = 'new'; refresh(); });
   $$('[data-go2]', el).forEach(c => c.onclick = () => { S.view = c.dataset.go2; refresh(); });
 }
@@ -73,6 +77,7 @@ function T_home(el) {
 const TSTD = {
   TPV: { n: '5.1.1 · 5.4.1', d: 'التأمل في الممارسة المهنية، وتطبيق الخبرات المكتسبة من التطوير المهني' },
   TWS: { n: '5.3 · 5.4 · 5.2.1', d: 'مواكبة المستجدات، وإظهار أثر التطوير المهني، والمساهمة في شبكات التعلم المهنية بتمكين الزميلات' },
+  TEX: { n: '5.1.1 · 5.2.1', d: 'تبادل الخبرات مع الزميلات والمشاركة في فعالياتهن ودعمها' },
   TPA: { n: '6.1.1 · 6.1.2', d: 'التواصل بفاعلية مع أولياء الأمور، وإشراكهم في دعم تعلم الطالبة ورفع تحصيلها' },
   TACH: { n: '2.6 · 6.3', d: 'تطوير مهارات التفكير العليا لدى الطالبات، وإعدادهن مواطنات فاعلات محلياً ودولياً' },
   TA: { n: '2.2 · 2.7.1 · 5.5.2', d: 'استخدام أنشطة متنوعة، وإثراء المنهج بأنشطة إضافية، وإظهار المبادرة بأدوار قيادية' },
@@ -161,9 +166,12 @@ function pvCheer(n) {
   if (n === 1) return `<div class="card pv-cheer" style="background:linear-gradient(90deg,#FFF8E6,#fff);border-inline-start:4px solid var(--gold)"><div style="font-size:18px;color:var(--gold)">★</div><p style="margin:4px 0 0;text-align:justify;font-weight:600">${nm}، شكرٌ موصولٌ لكِ؛ فتبادل الخبرات أقصر الطرق إلى إتقان الصنعة.</p>${vpSignLine()}</div>`;
   return '';
 }
+const pvTabs = () => `<div class="tabs" style="margin-bottom:12px"><button class="${S.pvTab !== 'ex' ? 'on' : ''}" data-pvt="v">🏫 الزيارات الصفية التبادلية (${mine('TPV').filter(inCur).length})</button><button class="${S.pvTab === 'ex' ? 'on' : ''}" data-pvt="ex">🎪 تبادل الخبرات في الفعاليات والأنشطة (${mine('TEX').filter(inCur).length})</button></div>`;
+const pvTabBind = el => $$('[data-pvt]', el).forEach(b => b.onclick = () => { S.pvTab = b.dataset.pvt; S.edit = null; show(); });
 function T_pv(el) {
+  if (S.pvTab === 'ex') return T_ex(el);
   T_page(el, {
-    item: 'TPV', fixP: 1, vis: 1, dateLbl: 'تاريخ الزيارة الفعلي (لا تاريخ اليوم إن كانت الزيارة سابقة)', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length) + (() => {
+    item: 'TPV', fixP: 1, vis: 1, dateLbl: 'تاريخ الزيارة الفعلي (لا تاريخ اليوم إن كانت الزيارة سابقة)', title: 'الزيارات التبادلية', one: 'زيارة تبادلية', top: () => pvTabs() + pvCheer(mine('TPV').filter(r => monthOf(r.date) === monthOf(today())).length) + (() => {
       // من زارتني: تسجّلها الزائرة، وتظهر هنا للمعلمة المُزارة تلقائياً دون أن تسجّلها
       const H = S.records.filter(r => r.item === 'TPV' && r.d && r.d.v === S.user.name).sort((a, b) => String(b.date).localeCompare(String(a.date)));
       return `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-size:13px"><b>🤝 زميلات حضرن حصصكِ</b> <span style="color:var(--muted)">— لا تحتاجين إلى تسجيلها؛ الزائرة هي التي تسجّل الزيارة، وتظهر لكِ هنا تلقائياً وتُحسب في سجلّكِ.</span>
@@ -178,12 +186,44 @@ function T_pv(el) {
     head: '<tr><th>التاريخ</th><th>المعلمة المزورة</th><th>القسم</th><th>لماذا اخترتِها</th><th>ما سأطبقه</th><th></th></tr>',
     row: r => `<td>${dmy(r.date)}</td><td><b>${esc(r.d.v)}</b></td><td>${esc(r.d.vdept || '')}</td><td style="font-size:12px">${esc(listTxt(r.d.pick))}</td><td style="font-size:12px">${esc(listTxt(r.d.apply))}${r.d.how ? ` <span class="chip">${esc(r.d.how)}</span>` : ''}</td>`,
     actions: '<button class="btn sec" id="tprint">ورقة الزيارات: حفظ PDF أو طباعة</button>',
-    bind: el => { if ($('#tprint')) $('#tprint').onclick = () => T_pvPaper(el); },
+    bind: el => { pvTabBind(el); if ($('#tprint')) $('#tprint').onclick = () => T_pvPaper(el); },
     bottom: () => { const H = S.records.filter(r => r.item === 'TPV' && r.d.v === S.user.name && inPast(r)).sort((a, b) => a.date < b.date ? -1 : 1);
       return `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>زارتني — توظيف جوانب تميزي</h2>
       <p style="margin:0 0 8px;text-align:justify">نشكر لكِ سعة صدركِ واستضافتكِ للزميلات، توظيفاً لجوانب التميز والمهارات التي تتميزين بها.</p>
       <div class="tbl"><table class="t"><tr><th>الفترة</th><th>التاريخ</th><th>الزائرة</th><th>القسم</th><th>جانب التميز الذي حضرت لأجله</th><th>ما استفادته</th></tr>
       ${H.map(r => `<tr><td style="white-space:nowrap;font-size:12px">${esc(perName(r.date))}</td><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td><td>${esc(r.dept)}</td><td style="font-size:12px">${esc(listTxt(r.d.pick))}</td><td style="font-size:12px">${esc(listTxt(r.d.saw))}</td></tr>`).join('') || '<tr><td colspan="6"><div class="empty">لم تُسجَّل زيارات لكِ هذا العام بعد — تظهر هنا تلقائياً حين تسجّلها الزائرة</div></td></tr>'}</table></div></div>`; },
+  });
+}
+/* تبادل الخبرات في الفعاليات والأنشطة: حضور فعالية زميلة أو المشاركة فيها أو تنظيمها يُحفظ حقاً للمعلمة */
+const texDepts = () => { const L = new Set(); ((S.staffAll && S.staffAll.length) ? S.staffAll : (S.staff || [])).forEach(s => s.dept && L.add(s.dept)); return [...[...L].sort((a, b) => a.localeCompare(b, 'ar')), 'إدارة المدرسة', 'أكثر من قسم']; };
+const texMembers = dp => { const co = {}, L = []; ((S.staffAll && S.staffAll.length) ? S.staffAll : (S.staff || [])).forEach(s => { if (s.dept !== dp || !s.name || L.includes(s.name)) return; L.push(s.name); if (s.role === 'منسقة') co[s.name] = 1; });
+  return L.sort((a, b) => (co[b] ? 1 : 0) - (co[a] ? 1 : 0) || a.localeCompare(b, 'ar')).map(n => co[n] ? n + ' (منسقة القسم)' : n); };
+const texOrgBox = (dp, cur) => { if (!dp) return '<span style="color:var(--muted);font-size:12.5px">اختاري القسم أولاً لتظهر أسماء أعضائه</span>'; cur = cur || [];
+  const M = texMembers(dp), all = cur.includes(REF.ALL_MEMBERS);
+  return `<div class="multi" data-m="org" style="border:1px solid var(--line);border-radius:12px;padding:6px 10px;max-height:190px;overflow:auto;font-size:12.5px;line-height:1.9"><label style="display:block;font-weight:700;color:var(--tiffany-d)"><input type="checkbox" value="${esc(REF.ALL_MEMBERS)}" ${all ? 'checked' : ''} data-texall> ${esc(REF.ALL_MEMBERS)}</label>${M.map(n => `<label style="display:block"><input type="checkbox" value="${esc(n.replace(' (منسقة القسم)', ''))}" ${cur.includes(n.replace(' (منسقة القسم)', '')) ? 'checked' : ''}> ${esc(n)}</label>`).join('')}<input data-mx="org" value="${esc(cur.filter(x => x !== REF.ALL_MEMBERS && !M.map(m => m.replace(' (منسقة القسم)', '')).includes(x)).join('، '))}" placeholder="أخرى (اكتبي)" style="width:100%;margin-top:4px;font-size:12px"></div>`; };
+const texRoles = cur => `<div class="multi" data-m="role" style="display:flex;gap:16px;flex-wrap:wrap;font-size:13.5px">${TEX_ROLE.map(o => `<label><input type="checkbox" value="${esc(o)}" ${(cur || []).includes(o) ? 'checked' : ''}> ${esc(o)}</label>`).join('')}<input type="hidden" data-mx="role" value=""></div><small style="color:var(--muted)">يمكنكِ اختيار أكثر من دور</small>`;
+function T_ex(el) {
+  T_page(el, {
+    item: 'TEX', prioMulti: 1, vis: 1, title: 'تبادل الخبرات في الفعاليات والأنشطة', one: 'حضور فعالية أو نشاط لزميلة', dateLbl: 'تاريخ الفعالية',
+    top: () => pvTabs() + `<div class="card" style="padding:10px 14px;margin-bottom:10px;font-size:13px;line-height:1.9;text-align:justify;background:linear-gradient(90deg,#F1FAF8,#fff);border-inline-start:4px solid var(--tiffany-d)"><b>🎪 حضوركِ فعاليات زميلاتكِ تبادلٌ للخبرات</b> — حين تحضرين فعالية أو نشاطاً لزميلاتكِ، أو تشاركين فيه وتدعمينه، أو تنظّمينه معهن، فأنتِ تتعلّمين وتُثرين. سجّليه هنا ليُحفظ لكِ ويُحسب في سجلّكِ وتقرير قسمكِ.</div>`,
+    note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اكتبي اسم الفعالية ونوعها، واختاري القسم المنظِّم والقائمات عليها، ودوركِ فيها، وتقييمكِ لتنظيمها، وما استفدتِه منها.',
+    blank: { kind: 'فعالية', role: ['حاضرة'], org: [], gain: [] },
+    form: d => fld('اسم الفعالية أو النشاط', `<input data-n="name" value="${esc(d.name || '')}" placeholder="مثل: اليوم العالمي للغة العربية" required>`, 1) +
+      fld('النوع', fCombo('kind', TEX_KIND, d.kind)) +
+      fld('القسم المنظِّم', `<select data-n="odept" id="texDp"><option value="">اختاري القسم…</option>${texDepts().map(x => `<option ${x === d.odept ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>`) +
+      fld('القائمات على الفعالية', `<div id="texOrg">${texOrgBox(d.odept, d.org)}</div>`, 1) +
+      fld('دوري في الفعالية', texRoles(d.role), 1) +
+      fld('تقييمي لتنظيم الفعالية', fRadio('orgq', TEX_ORG, d.orgq), 1) +
+      fld('أوجه الاستفادة من الفعالية', fMulti('gain', TEX_GAIN, d.gain), 1) +
+      fld('الأفكار المستفادة (إن وُجدت)', `<input data-n="idea" value="${esc(d.idea || '')}" placeholder="فكرة أو ممارسة لفتت نظركِ ويمكن تطبيقها">`, 1),
+    check: r => !String(r.name || '').trim() ? 'اكتبي اسم الفعالية' : !r.odept ? 'اختاري القسم المنظِّم' : !(r.role || []).length ? 'اختاري دوركِ في الفعالية' : '',
+    sum: r => 'فعالية تبادلية: ' + r.name,
+    head: '<tr><th>التاريخ</th><th>الفعالية</th><th>القسم المنظِّم</th><th>دوري</th><th>التنظيم</th><th>ما استفدتُه</th><th></th></tr>',
+    row: r => `<td>${dmy(r.date)}</td><td><b>${esc(r.d.name || '')}</b>${r.d.kind ? ` <span class="chip" style="font-size:11px">${esc(r.d.kind)}</span>` : ''}</td><td style="font-size:12px">${esc(r.d.odept || '')}${(r.d.org || []).length ? `<div style="color:var(--muted)">${esc(listTxt(r.d.org))}</div>` : ''}</td><td style="font-size:12px">${esc(listTxt(r.d.role))}</td><td style="font-size:12px">${esc(r.d.orgq || '')}</td><td style="font-size:12px">${esc(listTxt(r.d.gain))}${r.d.idea ? `<div>💡 ${esc(r.d.idea)}</div>` : ''}</td>`,
+    bind: (el, d) => { pvTabBind(el);
+      const dp = $('#texDp', el); if (dp) dp.onchange = () => { $('#texOrg', el).innerHTML = texOrgBox(dp.value, []); bindAll(); };
+      const bindAll = () => { const a = $('[data-texall]', el); if (a) a.onchange = () => { if (a.checked) $$('#texOrg input[type=checkbox]', el).forEach(c => { if (c !== a) c.checked = false; }); }; $$('#texOrg input[type=checkbox]', el).forEach(c => { if (!c.hasAttribute('data-texall')) c.addEventListener('change', () => { if (c.checked && a) a.checked = false; }); }); };
+      bindAll(); },
   });
 }
 async function T_pvPaper(el) {

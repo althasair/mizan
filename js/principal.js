@@ -110,7 +110,7 @@ function A_dash(el) {
   const mx = Math.max(1, ...deptCov.map(x => x[1]));
   el.innerHTML = `<div class="note">لوحة شاملة لكل ما في المنصة خلال العام الأكاديمي ${REF.YEAR || ''}، وتتحدث تلقائيًا مع كل تسجيل.</div>
   <div class="grid g4">
-    ${tile(nIni, 'المبادرات', '#62102A')}${tile(nAct, 'الأنشطة', '#B8903A')}${tile(by('TPV').length, 'الزيارات التبادلية', '#0E8C88')}${tile(wsKeys.size, 'الورش والتطوير (دون تكرار)', '#1F3A5F')}
+    ${tile(nIni, 'المبادرات', '#62102A')}${tile(nAct, 'الأنشطة', '#B8903A')}${tile(by('TPV').length + by('TEX').length, 'الزيارات والفعاليات التبادلية', '#0E8C88')}${tile(wsKeys.size, 'الورش والتطوير (دون تكرار)', '#1F3A5F')}
     ${tile(by('TPA').length, 'تواصل مع أولياء الأمور', '#7A4FA3')}${tile(achKeys.size, 'الإنجازات والمشاركات (دون تكرار)', '#2E7D52')}${tile(by('MT').reduce((a, r) => a + (+r.d.cnt > 1 ? +r.d.cnt : 1), 0), 'الاجتماعات الأكاديمية', '#8A6A2E')}${tile(by('V').length, 'حضور المنسقات الصفي', '#5A6B7D')}
   </div>
   <div class="grid g4" style="margin-top:14px">

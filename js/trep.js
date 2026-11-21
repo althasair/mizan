@@ -34,7 +34,7 @@ function trData(name, rng) {
   const inM = r => { const d = String(r.date || '').slice(0, 10); return d >= rng.from && d <= rng.to; };
   const own = it => S.records.filter(r => r.item === it && r.d && r.d.t === name && inM(r));
   const D = {
-    ta: own('TA'), pv: own('TPV'), ws: own('TWS'), pa: own('TPA'), ach: own('TACH'), tas: own('TAS'), ds: own('TDS'),
+    ta: own('TA'), pv: own('TPV'), tex: own('TEX'), ws: own('TWS'), pa: own('TPA'), ach: own('TACH'), tas: own('TAS'), ds: own('TDS'),
     host: S.records.filter(r => r.item === 'TPV' && r.d && r.d.v === name && inM(r)),
     sen: S.records.filter(r => r.item === 'SEN' && r.d && (r.d.t === name || r.d.teacher === name) && inM(r)),
     is: S.records.filter(r => r.item === 'IS' && r.d && r.d.t === name && inM(r)),
@@ -46,7 +46,7 @@ function trData(name, rng) {
   };
   D.paa = D.ta.filter(isPaAct);   // تُحسب مع الأنشطة، وتظهر أيضاً في الشراكة مع أولياء الأمور
   D.ini = D.ta.filter(r => r.d.kind === 'مبادرة').length + D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
-  D.work = D.ta.length + D.pv.length + D.ws.length + D.pa.length + D.ach.length + D.tas.length;
+  D.work = D.ta.length + D.pv.length + D.tex.length + D.ws.length + D.pa.length + D.ach.length + D.tas.length;
   D.cls = D.ini >= 1 && D.work >= 5 ? 'مبادرة' : D.work >= 3 ? 'مجتهدة' : 'ضعيف';
   return D;
 }
@@ -56,7 +56,7 @@ const TR_DOM = [[1, 'التخطيط لتطوير أداء وتحصيل الطل�
 function trStd(D) {
   const add = (m, ind, n, what) => { if (!n) return; ind.split(' · ').forEach(x => { const k = x.trim(); m[k] = m[k] || { n: 0, w: {} }; m[k].n += n; m[k].w[what] = n; }); };
   const m = {}, T = typeof TSTD !== 'undefined' ? TSTD : {};
-  [['TA', D.ta, 'الأنشطة والمبادرات'], ['TPV', D.pv, 'الزيارات التبادلية'], ['TWS', D.ws, 'الورش والتطوير'], ['TPA', D.pa, 'التواصل مع أولياء الأمور'], ['TACH', D.ach, 'الإنجازات والمشاركات'], ['TAS', D.tas, 'التكليفات'], ['TDS', D.ds, 'الانضباط الوظيفي']].forEach(([k, L, w]) => T[k] && add(m, T[k].n, L.length, w));
+  [['TA', D.ta, 'الأنشطة والمبادرات'], ['TPV', D.pv, 'الزيارات التبادلية'], ['TEX', D.tex, 'تبادل الخبرات في الفعاليات والأنشطة'], ['TWS', D.ws, 'الورش والتطوير'], ['TPA', D.pa, 'التواصل مع أولياء الأمور'], ['TACH', D.ach, 'الإنجازات والمشاركات'], ['TAS', D.tas, 'التكليفات'], ['TDS', D.ds, 'الانضباط الوظيفي']].forEach(([k, L, w]) => T[k] && add(m, T[k].n, L.length, w));
   if (T.TPA) add(m, T.TPA.n, D.paa.length, 'أنشطة الشراكة مع أولياء الأمور');
   add(m, '4.3.2 · 2.3', D.sen.length, 'الحصص الإثرائية'); add(m, '3.2.3 · 3.1', D.rf.length, 'شهادات الطالبات');
   return TR_DOM.map(([n, t, w]) => { const ks = Object.keys(m).filter(k => k.split('.')[0] === String(n)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
@@ -67,7 +67,8 @@ function trBody(name, rng, D) {
   const sec = (h, lines, empty) => `<tr><td class="k">${h}</td><td class="j">${lines.length ? lines.map(x => `<div>• ${esc(x)}</div>`).join('') : `<span style="color:#888">${empty}</span>`}</td></tr>`;
   const taL = D.ta.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}»${dt(r)}` + (trList(r.d.ps).length ? ` — يخدم: ${trList(r.d.ps).map(p => p.replace(/^الأولوية (\d): .*/, 'الأولوية $1')).join('، ')}` : ''));
   const pvL = D.pv.map(r => `زارت أ. ${r.d.v}${dt(r)}` + (trList(r.d.saw).length ? `، واستفادت: ${trList(r.d.saw).join('، ')}` : '') + (trList(r.d.apply).length ? `، وستطبّق: ${trList(r.d.apply).join('، ')}` : ''))
-    .concat(D.host.map(r => `استضافت زيارة من أ. ${r.d.t}${dt(r)}، توظيفاً لجوانب تميّزها`));
+    .concat(D.host.map(r => `استضافت زيارة من أ. ${r.d.t}${dt(r)}، توظيفاً لجوانب تميّزها`))
+    .concat(D.tex.map(r => `${trList(r.d.role).join(' و') || 'حاضرة'} في ${r.d.kind || 'فعالية'} «${String(r.d.name || '').trim()}»${r.d.odept ? ' لقسم ' + r.d.odept : ''}${dt(r)}` + (trList(r.d.gain).length ? `، واستفادت: ${trList(r.d.gain).join('، ')}` : '') + (r.d.idea ? `، وفكرة للتطبيق: ${r.d.idea}` : '')));
   const wsL = D.ws.map(r => `${r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت لزميلاتها' : r.d.role === 'حضرتُ ورشة خارجية' ? 'حضرت ورشة خارجية' : 'حضرت ورشة داخلية'}: «${String(r.d.title || '').trim()}»${dt(r)}`);
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const paL = (D.pa.length ? [`تواصلت مع أولياء أمور (${nPA}) من الطالبات، ومن أغراض التواصل: ${[...new Set(D.pa.map(r => r.d.topic || r.d.why).filter(Boolean))].join('، ') || 'متابعة أكاديمية'}`] : [])
@@ -193,7 +194,7 @@ function trEval(name, rng, D) {
     if (n === 2) { const c = D.ta.length + D.sen.length; ev.push(`${D.ta.length} نشاطاً وبرنامجاً`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(2), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
     if (n === 3) { ev.push(`${D.rf.length} شهادة تعزيز للطالبات`); o = mix(vAvg(3), wk(D.rf.length, mo), 0.85); }
     if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
-    if (n === 5) { const c = D.pv.length + D.host.length + D.ws.length + D.ex.length; ev.push(`${D.pv.length + D.host.length} زيارة تبادلية`, `${D.ws.length + D.ex.length} ورشة وبرنامج`, presWS ? `قدّمت ${presWS} لزميلاتها` : ''); o = { p: Math.min(100, wk(c, mo * 1.5) + (presWS ? 5 : 0)), src: 'الأعمال الموثّقة' }; }
+    if (n === 5) { const c = D.pv.length + D.host.length + D.ws.length + D.ex.length + D.tex.length; ev.push(`${D.pv.length + D.host.length} زيارة تبادلية`, D.tex.length ? `${D.tex.length} فعالية تبادلية` : '', `${D.ws.length + D.ex.length} ورشة وبرنامج`, presWS ? `قدّمت ${presWS} لزميلاتها` : ''); o = { p: Math.min(100, wk(c, mo * 1.5) + (presWS ? 5 : 0)), src: 'الأعمال الموثّقة' }; }
     if (n === 6) { ev.push(nPA ? `تواصل مع أولياء أمور ${nPA} طالبة` : '', D.paa.length ? `${D.paa.length} من أنشطة الشراكة مع أولياء الأمور` : '', D.ach.length ? `${D.ach.length} إنجاز ومشاركة` : ''); o = { p: wk(D.pa.length + D.paa.length + D.ach.length, mo * 2), src: 'الأعمال الموثّقة' }; }
     if (n === 7) { ev.push(`${D.tas.length} تكليفاً`, `${D.ini} مبادرة`, D.ds.length ? `غياب غير مرضي: ${abs}` : ''); o = { p: Math.max(50, Math.min(100, 85 + 15 * Math.min(1, (D.tas.length + D.ini) / mo) - 4 * abs)), src: 'التكليفات والمبادرات والانضباط' }; }
     const key = name + '|' + rng.from + '|' + rng.to + '|' + n;
