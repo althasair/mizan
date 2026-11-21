@@ -8,25 +8,24 @@
 const MYWS = [
   { id: 'sandooq', acc: '#E07A2E', title: 'الصندوق الأسود', sub: 'حين يتكلّم التقرير', theme: 'التقارير التأملية منهجٌ قيادي لتطوير الأداء', audience: 'القيادة الوسطى (المنسقات)', date: 'الاثنين 16 نوفمبر 2026', month: 'نوفمبر 2026', status: 'done',
     cover: 'ws/sandooq/cover.jpg', stats: [['14', 'دعوة'], ['13', 'حاضرة'], ['11', 'نشاطًا'], ['98%', 'التقييم']],
-    parts: {
-      deck: [{ t: 'العرض التقديمي', d: 'شرائح الورشة كاملة (61 شريحة) بالقصص والأنشطة.', file: 'ws/sandooq/deck.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#screen', liveT: 'العرض التفاعلي' }],
-      invite: [{ t: 'بطاقة الدعوة', d: 'بطاقة صعود إلكترونية اختارت منها كل قائدة اسمها وأكّدت رغبتها.', file: 'ws/sandooq/invite.png', live: 'https://sandooq.alshaimaa-school.com/invite.html?view', liveT: 'الدعوة التفاعلية' },
-        { t: 'كشف تسجيل الرغبة', ph: 'a', d: 'من أكّدت رغبتها في الحضور ووقت التأكيد: 12 من 14.', file: 'ws/sandooq/rsvp.pdf' }],
-      eval: [{ t: 'نموذج التقييم', ph: 'b', d: 'النموذج الإلكتروني الذي عبّأته القائدات: 6 عبارات بمقياس خماسي و3 أسئلة مفتوحة، وتتحول استجاباته إلى «نتائج التقييم».', file: 'ws/sandooq/eval-form.pdf', live: 'https://sandooq.alshaimaa-school.com/evaluation.html?view', liveT: 'النموذج الإلكتروني' },
-        { t: 'نتائج التقييم', ph: 'a', d: 'المؤشرات والدلالات ورسائل القائدات للمدرّبة.', file: 'ws/sandooq/eval-results.pdf', live: 'https://sandooq.alshaimaa-school.com/evaluation.html#list', liveT: 'النتائج المباشرة' }],
-      att: [{ t: 'كشف الحضور', ph: 'b', d: 'الكشف الفارغ بأسماء المدعوّات الـ 14 قبل الورشة.', file: 'ws/sandooq/att-before.pdf' },
-        { t: 'كشف الحضور', ph: 'a', d: 'من حضرت ووقت تسجيلها بمسح رمز QR: 13 حاضرة.', file: 'ws/sandooq/att-after.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#join', liveT: 'تجربة تسجيل الحضور' }]
-    } },
+    live: [{ ic: '🖥️', t: 'العرض', d: 'شرائح الورشة (61 شريحة) بالقصص والمحطات', url: 'https://sandooq.alshaimaa-school.com/deck.html' },
+      { ic: '🎫', t: 'الدعوة', d: 'بطاقة الصعود التي أكّدت منها القائدات رغبتهن', url: 'https://sandooq.alshaimaa-school.com/invite.html?view' },
+      { ic: '📋', t: 'الكشف', d: 'تسجيل الحضور بمسح رمز QR', url: 'https://sandooq.alshaimaa-school.com/?view#join' },
+      { ic: '🎯', t: 'الأنشطة', d: 'منصة التفاعل: الأسئلة والإجابات على الشاشة', url: 'https://sandooq.alshaimaa-school.com/?view#screen' },
+      { ic: '⭐', t: 'التقييم', d: 'نموذج التقييم الإلكتروني ونتائجه المباشرة', url: 'https://sandooq.alshaimaa-school.com/evaluation.html?view' }],
+    docs: [{ t: 'العرض التقديمي', b: { file: 'ws/sandooq/deck.pdf', d: 'نسخة PDF من الشرائح' } },
+      { t: 'الدعوة', b: { file: 'ws/sandooq/invite.png', d: 'بطاقة الدعوة' }, a: { file: 'ws/sandooq/rsvp.pdf', d: 'كشف تسجيل الرغبة: 12 من 14' } },
+      { t: 'كشف الحضور', b: { file: 'ws/sandooq/att-before.pdf', d: 'الكشف بأسماء المدعوّات الـ 14' }, a: { file: 'ws/sandooq/att-after.pdf', d: 'الحاضرات ووقت تسجيلهن: 13 حاضرة' } },
+      { t: 'التقييم', b: { file: 'ws/sandooq/eval-form.pdf', d: 'نموذج التقييم: 6 عبارات و3 أسئلة' }, a: { file: 'ws/sandooq/eval-results.pdf', d: 'نتائج التقييم ودلالاتها' } }] },
   { id: 'katalog', acc: '#C2185B', title: 'بنات بدون كتالوج', sub: 'طالبة الثانوية: أنماط ومفاتيح', theme: 'خصائص المراهقة وشخصيات الصف… وكيف نكسبها في المدرسة والبيت', audience: 'المعلمات والمنسقات', date: 'الاثنين 23 نوفمبر 2026', month: 'نوفمبر 2026', status: 'soon',
     cover: 'ws/katalog/cover.jpg', stats: [['70', 'معلمة'], ['23', 'نمطًا'], ['6', 'مجموعات'], ['4', 'جولات']],
-    parts: {
-      deck: [{ t: 'العرض التقديمي', d: 'العرض التفاعلي: الأنماط والمفاتيح ولعبة «أنا في عمرهم» وخريطة صفّي.', live: 'https://katalog.alshaimaa-school.com/warsha.html?view', liveT: 'العرض التفاعلي' }],
-      invite: [],
-      eval: [{ t: 'نموذج التقييم', ph: 'b', d: 'النموذج الإلكتروني الذي تعبّئه المعلمات بعد الورشة: 6 عبارات و3 أسئلة مفتوحة، وتتحول استجاباته إلى «نتائج التقييم».', file: 'ws/katalog/eval-form.pdf', live: 'https://katalog.alshaimaa-school.com/warsha.html?view#eval', liveT: 'النموذج الإلكتروني' },
-        { t: 'نتائج التقييم', ph: 'a', d: 'تُضاف بعد تنفيذ الورشة.', pending: 1 }],
-      att: [{ t: 'كشف الحضور', ph: 'b', d: 'الكشف الفارغ بأسماء المعلمات الـ 70 مرتبات حسب القسم، والمنسقة أولًا.', file: 'ws/katalog/att-before.pdf' },
-        { t: 'كشف الحضور', ph: 'a', d: 'يُضاف بعد تنفيذ الورشة.', pending: 1 }]
-    } }
+    live: [{ ic: '🖥️', t: 'العرض', d: 'العرض التفاعلي: الأنماط والمفاتيح', url: 'https://katalog.alshaimaa-school.com/warsha.html?view' },
+      { ic: '📋', t: 'الكشف', d: 'تسجيل حضور المعلمات من الجوال', url: 'https://katalog.alshaimaa-school.com/warsha.html?view#join' },
+      { ic: '🎯', t: 'الأنشطة', d: 'لعبة «أنا في عمرهم» وأدوات المعلمة', url: 'https://katalog.alshaimaa-school.com/#game' },
+      { ic: '🗺️', t: 'خريطة صفّي', d: 'خريطة طالبات كل معلمة حسب الأنماط', url: 'https://katalog.alshaimaa-school.com/map.html' },
+      { ic: '⭐', t: 'التقييم', d: 'نموذج التقييم الإلكتروني', url: 'https://katalog.alshaimaa-school.com/warsha.html?view#eval' }],
+    docs: [{ t: 'كشف الحضور', b: { file: 'ws/katalog/att-before.pdf', d: 'الكشف بأسماء المعلمات الـ 70 حسب القسم' }, a: null },
+      { t: 'التقييم', b: { file: 'ws/katalog/eval-form.pdf', d: 'نموذج التقييم: 6 عبارات و3 أسئلة' }, a: null }] }
 ];
 const MYWS_TABS = [['deck', '🖥️ العرض'], ['invite', '🎫 الدعوة'], ['eval', '⭐ التقييم'], ['att', '📋 الكشف']];
 const MYWS_CSS = `
@@ -85,6 +84,16 @@ const MYWS_CSS = `
 .mw-c .mw-go{margin:0;background:var(--acc)}
 .mw-d .mw-di h2{color:var(--acc)}.mw-d .mw-tb button.on{background:var(--acc);border-color:var(--acc)}.mw-d .mw-k div{border-bottom:3px solid var(--acc)}
 .mw-k div{border-bottom:3px solid var(--acc,#1B2560)}
+.mw-sh{display:flex;align-items:center;gap:8px;margin:18px 16px 10px;font-weight:700;font-size:16px;color:var(--nv)}.mw-sh span{width:26px;height:26px;border-radius:50%;background:var(--acc);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:13px}.mw-sh small{font-weight:400;color:#8a8f99;font-size:12px}
+.mw-lv{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px;padding:0 16px}
+.mw-l{font-family:inherit;text-align:center;cursor:pointer;background:#fff;border:1.5px solid #ece6d8;border-radius:16px;padding:14px 10px;display:flex;flex-direction:column;align-items:center;gap:4px;transition:all .15s}
+.mw-l:hover{border-color:var(--acc);transform:translateY(-2px);box-shadow:0 8px 18px rgba(0,0,0,.08)}.mw-l i{font-style:normal;font-size:28px;width:52px;height:52px;border-radius:50%;background:color-mix(in srgb,var(--acc) 12%,#fff);display:flex;align-items:center;justify-content:center}.mw-l b{color:var(--acc);font-size:15px}.mw-l small{color:#777;font-size:11.5px;line-height:1.6}
+.mw-dc{margin:0 16px 18px;border:1px solid #ece6d8;border-radius:14px;overflow:hidden}
+.mw-dr{display:grid;grid-template-columns:130px 1fr 1fr;border-top:1px solid #f0ebe0}.mw-dr:first-child{border-top:none}.mw-dr>div{padding:10px 12px}
+.mw-dr.hd{background:#faf8f3;font-size:12.5px;color:#666;font-weight:700}.mw-dr .t{font-weight:700;color:var(--nv);display:flex;align-items:center;background:#fcfbf8}
+.mw-dr .c p{margin:0 0 6px;font-size:12.5px;color:#555}.mw-dr .c.a{background:#f3f9f5}.mw-dr .c.off{opacity:.6}
+@media(max-width:760px){.mw-dr{grid-template-columns:1fr}}
+
 @media(max-width:760px){.mw-dh{grid-template-columns:1fr}.mw-its{grid-template-columns:1fr}.mw-grid{grid-template-columns:1fr}}`;
 const mwStat = w => w.status === 'done' ? '✓ نُفّذت' : '⏳ قادمة';
 function A_myws(el) {
@@ -103,7 +112,7 @@ function A_myws(el) {
     $$('[data-mo]', el).forEach(c => c.onclick = () => { S.mwOpen = c.dataset.mo; A_myws(el); });
     return;
   }
-  const tabs = MYWS_TABS.filter(([k]) => (w.parts[k] || []).length); const cur = (S.mwTab || {})[w.id] || tabs[0][0];
+  const fBtns = (x, lbl) => `<div class="mw-bt"><button data-mv="${esc(x.file)}" data-mt="${esc(w.title + ' · ' + lbl)}">👁️ عرض</button><a class="l" href="${esc(x.file)}" download="${esc(w.title + ' - ' + lbl + x.file.slice(x.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(x.file)}">🖨️ طباعة</button></div>`;
   el.innerHTML = `<style>${MYWS_CSS}</style><div class="mw">
     <div class="row" style="margin-bottom:12px"><button class="btn sec" id="mwB">→ كل الورش</button></div>
     <div class="mw-d" style="--acc:${w.acc || '#1B2560'};border-top:5px solid var(--acc)"><div class="mw-dh"><div class="mw-cv"><img src="${w.cover}" alt=""></div>
@@ -111,11 +120,15 @@ function A_myws(el) {
         <h2>${esc(w.title)}</h2><div style="color:var(--tq);font-size:15px">${esc(w.sub)}</div>
         <div class="mw-mt"><span>🎯 ${esc(w.theme)}</span><span>👥 ${esc(w.audience)}</span><span>🗓️ ${esc(w.date)}</span></div>
         <div class="mw-k">${w.stats.map(s => `<div><b>${esc(s[0])}</b><small>${esc(s[1])}</small></div>`).join('')}</div></div></div>
-      <div class="mw-tb">${tabs.map(([k, t]) => `<button class="${k === cur ? 'on' : ''}" data-mk="${k}">${t}</button>`).join('')}</div>
-      <div class="mw-its">${w.parts[cur].map(it => `<div class="mw-it ${it.pending ? 'off' : ''}"><h4>${esc(it.t)}${it.ph ? `<span class="mw-ph ${it.ph}">${it.ph === 'b' ? 'قبل الاستجابة' : 'بعد الاستجابة'}</span>` : ''}</h4><p>${esc(it.d)}</p>${it.pending ? '<span class="mw-wt">⏳ بعد تنفيذ الورشة</span>' : ''}
-        <div class="mw-bt">${cur === 'eval' && it.live ? `<button data-mv="${esc(it.live)}" data-mt="${esc(w.title + ' · ' + it.liveT)}">✨ ${esc(it.liveT)}</button>` : ''}${it.file ? `<button ${cur === 'eval' && it.live ? 'class="l" ' : ''}data-mv="${esc(it.file)}" data-mt="${esc(w.title + ' · ' + it.t)}">👁️ ${cur === 'eval' && it.live ? 'النسخة المطبوعة' : 'عرض'}</button><a class="l" href="${esc(it.file)}" download="${esc(w.title + ' - ' + it.t + (it.ph === 'a' ? ' (بعد)' : it.ph === 'b' ? ' (قبل)' : '') + it.file.slice(it.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(it.file)}">🖨️ طباعة</button>` : ''}${it.live && cur !== 'eval' ? `<a class="l" href="${esc(it.live)}" target="_blank" rel="noopener">↗ ${esc(it.liveT)}</a>` : ''}</div></div>`).join('')}</div></div></div>`;
+      <div class="mw-sh"><span>1</span>العروض التفاعلية للورشة</div>
+      <div class="mw-lv">${w.live.map(x => `<button class="mw-l" data-mv="${esc(x.url)}" data-mt="${esc(w.title + ' · ' + x.t)}"><i>${x.ic}</i><b>${esc(x.t)}</b><small>${esc(x.d)}</small></button>`).join('')}</div>
+      <div class="mw-sh"><span>2</span>النماذج والاستجابات <small>على ترويسة المدرسة</small></div>
+      <div class="mw-dc"><div class="mw-dr hd"><div></div><div>قبل الاستجابة (النموذج)</div><div>بعد الاستجابة</div></div>
+      ${w.docs.map(x => `<div class="mw-dr"><div class="t">${esc(x.t)}</div>
+        <div class="c"><p>${esc(x.b.d)}</p>${fBtns(x.b, x.t)}</div>
+        <div class="c ${x.a ? 'a' : x.a === null ? 'off' : ''}">${x.a ? `<p>${esc(x.a.d)}</p>${fBtns(x.a, x.t + ' (بعد)')}` : x.a === null ? '<p class="mw-wt">⏳ تُضاف بعد تنفيذ الورشة</p>' : '<p style="color:#aaa">—</p>'}</div></div>`).join('')}</div>
+    </div></div>`;
   $('#mwB', el).onclick = () => { S.mwOpen = null; A_myws(el); };
-  $$('[data-mk]', el).forEach(b => b.onclick = () => { S.mwTab = Object.assign({}, S.mwTab, { [w.id]: b.dataset.mk }); A_myws(el); });
   $$('[data-mv]', el).forEach(b => b.onclick = () => mwOpen(b.dataset.mv, b.dataset.mt));
   $$('[data-mp]', el).forEach(b => b.onclick = () => mwPrint(b.dataset.mp));
 }
