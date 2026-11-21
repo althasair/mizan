@@ -175,7 +175,7 @@ function listRecords_(u) {
   const lead = u.role === 'admin' ? [] : all.filter(x => (x.item === 'VPV' || x.item === 'PRV') && u.dept.indexOf(x.dept) >= 0).map(x => ({
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
     d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
-  return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(sabAdm_()).concat(indibat_())
+  return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(sabAdm_()).concat(sabRQ_()).concat(indibat_())
     .filter(x => u.role === 'admin' || (x.item === 'CF' && u.role === 'coord' && x.d && x.d.ok && x.d.tk === u.id) || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
 }
@@ -636,6 +636,31 @@ function sabAdm_() {
       out.push({ id: id, dept: String(t[0]), item: it, date: date, sum: 'من سبع سنابل (النماذج)', d: d, by: 'سبع سنابل', at: '', up: '' }); });
   } catch (e) { return []; }
   try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 300); c.put('sabAdmN', String(k), 300); } } catch (e) {}
+  return out;
+}
+
+/* قراءة نتائج القسم التي اعتمدتها المنسقة في سبع سنابل: مؤشرات مختصرة ومقترحات الفترة القادمة تنعكس في التقرير الشهري (التحصيل الأكاديمي) */
+function sabRQ_() {
+  const c = CacheService.getScriptCache(); const hit = c.get('sabRQ1'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  const out = [];
+  try {
+    const tok = sabAccess_(); if (!tok) return [];
+    const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
+      method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
+      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'reads' }], where: { fieldFilter: { field: { fieldPath: 'capp' }, op: 'EQUAL', value: { booleanValue: true } } } } }) });
+    const T = rows_(SH.teachers).rows.filter(x => x[1]);
+    const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
+    const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
+    JSON.parse(r.getContentText()).forEach(x => {
+      if (!x.document) return; const f = x.document.fields || {}; const sv = k => f[k] && f[k].stringValue != null ? f[k].stringValue : '';
+      if (sv('role') !== 'coord' || !sv('mjs')) return;
+      let m = {}; try { m = JSON.parse(sv('mjs')); } catch (e) { return; }
+      const t = tRow(sv('name')); const dept = t ? String(t[0]) : (depts[normAr_(sv('dept'))] || sv('dept'));
+      out.push({ id: 'sabRQ_' + x.document.name.split('/').pop(), dept: dept, item: 'SRQ', date: String(sv('cappAt') || sv('at')).slice(0, 10), sum: 'قراءة نتائج القسم — سبع سنابل',
+        d: { t: t ? String(t[1]) : sv('name'), per: m.per, pn: m.pn || '', rows: m.rows || [], so: m.so || [], src: 'sab3' }, by: 'سبع سنابل', at: sv('cappAt'), up: '' });
+    });
+  } catch (e) { return []; }
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabRQ1', txt, 120);
   return out;
 }
 

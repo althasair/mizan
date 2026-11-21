@@ -398,7 +398,11 @@ async function C_report(el, deptArg) {
 }
 function upsertRep(r) { const i = S.reports.findIndex(x => x.dept === r.dept && x.period === r.period); if (i >= 0) S.reports[i] = r; else S.reports.push(r); }
 /* جدول الزيارات التبادلية داخل خانة التقرير */
-function tLines(o) { return (o.head ? `<div class="tlh">${esc(o.head)}</div>` : '') + o.lines.map(l => `<div class="tl"><span class="tls">${'★'.repeat(l.st)}</span>${esc(l.tx)}</div>`).join(''); }
+function tLines(o) { return (o.head ? `<div class="tlh">${esc(o.head)}</div>` : '') + o.lines.map(l => `<div class="tl">${l.st === 0 ? '• ' : `<span class="tls">${'★'.repeat(l.st)}</span>`}${esc(l.tx)}</div>`).join(''); }
+/* مؤشرات النتائج المختصرة من قراءة القسم المعتمدة في سبع سنابل */
+function resTbl(o) { const LV = { 10: 'العاشر', 11: 'الحادي عشر', 12: 'الثاني عشر' }; const L = o.res.slice().sort((a, b) => (+a.l - +b.l) || String(a.sub).localeCompare(String(b.sub), 'ar')); const one = new Set(L.map(r => r.sub)).size === 1;
+  const pc = x => `<small>(${Math.round(x * 10) / 10}%)</small>`;
+  return `<div class="tlh">نتائج ${esc(o.pn || 'الفترة')}:</div><table class="ptb rtb"><thead><tr><th>${one ? 'المستوى' : 'المادة — المستوى'}</th><th>عدد الطالبات</th><th>التحصيل</th><th>الراسبات</th><th>دون 70%</th><th>70% فأعلى</th><th>90% فأعلى</th></tr></thead><tbody>${L.map(r => `<tr><td>${one ? '' : esc(r.sub) + ' — '}${esc(LV[r.l] || r.l)}</td><td>${r.n}</td><td><b>${Math.round(r.ach * 10) / 10}%</b></td><td>${r.nf}</td><td>${r.n - r.n70}</td><td>${r.n70} ${pc(r.a70)}</td><td>${r.n90} ${pc(r.a90)}</td></tr>`).join('')}</tbody></table><div class="rtn">للاطلاع على النتائج بالتفصيل، يُرجى الرجوع إلى قراءة النتائج الخاصة بالقسم.</div>`; }
 function peerTbl(L) {
   return `<table class="ptb"><thead><tr><th>م</th><th>المعلمة الزائرة</th><th>المعلمة المُزارة</th><th>التاريخ</th><th>سبب الاختيار (تميّزها في)</th><th>ما استفادته</th><th>ما ستطبّقه</th></tr></thead><tbody>${L.map((r, i) => `<tr><td>${i + 1}</td><td>أ. ${esc(r.t)}</td><td>أ. ${esc(r.v)}${r.vd ? `<br><small>(${esc(r.vd)})</small>` : ''}</td><td style="white-space:nowrap">${r.date ? dm(r.date) : ''}</td><td>${esc(r.pick) || '—'}</td><td>${esc(r.saw) || '—'}</td><td>${esc(r.apply) || '—'}</td></tr>`).join('')}</tbody></table>`;
 }
@@ -413,7 +417,7 @@ function paperHTML(R, rp, sig, csig) {
         if (first) { h += `<td class="m" rowspan="${total}"${sub === null ? ' colspan="2"' : ''}>${esc(main)}</td>`; first = false; }
         if (i === 0 && sub !== null) h += `<td class="s${small ? ' small' : ''}" rowspan="${texts.length}">${esc(sub)}</td>`;
         const emp = typeof t === 'string' && (!t.trim() || /^(لم |لا توجد|لا )/.test(t.trim()));
-        h += `<td class="x${emp ? ' emp' : ''}">${t && t.lines ? tLines(t) : t && t.peer ? peerTbl(t.peer) : esc(t)}</td></tr>`;
+        h += `<td class="x${emp ? ' emp' : ''}">${t && t.lines ? tLines(t) : t && t.peer ? peerTbl(t.peer) : t && t.res ? resTbl(t) : esc(t)}</td></tr>`;
       });
     });
     return h;

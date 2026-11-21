@@ -52,6 +52,9 @@ function buildReport(ctx) {
   T.as_ach = sec(ASa, r => SEC.AS.tx(d(r)), 'لم تُسجَّل اختبارات تحصيلية خلال الفترة.', 'الاختبارات التحصيلية: ');
   const ASn = AS.filter(r => SEC.AS.an(d(r)));
   T.as_anal = sec(ASn, r => SEC.AS.an(d(r)), 'لم يُسجَّل تحليل للنتائج خلال الفترة.', 'تمت قراءة النتائج وتحليلها: ');
+  /* قراءة نتائج القسم المعتمدة من المنسقة في سبع سنابل: مؤشرات مختصرة + مقترحات الفترة القادمة */
+  { const RQ = ctx.recs.filter(r => r.dept === dept && r.item === 'SRQ' && r.d && (r.d.rows || []).length && inP(String(r.date).slice(0, 10), P)).sort((a, b) => (+b.d.per || 0) - (+a.d.per || 0) || String(b.at).localeCompare(String(a.at)));
+    if (RQ.length) { const q = RQ[0].d; T.as_res = { res: q.rows, pn: q.pn }; T.as_next = (q.so || []).length ? { lines: q.so.map(x => ({ st: 0, tx: String(x).replace(/[.،؛\s]+$/, '') + '.' })) } : null; } }
   /* تحليل النتائج الذي سجّلته المعلمات في سبع سنابل */
   { const SA = ctx.recs.filter(r => r.dept === dept && r.item === 'SAN' && r.d && inP(String(r.date).slice(0, 10), P));
     if (SA.length) { const by = {}; SA.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
@@ -356,7 +359,7 @@ function buildReport(ctx) {
   /* هيكل التقرير الرسمي */
   const rows = [
     ['التخطيط', [['الخطة السنوية للقسم', [T.pl_annual]], ['متابعة الخطط الفصلية', [T.pl_sem]]]],
-    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra]]]],
+    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ...(T.as_res ? [['مؤشرات النتائج', [T.as_res]]] : []), ['إجراءات رفع التحصيل', [T.ra]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
