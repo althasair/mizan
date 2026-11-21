@@ -6,7 +6,7 @@
    · لإضافة ورشة: ارفعي ملفاتها في ws/<id>/ وأضيفي كتلتها في MYWS
    ================================================================== */
 const MYWS = [
-  { id: 'sandooq', title: 'الصندوق الأسود', sub: 'حين يتكلّم التقرير', theme: 'التقارير التأملية منهجٌ قيادي لتطوير الأداء', audience: 'القيادة الوسطى (المنسقات)', date: 'الاثنين 16 نوفمبر 2026', month: 'نوفمبر 2026', status: 'done',
+  { id: 'sandooq', acc: '#E07A2E', title: 'الصندوق الأسود', sub: 'حين يتكلّم التقرير', theme: 'التقارير التأملية منهجٌ قيادي لتطوير الأداء', audience: 'القيادة الوسطى (المنسقات)', date: 'الاثنين 16 نوفمبر 2026', month: 'نوفمبر 2026', status: 'done',
     cover: 'ws/sandooq/cover.jpg', stats: [['14', 'دعوة'], ['13', 'حاضرة'], ['11', 'نشاطًا'], ['98%', 'التقييم']],
     parts: {
       deck: [{ t: 'العرض التقديمي', d: 'شرائح الورشة كاملة (61 شريحة) بالقصص والأنشطة.', file: 'ws/sandooq/deck.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#screen', liveT: 'العرض التفاعلي' }],
@@ -17,7 +17,7 @@ const MYWS = [
       att: [{ t: 'كشف الحضور', ph: 'b', d: 'الكشف الفارغ بأسماء المدعوّات الـ 14 قبل الورشة.', file: 'ws/sandooq/att-before.pdf' },
         { t: 'كشف الحضور', ph: 'a', d: 'من حضرت ووقت تسجيلها بمسح رمز QR: 13 حاضرة.', file: 'ws/sandooq/att-after.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#join', liveT: 'تجربة تسجيل الحضور' }]
     } },
-  { id: 'katalog', title: 'بنات بدون كتالوج', sub: 'طالبة الثانوية: أنماط ومفاتيح', theme: 'خصائص المراهقة وشخصيات الصف… وكيف نكسبها في المدرسة والبيت', audience: 'المعلمات والمنسقات', date: 'الاثنين 23 نوفمبر 2026', month: 'نوفمبر 2026', status: 'soon',
+  { id: 'katalog', acc: '#C2185B', title: 'بنات بدون كتالوج', sub: 'طالبة الثانوية: أنماط ومفاتيح', theme: 'خصائص المراهقة وشخصيات الصف… وكيف نكسبها في المدرسة والبيت', audience: 'المعلمات والمنسقات', date: 'الاثنين 23 نوفمبر 2026', month: 'نوفمبر 2026', status: 'soon',
     cover: 'ws/katalog/cover.jpg', stats: [['70', 'معلمة'], ['23', 'نمطًا'], ['6', 'مجموعات'], ['4', 'جولات']],
     parts: {
       deck: [{ t: 'العرض التقديمي', d: 'العرض التفاعلي: الأنماط والمفاتيح ولعبة «أنا في عمرهم» وخريطة صفّي.', live: 'https://katalog.alshaimaa-school.com/warsha.html?view', liveT: 'العرض التفاعلي' }],
@@ -31,46 +31,91 @@ const MYWS = [
 const MYWS_TABS = [['deck', '🖥️ العرض'], ['invite', '🎫 الدعوة'], ['eval', '⭐ التقييم'], ['att', '📋 الكشف']];
 const MYWS_CSS = `
 @font-face{font-family:Marhey;src:url(fonts/marhey.ttf)}
-.mw{--nv:#1B2560;--gd:#C9A04E;--tq:#2EA9BA}
-.mw-hd{background:linear-gradient(135deg,#1B2560,#0f1840);color:#fff;border-radius:20px;padding:18px 20px;border-bottom:4px solid var(--gd);text-align:center;margin-bottom:14px}
-.mw-hd h1{margin:0;font-family:Marhey,inherit;font-size:26px}.mw-hd p{margin:6px 0 0;color:#cfd6ee;font-size:13.5px}
-.mw-in{background:#fff;border-radius:14px;padding:10px 14px;font-size:13px;color:#777;line-height:1.8;border-right:5px solid var(--gd);margin-bottom:16px}
-.mw-ws{background:#fff;border-radius:20px;box-shadow:0 8px 24px rgba(27,37,89,.08);overflow:hidden;margin-bottom:20px;border:1px solid #ece6d8}
-.mw-top{display:grid;grid-template-columns:300px 1fr}.mw-top img{width:100%;height:100%;object-fit:cover;min-height:180px;display:block}
-.mw-inf{padding:16px 20px}.mw-inf h2{margin:6px 0 0;font-family:Marhey,inherit;font-size:24px;color:var(--nv)}.mw-inf .sb{color:var(--tq);font-size:15px;margin:2px 0 8px}
-.mw-ch{display:inline-block;font-size:12px;border-radius:20px;padding:3px 12px;margin-inline-end:6px}.mw-ch.done{background:#e3f6ec;color:#1f7a50}.mw-ch.soon{background:#fff3d9;color:#8a6212}.mw-ch.m{background:#eef0f6;color:#333}
-.mw-mt{display:flex;flex-wrap:wrap;gap:7px;margin-top:8px}.mw-mt span{background:#F7F3EC;border-radius:12px;padding:4px 11px;font-size:12.5px;color:#444;white-space:nowrap}
-.mw-st{display:flex;gap:10px;margin-top:12px}.mw-st div{flex:1;text-align:center;background:#f2f4fa;border-radius:12px;padding:6px}.mw-st b{display:block;font-size:19px;color:var(--nv)}.mw-st small{font-size:11.5px;color:#6b7385}
-.mw-tb{display:flex;gap:6px;padding:10px 14px 0;border-top:1px solid #eee;flex-wrap:wrap}
-.mw-tb button{font-family:inherit;font-size:14px;border:none;background:#f2f4fa;color:var(--nv);border-radius:14px 14px 0 0;padding:8px 16px;cursor:pointer}.mw-tb button.on{background:var(--nv);color:#fff}
-.mw-pn{padding:14px 16px 18px;background:#fbfaf6;border-top:3px solid var(--nv)}
-.mw-its{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.mw-it{background:#fff;border:1px solid #e6e0d0;border-radius:16px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
-.mw-it h4{margin:0;font-size:15px;color:var(--nv)}.mw-ph{font-size:11.5px;border-radius:10px;padding:1px 9px;align-self:flex-start}.mw-ph.b{background:#eef0f6;color:#555}.mw-ph.a{background:#e3f6ec;color:#1f7a50}
+.mw{--nv:#1B2560;--gd:#C9A04E;--tq:#2EA9BA;max-width:1080px;margin:0 auto}
+.mw-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:2px 0 16px}
+.mw-top h1{margin:0;font-family:Marhey,inherit;font-size:24px;color:var(--nv)}.mw-top p{margin:4px 0 0;font-size:13px;color:#7a7f8c}
+.mw-sum{display:flex;gap:8px}.mw-sum span{background:#fff;border:1px solid #ece6d8;border-radius:12px;padding:6px 12px;font-size:12.5px;color:#555;white-space:nowrap}.mw-sum b{color:var(--nv);font-size:15px;margin-inline-end:4px}
+.mw-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px}
+.mw-c{background:#fff;border:1px solid #ece6d8;border-radius:18px;overflow:hidden;box-shadow:0 6px 18px rgba(27,37,89,.07);display:flex;flex-direction:column;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.mw-c:hover{transform:translateY(-3px);box-shadow:0 12px 28px rgba(27,37,89,.13)}
+.mw-cv{position:relative;aspect-ratio:16/9;background:#0f1840;display:flex;align-items:center;justify-content:center}
+.mw-cv img{width:100%;height:100%;object-fit:contain;display:block}
+.mw-st{position:absolute;top:10px;right:10px;font-size:12px;border-radius:20px;padding:3px 11px;font-weight:700}.mw-st.done{background:#e3f6ec;color:#1f7a50}.mw-st.soon{background:#fff3d9;color:#8a6212}
+.mw-b{padding:14px 16px 16px;display:flex;flex-direction:column;gap:6px;flex:1}
+.mw-b h2{margin:0;font-family:Marhey,inherit;font-size:21px;color:var(--nv)}.mw-b .sb{color:var(--tq);font-size:14px}
+.mw-ln{font-size:12.5px;color:#666;display:flex;gap:12px;flex-wrap:wrap}
+.mw-k{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:6px}.mw-k div{text-align:center;background:#f4f5fa;border-radius:10px;padding:5px 2px}.mw-k b{display:block;font-size:16px;color:var(--nv)}.mw-k small{font-size:11px;color:#6b7385}
+.mw-go{margin-top:auto;align-self:flex-start;font-family:inherit;border:none;background:var(--nv);color:#fff;border-radius:20px;padding:7px 16px;font-size:13px;cursor:pointer;margin-top:10px}
+.mw-d{background:#fff;border:1px solid #ece6d8;border-radius:18px;overflow:hidden;box-shadow:0 6px 18px rgba(27,37,89,.07)}
+.mw-dh{display:grid;grid-template-columns:360px 1fr;gap:0;border-bottom:1px solid #eee}
+.mw-dh .mw-cv{aspect-ratio:auto;min-height:100%}
+.mw-di{padding:16px 20px;display:flex;flex-direction:column;gap:7px}
+.mw-di h2{margin:0;font-family:Marhey,inherit;font-size:24px;color:var(--nv)}
+.mw-ch{display:inline-block;font-size:12px;border-radius:20px;padding:3px 11px;margin-inline-end:6px}.mw-ch.done{background:#e3f6ec;color:#1f7a50}.mw-ch.soon{background:#fff3d9;color:#8a6212}.mw-ch.m{background:#eef0f6;color:#333}
+.mw-mt{display:flex;flex-direction:column;gap:3px;font-size:13px;color:#555}
+.mw-tb{display:flex;gap:6px;padding:12px 16px;background:#faf8f3;border-bottom:1px solid #eee;flex-wrap:wrap}
+.mw-tb button{font-family:inherit;font-size:13.5px;border:1px solid #e2dccd;background:#fff;color:var(--nv);border-radius:20px;padding:6px 16px;cursor:pointer}.mw-tb button.on{background:var(--nv);color:#fff;border-color:var(--nv)}
+.mw-its{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px}
+.mw-it{border:1px solid #e6e0d0;border-radius:14px;padding:12px 14px;display:flex;flex-direction:column;gap:6px;background:#fff}
+.mw-it h4{margin:0;font-size:15px;color:var(--nv);display:flex;align-items:center;gap:8px}.mw-ph{font-size:11px;border-radius:10px;padding:1px 8px;font-weight:400}.mw-ph.b{background:#eef0f6;color:#555}.mw-ph.a{background:#e3f6ec;color:#1f7a50}
 .mw-it p{margin:0;font-size:12.5px;color:#666;line-height:1.7}
-.mw-bt{display:flex;gap:7px;flex-wrap:wrap;margin-top:4px}
-.mw-bt a,.mw-bt button{font-family:inherit;font-size:13px;text-decoration:none;border:none;cursor:pointer;border-radius:20px;padding:6px 13px;background:var(--nv);color:#fff}
+.mw-bt{display:flex;gap:7px;flex-wrap:wrap;margin-top:auto;padding-top:4px}
+.mw-bt a,.mw-bt button{font-family:inherit;font-size:12.5px;text-decoration:none;border:none;cursor:pointer;border-radius:20px;padding:5px 12px;background:var(--nv);color:#fff}
 .mw-bt .l{background:#fff;color:var(--nv);border:1.5px solid var(--nv)}
-.mw-it.off{opacity:.55}.mw-it.off .mw-bt{display:none}.mw-wt{font-size:12px;color:#8a6212}
+.mw-it.off{opacity:.55;background:#fbfaf6}.mw-it.off .mw-bt{display:none}.mw-wt{font-size:12px;color:#8a6212}
 #mwV{position:fixed;inset:0;background:rgba(10,15,40,.78);display:none;z-index:200;align-items:center;justify-content:center;padding:18px}#mwV.on{display:flex}
 #mwV .bx{background:#fff;border-radius:16px;width:min(1100px,100%);height:min(92vh,900px);display:flex;flex-direction:column;overflow:hidden}
 #mwV .br{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 14px;background:#1B2560;color:#fff}
 #mwV .br button,#mwV .br a{font-family:inherit;background:none;border:1px solid rgba(255,255,255,.5);color:#fff;border-radius:14px;padding:4px 12px;cursor:pointer;text-decoration:none;font-size:13px;margin-inline-start:6px}
 #mwV iframe,#mwV img{flex:1;border:0;width:100%;min-height:0;object-fit:contain;background:#eee}
-@media(max-width:760px){.mw-top{grid-template-columns:1fr}.mw-its{grid-template-columns:1fr}}`;
+
+.mw-hero{position:relative;overflow:hidden;border-radius:22px;padding:26px 28px;margin-bottom:20px;color:#fff;background:radial-gradient(circle at 15% 20%,rgba(201,160,78,.35),transparent 45%),radial-gradient(circle at 85% 90%,rgba(46,169,186,.3),transparent 50%),linear-gradient(135deg,#1B2560,#0b1236);box-shadow:0 14px 34px rgba(11,18,54,.28)}
+.mw-hero:after{content:"";position:absolute;inset:auto -60px -80px auto;width:260px;height:260px;border:2px solid rgba(201,160,78,.35);border-radius:50%}
+.mw-hero h1{margin:0;font-family:Marhey,inherit;font-size:30px;color:#fff}.mw-hero h1 em{font-style:normal;color:var(--gd)}
+.mw-hero p{margin:8px 0 0;color:#cfd6ee;font-size:14px;line-height:1.9;max-width:560px}
+.mw-cnt{display:flex;gap:12px;margin-top:18px;flex-wrap:wrap;position:relative;z-index:1}
+.mw-cnt div{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:14px;padding:8px 16px;min-width:96px;text-align:center}
+.mw-cnt b{display:block;font-family:Marhey,inherit;font-size:24px;color:var(--gd)}.mw-cnt small{font-size:12px;color:#dfe4f5}
+.mw-grid{grid-template-columns:repeat(2,1fr)!important}
+.mw-c{border-top:5px solid var(--acc)}
+.mw-c .mw-b h2{color:var(--acc)}
+.mw-th{font-size:13px;color:#555;line-height:1.7}
+.mw-ft{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:12px;padding-top:12px;border-top:1px dashed #e6e0d0}
+.mw-ft .dt{font-size:12.5px;color:#444;background:#f6f3ec;border-radius:12px;padding:4px 10px}
+.mw-c .mw-go{margin:0;background:var(--acc)}
+.mw-d .mw-di h2{color:var(--acc)}.mw-d .mw-tb button.on{background:var(--acc);border-color:var(--acc)}.mw-d .mw-k div{border-bottom:3px solid var(--acc)}
+.mw-k div{border-bottom:3px solid var(--acc,#1B2560)}
+@media(max-width:760px){.mw-dh{grid-template-columns:1fr}.mw-its{grid-template-columns:1fr}.mw-grid{grid-template-columns:1fr}}`;
+const mwStat = w => w.status === 'done' ? '✓ نُفّذت' : '⏳ قادمة';
 function A_myws(el) {
   setTitle('ورشي التدريبية');
-  const card = w => { const tabs = MYWS_TABS.filter(([k]) => (w.parts[k] || []).length); const cur = (S.mwTab || {})[w.id] || tabs[0][0];
-    return `<div class="mw-ws"><div class="mw-top"><img src="${w.cover}" alt=""><div class="mw-inf"><span class="mw-ch ${w.status}">${w.status === 'done' ? '✓ نُفّذت' : '⏳ قادمة'}</span><span class="mw-ch m">📅 ${esc(w.month)}</span>
-      <h2>${esc(w.title)}</h2><div class="sb">${esc(w.sub)}</div><div class="mw-mt"><span>🎯 ${esc(w.theme)}</span><span>👥 ${esc(w.audience)}</span><span>🗓️ ${esc(w.date)}</span></div>
-      <div class="mw-st">${w.stats.map(s => `<div><b>${esc(s[0])}</b><small>${esc(s[1])}</small></div>`).join('')}</div></div></div>
-      <div class="mw-tb">${tabs.map(([k, t]) => `<button class="${k === cur ? 'on' : ''}" data-mw="${w.id}" data-mk="${k}">${t}</button>`).join('')}</div>
-      <div class="mw-pn"><div class="mw-its">${w.parts[cur].map(it => `<div class="mw-it ${it.pending ? 'off' : ''}"><h4>${esc(it.t)}</h4>${it.ph ? `<span class="mw-ph ${it.ph}">${it.ph === 'b' ? 'قبل الاستجابة' : 'بعد الاستجابة'}</span>` : ''}<p>${esc(it.d)}</p>${it.pending ? '<span class="mw-wt">⏳ بعد تنفيذ الورشة</span>' : ''}
-        <div class="mw-bt">${it.file ? `<button data-mv="${esc(it.file)}" data-mt="${esc(w.title + ' · ' + it.t)}">👁️ عرض</button><a class="l" href="${esc(it.file)}" download="${esc(w.title + ' - ' + it.t + (it.ph === 'a' ? ' (بعد)' : it.ph === 'b' ? ' (قبل)' : '') + it.file.slice(it.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(it.file)}">🖨️ طباعة</button>` : ''}${it.live ? `<a class="l" href="${esc(it.live)}" target="_blank" rel="noopener">↗ ${esc(it.liveT)}</a>` : ''}</div></div>`).join('')}</div></div></div>`; };
-  el.innerHTML = `<style>${MYWS_CSS}</style><div class="mw"><div class="mw-hd"><h1>🎓 ورشي التدريبية</h1><p>كل ورشة قدّمتها النائبة الأكاديمية: عرضها ودعوتها وتقييمها وكشف حضورها في مكان واحد</p></div>
-    <div class="mw-in">اختاري الورشة، ثم القسم الذي تريدينه (العرض، الدعوة، التقييم، الكشف). لكل تقييم وكشف نسختان: <b>قبل الاستجابة</b> (النموذج الفارغ) و<b>بعد الاستجابة</b> (النتائج كما وصلت)، وتظهر نسخة «بعد» عند تنفيذ الورشة.</div>
-    ${MYWS.map(card).join('')}</div>`;
-  $$('[data-mw]', el).forEach(b => b.onclick = () => { S.mwTab = Object.assign({}, S.mwTab, { [b.dataset.mw]: b.dataset.mk }); A_myws(el); });
+  const W = MYWS.slice().sort((a, b) => (a.status === 'soon' ? 0 : 1) - (b.status === 'soon' ? 0 : 1));
+  const w = MYWS.find(x => x.id === S.mwOpen);
+  if (!w) {
+    const att = MYWS.filter(x => x.status === 'done').reduce((a, x) => a + (+((x.stats.find(s => /حاضر/.test(s[1])) || [])[0]) || 0), 0);
+    el.innerHTML = `<style>${MYWS_CSS}</style><div class="mw">
+      <div class="mw-hero"><h1>🎓 ورشي <em>التدريبية</em></h1><p>كل ورشة قدّمتُها حقيبةٌ متكاملة: عرضها التفاعلي، ودعوتها، وتقييمها، وكشف حضورها، قبل التنفيذ وبعده.</p>
+        <div class="mw-cnt"><div><b>${MYWS.length}</b><small>ورشة</small></div><div><b>${MYWS.filter(x => x.status === 'done').length}</b><small>نُفّذت</small></div><div><b>${MYWS.filter(x => x.status !== 'done').length}</b><small>قادمة</small></div>${att ? `<div><b>${att}</b><small>حاضرة حتى الآن</small></div>` : ''}</div></div>
+      <div class="mw-grid">${W.map(x => `<div class="mw-c" data-mo="${x.id}" style="--acc:${x.acc || '#1B2560'}"><div class="mw-cv"><img src="${x.cover}" alt=""><span class="mw-st ${x.status}">${mwStat(x)}</span></div>
+        <div class="mw-b"><h2>${esc(x.title)}</h2><div class="sb">${esc(x.sub)}</div><div class="mw-th">🎯 ${esc(x.theme)}<br>👥 ${esc(x.audience)}</div>
+        <div class="mw-k">${x.stats.map(s => `<div><b>${esc(s[0])}</b><small>${esc(s[1])}</small></div>`).join('')}</div>
+        <div class="mw-ft"><span class="dt">🗓️ ${esc(x.date)}</span><button class="mw-go">فتح الحقيبة ←</button></div></div></div>`).join('')}</div></div>`;
+    $$('[data-mo]', el).forEach(c => c.onclick = () => { S.mwOpen = c.dataset.mo; A_myws(el); });
+    return;
+  }
+  const tabs = MYWS_TABS.filter(([k]) => (w.parts[k] || []).length); const cur = (S.mwTab || {})[w.id] || tabs[0][0];
+  el.innerHTML = `<style>${MYWS_CSS}</style><div class="mw">
+    <div class="row" style="margin-bottom:12px"><button class="btn sec" id="mwB">→ كل الورش</button></div>
+    <div class="mw-d" style="--acc:${w.acc || '#1B2560'};border-top:5px solid var(--acc)"><div class="mw-dh"><div class="mw-cv"><img src="${w.cover}" alt=""></div>
+      <div class="mw-di"><div><span class="mw-ch ${w.status}">${mwStat(w)}</span><span class="mw-ch m">📅 ${esc(w.month)}</span></div>
+        <h2>${esc(w.title)}</h2><div style="color:var(--tq);font-size:15px">${esc(w.sub)}</div>
+        <div class="mw-mt"><span>🎯 ${esc(w.theme)}</span><span>👥 ${esc(w.audience)}</span><span>🗓️ ${esc(w.date)}</span></div>
+        <div class="mw-k">${w.stats.map(s => `<div><b>${esc(s[0])}</b><small>${esc(s[1])}</small></div>`).join('')}</div></div></div>
+      <div class="mw-tb">${tabs.map(([k, t]) => `<button class="${k === cur ? 'on' : ''}" data-mk="${k}">${t}</button>`).join('')}</div>
+      <div class="mw-its">${w.parts[cur].map(it => `<div class="mw-it ${it.pending ? 'off' : ''}"><h4>${esc(it.t)}${it.ph ? `<span class="mw-ph ${it.ph}">${it.ph === 'b' ? 'قبل الاستجابة' : 'بعد الاستجابة'}</span>` : ''}</h4><p>${esc(it.d)}</p>${it.pending ? '<span class="mw-wt">⏳ بعد تنفيذ الورشة</span>' : ''}
+        <div class="mw-bt">${it.file ? `<button data-mv="${esc(it.file)}" data-mt="${esc(w.title + ' · ' + it.t)}">👁️ عرض</button><a class="l" href="${esc(it.file)}" download="${esc(w.title + ' - ' + it.t + (it.ph === 'a' ? ' (بعد)' : it.ph === 'b' ? ' (قبل)' : '') + it.file.slice(it.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(it.file)}">🖨️ طباعة</button>` : ''}${it.live ? `<a class="l" href="${esc(it.live)}" target="_blank" rel="noopener">↗ ${esc(it.liveT)}</a>` : ''}</div></div>`).join('')}</div></div></div>`;
+  $('#mwB', el).onclick = () => { S.mwOpen = null; A_myws(el); };
+  $$('[data-mk]', el).forEach(b => b.onclick = () => { S.mwTab = Object.assign({}, S.mwTab, { [w.id]: b.dataset.mk }); A_myws(el); });
   $$('[data-mv]', el).forEach(b => b.onclick = () => mwOpen(b.dataset.mv, b.dataset.mt));
   $$('[data-mp]', el).forEach(b => b.onclick = () => mwPrint(b.dataset.mp));
 }
