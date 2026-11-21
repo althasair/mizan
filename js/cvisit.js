@@ -139,6 +139,32 @@ function cvWsPrint(d) {
     ${L.map(v => `<tr><td style="font-size:9.5px">${esc(v.title)}${v.src ? ` <span style="color:#777">(${esc(v.src)})</span>` : ''}</td><td class="c" style="font-size:9.5px">${dmy(v.date)}</td><td style="font-size:9.5px">${esc(v.st || WSI_ST[0])}</td><td style="font-size:9.5px">${esc((v.via || []).join('، '))}${v.note ? ((v.via || []).length ? ' — ' : '') + esc(v.note) : ''}</td></tr>`).join('')}</table>` : '';
 }
 /* ملاحظات وتوصيات عامّة: عبارة شكر + نقطة قوة واحدة من القائمة وبعبارات الزائرة (إلزامي) + توصية واحدة وبعباراتها (إلزامي) + توصيات إضافية */
+/* ===== ثنائية اللغة لمنسقة اللغة الإنجليزية: تكتب وتختار بالإنجليزية، وتظهر الترجمة العربية تحتها مباشرة وتُحفظ للتقرير الشهري ===== */
+const cvEnOn = () => S.dept === 'اللغة الإنجليزية' && typeof VIS_EN !== 'undefined';
+const enOf = a => (typeof VIS_EN !== 'undefined' && VIS_EN[a]) || '';
+const cvOpt = (d, o, sel) => d.en ? `<option value="${esc(o)}" ${sel ? 'selected' : ''}>${esc(enOf(o) || o)}</option>` : `<option ${sel ? 'selected' : ''}>${esc(o)}</option>`;
+/* تصحيح المصطلحات التربوية بعد الترجمة الآلية وفق مصطلحات الوزارة، وبصيغة المؤنث لمدرسة بنات */
+const TR_FIX = [[/التقييم التكويني|التقويم التكويني/g, 'التقويم البنائي'], [/التقييم الختامي/g, 'التقويم الختامي'], [/التقييم التشخيصي/g, 'التقويم القبلي'], [/الإحماء|النشاط الافتتاحي/g, 'التهيئة'], [/الختام(?!ي)|الخاتمة/g, 'الغلق'], [/تذكرة الخروج|بطاقة الخروج/g, 'تذكرة الخروج'],
+  [/مهارات التفكير العليا|مهارات التفكير عالية المستوى|التفكير عالي المستوى/g, 'مهارات التفكير العليا'], [/وقت الانتظار/g, 'زمن الانتظار'], [/التعليم المتمايز|التمييز(?= في التعليم| بين)/g, 'التعليم المتمايز'], [/الفصل الدراسي(?! الأول| الثاني)/g, 'الصف'], [/إدارة الفصل/g, 'الإدارة الصفية'],
+  [/خطة الدرس اليومية/g, 'خطة الدرس'], [/أهداف التعلم|نتائج التعلم/g, 'أهداف التعلم'], [/السقالات التعليمية|السقالات/g, 'الدعم المتدرج'], [/تقييم الأقران|التقييم من قبل الأقران/g, 'تقييم الأقران'], [/نظام قطر التعليمي|نظام التعليم في قطر/g, 'نظام قطر للتعليم'],
+  [/الطلاب/g, 'الطالبات'], [/طلاب/g, 'طالبات'], [/الطلبة/g, 'الطالبات'], [/الطالب(?!ة|ات)/g, 'الطالبة'], [/المتعلمين/g, 'المتعلمات'], [/المعلم(?!ة|ات|ين)/g, 'المعلمة'], [/معلم(?!ة|ات|ين)/g, 'معلمة'], [/\bQES\b/g, 'نظام قطر للتعليم']];
+const trFix = t => TR_FIX.reduce((a, [re, b]) => a.replace(re, b), String(t || ''));
+/* الترجمة: العبارات المعتمدة من القائمة أولاً، ثم ترجمة آلية للعبارات الحرة مع تصحيح مصطلحاتها */
+async function cvTr(txt) {
+  const parts = String(txt || '').split(/\n+/).map(x => x.trim()).filter(Boolean); if (!parts.length) return '';
+  const key = x => x.replace(/[.;،\s]+$/, ''); const out = parts.map(x => VIS_AR[key(x)] || VIS_AR[key(x) + '.'] || null);
+  const need = parts.filter((x, i) => !out[i]);
+  if (need.length) { let L = []; try { L = (await API.call('tr', { list: need, from: 'en', to: 'ar' })).list || []; } catch (e) { L = []; } let j = 0; parts.forEach((x, i) => { if (!out[i]) out[i] = trFix(L[j++] || ''); }); }
+  return out.filter(Boolean).join('\n');
+}
+const cvBi = (d, k, en, ar, ph, rows) => d.en ? `<textarea data-tre="${k}" dir="ltr" rows="${rows || 3}" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px;font-family:inherit;text-align:left" placeholder="${esc(ph[1])}">${esc(en || '')}</textarea>
+  <div style="font-size:11px;color:var(--tiffany-d);margin-top:2px">الترجمة العربية (تُحفظ في التقرير الشهري، ويمكنكِ تعديلها)</div><textarea data-tra="${k}" ${k === 'strW' ? 'id="cStrW"' : k === 'impW' ? 'id="cImpW"' : k === 'pre' ? 'id="cPre"' : `data-imx="${k.slice(3)}"`} rows="${rows || 3}" style="width:100%;border:1px dashed var(--tiffany-d);background:#F6FBFA;border-radius:10px;padding:6px;font-size:12.5px">${esc(ar || '')}</textarea>` : '';
+function cvBiBind(el) {
+  $$('[data-tre]', el).forEach(t => { const a = $(`[data-tra="${t.dataset.tre}"]`, el); if (!a) return; let tm = null;
+    a.addEventListener('input', () => { a.dataset.man = a.value.trim() ? 1 : ''; });
+    const go = async () => { if (a.dataset.man) return; const v = t.value.trim(); if (!v) { a.value = ''; return; } a.placeholder = 'جارٍ الترجمة…'; const r = await cvTr(v); if (!a.dataset.man && t.value.trim() === v) a.value = r; a.placeholder = r ? '' : 'لم تتم الترجمة الآلية، اكتبي الترجمة العربية هنا'; };
+    t.addEventListener('input', () => { clearTimeout(tm); tm = setTimeout(go, 900); }); t.addEventListener('blur', () => { clearTimeout(tm); go(); }); });
+}
 function cvNotesInit(d, strL, impL) {
   if (d.strW == null) { d.strP = ''; d.strW = (strL || []).filter(Boolean).join('\n'); }
   if (d.impW == null) { const a = (impL || []).filter(Boolean); d.impP = ''; d.impW = a[0] || ''; d.impX = a.slice(1); }
@@ -147,35 +173,39 @@ function cvNotesInit(d, strL, impL) {
 function cvNotesCard(d, F, intro) {
   const strong = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1), weak = F.items.map((x, i) => i).filter(i => d.rt[i] === 3 || d.rt[i] === 4);
   const doms = uniqA(F.items.map(x => x.d));
-  const optG = (pick, key, curV) => { const top = uniqA(pick.flatMap(i => key === 'r' ? [d.rc[i], ...F.items[i].r] : F.items[i].s)); const all = new Set(); return `<option value="">${key === 'r' ? 'اختاري توصية واحدة من القائمة…' : 'اختاري نقطة قوة واحدة من القائمة…'}</option>` + (curV && !F.items.some(x => x[key].includes(curV)) && !top.includes(curV) ? `<option selected>${esc(curV)}</option>` : '') + (top.length ? `<optgroup label="${key === 'r' ? 'من المعايير التي تحتاج إلى تحسين' : 'من المعايير التي قدّرتِها مرتفعة'}">${top.map(o => { all.add(o); return `<option ${o === curV ? 'selected' : ''}>${esc(o)}</option>`; }).join('')}</optgroup>` : '') + doms.map(dm0 => `<optgroup label="${esc(dm0)}">${uniqA(F.items.filter(x => x.d === dm0).flatMap(x => x[key])).filter(o => !all.has(o)).map(o => `<option ${o === curV ? 'selected' : ''}>${esc(o)}</option>`).join('')}</optgroup>`).join(''); };
+  const optG = (pick, key, curV) => { const top = uniqA(pick.flatMap(i => key === 'r' ? [d.rc[i], ...F.items[i].r] : F.items[i].s)); const all = new Set(); return `<option value="">${key === 'r' ? 'اختاري توصية واحدة من القائمة…' : 'اختاري نقطة قوة واحدة من القائمة…'}</option>` + (curV && !F.items.some(x => x[key].includes(curV)) && !top.includes(curV) ? `<option selected>${esc(curV)}</option>` : '') + (top.length ? `<optgroup label="${key === 'r' ? 'من المعايير التي تحتاج إلى تحسين' : 'من المعايير التي قدّرتِها مرتفعة'}">${top.map(o => { all.add(o); return cvOpt(d, o, o === curV); }).join('')}</optgroup>` : '') + doms.map(dm0 => `<optgroup label="${esc(d.en ? (enOf(dm0) || dm0) : dm0)}">${uniqA(F.items.filter(x => x.d === dm0).flatMap(x => x[key])).filter(o => !all.has(o)).map(o => cvOpt(d, o, o === curV)).join('')}</optgroup>`).join(''); };
   return `<div class="card"><h2>ملاحظات وتوصيات عامّة</h2>
       <div style="font-size:12.5px;color:#8A8F99;line-height:1.9;margin-bottom:8px">${intro}يسعدكِ الاستعانة بالقوائم المقترحة لاختيار عبارة شكر ونقطة قوة وتوصية واحدة، غير أن معلمتكِ لا تستغني عن عباراتكِ الثمينة؛ فأنتِ قائدتها وخير مطوّرة لها، وكلماتكِ النابعة من عمق المادة هي ما يصنع أثراً حقيقياً في أدائها. فلا تحرميها منها: اكتبي نقطة القوة والتوصية بعباراتكِ، وأضيفي من التوصيات ما ترينه.</div>
-      <div class="fld"><label>عبارة الشكر للمعلمة</label><select id="cThx" style="width:100%;margin-bottom:4px"><option value="">اختاري عبارة شكر من القائمة…</option>${uniqA([...(F.pre_opts || []), ...CV_THX]).map(x => x.replace('{name}', d.t || '...')).map(x => `<option>${esc(x)}</option>`).join('')}</select><textarea id="cPre" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="اختاري من القائمة أعلاه أو اكتبي عبارة الشكر بأسلوبكِ">${esc(d.pre || '')}</textarea></div>
+      ${d.en ? `<div style="background:#F1FAF8;border:1px solid #CDE9E5;border-radius:10px;padding:6px 10px;font-size:12px;color:#26615C;margin-bottom:8px" dir="rtl"><div dir="ltr" style="text-align:left">🇬🇧 <b>English / عربي:</b> Choose or write in English, and the Arabic translation appears right under it. The Arabic text is saved for the monthly report.</div>اختاري أو اكتبي بالإنجليزية، وتظهر الترجمة العربية تحتها مباشرة، وهي التي تُحفظ في التقرير الشهري (يمكنكِ تعديلها).</div>` : ''}
+      <div class="fld"><label>عبارة الشكر للمعلمة${d.en ? ' · Thanks' : ''}</label><select id="cThx" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-bottom:4px"><option value="">${d.en ? 'Choose a thank-you phrase…' : 'اختاري عبارة شكر من القائمة…'}</option>${uniqA([...(F.pre_opts || []), ...CV_THX]).map(x => `<option value="${esc(x)}">${esc((d.en ? enOf(x) || x : x).replace(/\{name\}/g, d.t || '...'))}</option>`).join('')}</select>${d.en ? cvBi(d, 'pre', d.en.pre, d.pre, ['', 'Choose from the list above or write your own thank-you phrase'], 2) : `<textarea id="cPre" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="اختاري من القائمة أعلاه أو اكتبي عبارة الشكر بأسلوبكِ">${esc(d.pre || '')}</textarea>`}</div>
       <div class="grid g2" style="margin-top:10px">
         <div><b style="color:var(--ok)">نقاط القوة</b>
-          <select id="cStrP" style="width:100%;margin-top:6px;font-size:12.5px">${optG(strong, 's', d.strP)}</select>
-          <textarea id="cStrW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): ما الذي لفتكِ في أداء المعلمة، وما أثره على تعلّم الطالبات؟">${esc(d.strW || '')}</textarea></div>
+          <select id="cStrP" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-top:6px;font-size:12.5px">${optG(strong, 's', d.strP)}</select>${d.en && d.strP ? `<div style="font-size:11.5px;color:var(--tiffany-d)">↳ ${esc(d.strP)}</div>` : ''}
+          ${d.en ? cvBi(d, 'strW', d.en.strW, d.strW, ['', 'In your words (required): what stood out in the teacher\'s performance, and its impact on students\' learning?']) : `<textarea id="cStrW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): ما الذي لفتكِ في أداء المعلمة، وما أثره على تعلّم الطالبات؟">${esc(d.strW || '')}</textarea>`}</div>
         <div><b style="color:var(--maroon)">التوصيات (النقاط التي تحتاج إلى تحسين)</b>
-          <select id="cImpP" style="width:100%;margin-top:6px;font-size:12.5px">${optG(weak, 'r', d.impP)}</select>
-          <textarea id="cImpW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): توصية بنّاءة محددة تُتابَع في الزيارة القادمة">${esc(d.impW || '')}</textarea>
-          ${d.impX.map((v, j) => `<textarea data-imx="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="توصية إضافية بعباراتكِ">${esc(v)}</textarea>`).join('')}
-          <button class="btn sm ghost" id="addImp" type="button" style="margin-top:6px">++ توصية إضافية بعباراتكِ</button></div>
+          <select id="cImpP" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-top:6px;font-size:12.5px">${optG(weak, 'r', d.impP)}</select>${d.en && d.impP ? `<div style="font-size:11.5px;color:var(--tiffany-d)">↳ ${esc(d.impP)}</div>` : ''}
+          ${d.en ? cvBi(d, 'impW', d.en.impW, d.impW, ['', 'In your words (required): a specific, constructive recommendation to follow up in the next visit']) + d.impX.map((v, j) => cvBi(d, 'imx' + j, (d.en.impX || [])[j], v, ['', 'Additional recommendation in your words'], 2)).join('') : `<textarea id="cImpW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): توصية بنّاءة محددة تُتابَع في الزيارة القادمة">${esc(d.impW || '')}</textarea>
+          ${d.impX.map((v, j) => `<textarea data-imx="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="توصية إضافية بعباراتكِ">${esc(v)}</textarea>`).join('')}`}
+          <button class="btn sm ghost" id="addImp" type="button" style="margin-top:6px">++ توصية إضافية بعباراتكِ${d.en ? ' · Add a recommendation' : ''}</button></div>
       </div></div>`;
 }
 function cvNotesGrab(d, el) {
   if (!$('#cStrW')) return;
   d.pre = $('#cPre').value.trim(); d.strP = $('#cStrP').value; d.strW = $('#cStrW').value.trim(); d.impP = $('#cImpP').value; d.impW = $('#cImpW').value.trim(); d.impX = $$('[data-imx]', el).map(i => i.value.trim());
+  if (d.en) { const g = k => (($(`[data-tre="${k}"]`, el) || {}).value || '').trim(); d.en.pre = g('pre'); d.en.strW = g('strW'); d.en.impW = g('impW'); d.en.impX = d.impX.map((_, j) => g('imx' + j)); }
 }
 function cvNotesBind(el, d, redraw) {
   $('#addImp').onclick = () => redraw(() => d.impX.push(''));
-  $('#cThx').onchange = () => { const v = $('#cThx').value; if (v) $('#cPre').value = v; };
+  $('#cThx').onchange = () => { const v = $('#cThx').value; if (!v) return; const nm = d.t || '...'; $('#cPre').value = v.replace(/\{name\}/g, nm); const e = $('[data-tre="pre"]', el); if (e) { e.value = (enOf(v) || '').replace(/\{name\}/g, nm); $('#cPre').dataset.man = ''; } };
+  if (d.en) { cvBiBind(el); ['cStrP', 'cImpP'].forEach(id => $('#' + id).addEventListener('change', () => redraw())); }
   $$('[data-wst]', el).forEach(sl => sl.addEventListener('change', () => redraw()));
 }
 function cvNotesCheck(d) {
   if (!d.pre) { toast('اكتبي عبارة الشكر للمعلمة أو اختاريها من القائمة', 1); return null; }
   if (!d.strW) { toast('اكتبي نقطة القوة بعباراتكِ — معلمتكِ تنتظر كلماتكِ', 1); $('#cStrW') && $('#cStrW').focus(); return null; }
   if (!d.impW) { toast('اكتبي التوصية بعباراتكِ — فهي ما يصنع الأثر', 1); $('#cImpW') && $('#cImpW').focus(); return null; }
-  d.impX = (d.impX || []).filter(Boolean);
+  { const pr = (d.impX || []).map((a, j) => [a, ((d.en && d.en.impX) || [])[j] || '']).filter(x => x[0]); d.impX = pr.map(x => x[0]); if (d.en) d.en.impX = pr.map(x => x[1]); }
+  if (d.en) { const ix = (d.impX || []); d.en.str = uniqA([enOf(d.strP), d.en.strW]); d.en.imp = uniqA([enOf(d.impP), d.en.impW, ...(d.en.impX || [])]); }
   return { str: uniqA([d.strP, d.strW]), imp: uniqA([d.impP, d.impW, ...d.impX]) };
 }
 /* حالة المعلمة في الربع */
@@ -275,6 +305,7 @@ function cvForm(el, rec) {
   const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.cvT || '', date: today(), mode: 'ميدانية', kj: S.cvK || 'كلية', rt: {}, rc: {}, fu: [], str: ['', ''], imp: ['', ''], pre: '', form: 1 };
   d.rt = d.rt || {}; d.rc = d.rc || {}; d.fu = d.fu || []; d.str = d.str || (d.f1 ? [d.f1, d.f2].filter(Boolean) : ['', '']); d.imp = d.imp || recsOf({ d }); if (!d.imp.length) d.imp = ['', ''];
   cvNotesInit(d, d.str, d.imp); d.wsi = d.wsi || {};
+  if (cvEnOn()) d.en = d.en || {}; else delete d.en;
   const T = cvTeachers();
   const prevOf = () => cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && (r.date < d.date || (r.date === d.date && rec && String(r.id) < String(rec.id)))).slice(-1)[0];
   const syncFU = () => {   // متابعة توصيات الزيارة السابقة — ثابتة في كل زيارة
@@ -322,10 +353,10 @@ function cvForm(el, rec) {
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة مقترحة أو كتابة حرة)</span></h2>
     <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
-      return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}${x.ind ? `<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--tiffany-d);font-size:11.5px">ما يجب توفره (${x.ind.length})</summary><ul style="margin:4px 0;padding-inline-start:16px;font-size:11.5px;color:var(--muted)">${x.ind.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}</td>
+      return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}${d.en && enOf(x.c) ? `<div dir="ltr" style="font-size:11px;color:var(--tiffany-d);text-align:left">${esc(enOf(x.c))}</div>` : ''}${x.ind ? `<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--tiffany-d);font-size:11.5px">ما يجب توفره (${x.ind.length})</summary><ul style="margin:4px 0;padding-inline-start:16px;font-size:11.5px;color:var(--muted)">${x.ind.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}</td>
         ${F.scale.map((_, k) => `<td class="ck" data-i="${i}" data-k="${k}" style="text-align:center;cursor:pointer;font-size:18px;color:var(--tiffany-d)">${d.rt[i] === k ? '✓' : ''}</td>`).join('')}
         <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
-          <select data-add="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ توصية مقترحة (${x.r.length})…</option>${x.r.map(t => `<option>${esc(t)}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div></div>
+          <select data-add="${i}" ${d.en ? 'dir="ltr"' : ''} style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ ${d.en ? 'Suggested recommendation' : 'توصية مقترحة'} (${x.r.length})…</option>${x.r.map(t => cvOpt(d, t, false)).join('')}</select>${d.en && d.rc[i] ? `<div dir="ltr" style="font-size:11px;color:var(--tiffany-d);text-align:left">${esc(String(d.rc[i]).split('؛ ').map(z => enOf(z.trim()) || '').filter(Boolean).join('; '))}</div>` : ''}</td></tr>`; }).join('')}</table></div></div>
 
     ${cvWsCard(d, WS)}
 
@@ -399,6 +430,7 @@ function cvInner(r) {
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '') + fuTxt + ((d.str || []).length ? '\n\nنقاط القوة:\n' + d.str.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '') + ((d.imp || []).length ? '\n\nالنقاط التي تحتاج إلى تحسين:\n' + d.imp.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '')).trim()}</div></div>
+  ${d.en && ((d.en.str || []).length || (d.en.imp || []).length) ? `<div class="gen" dir="ltr" style="text-align:left"><div class="h">General Notes and Recommendations</div><div class="b" style="text-align:left">${esc(((d.en.pre || '') + ((d.en.str || []).length ? '\n\nStrengths:\n' + d.en.str.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '') + ((d.en.imp || []).length ? '\n\nAreas for improvement:\n' + d.en.imp.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '')).trim())}</div></div>` : ''}
   ${d.vpfb ? `<div class="gen"><div class="h">ملاحظات النائب الأكاديمي${d.vpfbAt ? ' (' + dmy(d.vpfbAt) + ')' : ''}</div><div class="b">${esc(d.vpfb)}</div></div>` : ''}
   <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(cN)}{{SIG}}</td>${d.vpfb ? `<td>توقيع النائب الأكاديمي<br>أ. ${esc(typeof VP_NAME !== 'undefined' ? VP_NAME : '')}</td>` : ''}</tr></table>`;
 }

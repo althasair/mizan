@@ -192,7 +192,7 @@ function autoFeedback(dept, p) {
   else if (K.planPct >= 0.75) st.push(`تنفيذ ${fmtPct(K.planPct)} من ورش خطة التطوير المهني المقررة`);
   if (K.att != null && K.att >= 0.85) st.push(`ارتفاع نسبة حضور المعلمات للورش الداخلية (${fmtPct(K.att)})`);
   if (K.extPct >= 0.5) st.push(`مشاركة ${fmtPct(K.extPct)} من المعلمات في برامج التطوير المهني الخارجية`);
-  if (K.commonRecs && K.cpActions) st.push('اتخاذ إجراءات عملية لمعالجة التوصيات المشتركة بين المعلمات');
+  if (K.commonRecs && K.cpActions && !K.commonOpen) st.push('اتخاذ إجراءات عملية لمعالجة التوصيات المشتركة بين المعلمات');
   if (K.activities >= 3) st.push(`تنوع الأنشطة والمبادرات المنفذة (${K.activities})`);
   if (K.achievements) st.push(`تحقيق (${K.achievements}) من الإنجازات والمراكز`);
   if (K.peer && K.peerMet) st.push('تفعيل الزيارات التبادلية بما يلبي احتياجات المعلمات');
@@ -204,7 +204,7 @@ function autoFeedback(dept, p) {
   if (!K.visits) { if (noted('الحضور الصفي للمنسقة')) inFile.push('الزيارات الصفية'); else rc.push('تنفيذ الزيارات الصفية لمعلمات القسم وتوثيقها'); }
   else if (notVisited.length) rc.push('استكمال الزيارات الصفية للمعلمات اللاتي لم تتم زيارتهن: ' + notVisited.join('، '));
   if (fuNot) rc.push(`متابعة تنفيذ التوصيات التي لم تُنفذ بعد في زيارات المتابعة (${fuNot})`);
-  if (K.commonRecs && !K.cpActions) rc.push('اتخاذ إجراءات لمعالجة التوصيات المشتركة: ' + T.common.join('؛ '));
+  if (K.commonRecs && (T.commonOpen || T.common).length) rc.push('عقد حلقة نقاشية أو اجتماع للقسم لمعالجة التوصيات المشتركة بين المعلمات، وتوثيق الإجراء في «إجراءات التوصيات المشتركة»: ' + (T.commonOpen || T.common).join('؛ '));
   if (ovNot) rc.push('متابعة تنفيذ توصيات زيارات القيادة والتوجيه التربوي');
   if (K.planPct != null && K.planPct < 1) rc.push('متابعة تنفيذ ورش خطة التطوير المهني المتبقية وتوثيق حالتها');
   if (!has('PL') && !noted(...SNMAP.PL)) rc.push('توثيق متابعة الخطط الفصلية وتغطية المنهج');

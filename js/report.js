@@ -184,15 +184,34 @@ function buildReport(ctx) {
     const sh = L.filter(x => x.done && (x.shortV || x.shortS)).map(x => mAr(x.m));
     return `• متابعة أ. ${t} (خطة شهرية خاصة): ${parts.join('؛ ')}.` + (sh.length ? ` ويُلاحظ قصور في متابعة المعلمة خلال شهر ${sh.join(' و')}، إذ لم تكتمل الزيارات أو الجلسات الفردية المطلوبة.` : '');
   }).filter(Boolean);
-  // التوصيات المشتركة (تكررت لدى معلمتين فأكثر)
+  // التوصيات المشتركة (تكررت لدى معلمتين فأكثر): تُجمع حسب موضوعها لا حرفيّتها، فتلتقي العبارات المتقاربة (مثل «توظيف التعلم التعاوني» و«تعزيز التعلم التعاوني»)
   const recStats = uniq([...REF.REC, ...V.flatMap(v => [v.r1, v.r2, v.r3]).filter(Boolean)]).map((rc, i) => {
     const l = V.filter(v => !isFU(v) && [v.r1, v.r2, v.r3].includes(rc));
     return { rc, i, n: l.length, k: uniq(l.map(v => v.t)).length };
   });
-  T.common = recStats.filter(x => x.k >= 2).map(x => x.rc);
+  const REC_TH = [
+    ['توظيف التعلم التعاوني وتوزيع الأدوار في المجموعات', /تعاون|المجموعات|مجموعة|الأدوار|تشارك/],
+    ['مراعاة الفروق الفردية وتمايز الأنشطة', /الفروق الفردية|متمايز|تمايز|ذوات الأداء|المتفوقات|مستويات الطالبات/],
+    ['تفعيل دور الطالبة ومحورية التعلم والمناقشة', /دور الطالب|محور|التعلم النشط|استنتاج|المناقشة|التفاعل/],
+    ['الأسئلة الصفية ومهارات التفكير العليا', /أسئلة|الأسئلة|التفكير|زمن انتظار/],
+    ['تنويع التقويم البنائي والتغذية الراجعة', /تقويم|تقييم|تغذية راجعة/],
+    ['التهيئة وغلق الدرس', /تمهيد|تهيئة|غلق|تذكرة خروج/],
+    ['الإدارة الصفية واستثمار زمن الحصة', /إدارة الصف|الإدارة الصفية|السلوك|زمن الحصة|الوقت|المؤقت|الانتقال بين/],
+    ['توظيف التقنية ومصادر التعلم', /تكنولوجيا|التقنية|نظام قطر|مصادر التعلم|مصدر التعلم|الوسائل/],
+    ['التخطيط وصياغة الأهداف', /خطة الدرس|صياغة الأهداف|أهداف التعلم|التدرج المنطقي|خطوات الدرس/],
+    ['المهارات اللغوية (القراءة والكتابة والتعبير)', /الكتابة|للكتابة|القراءة|التعبير|المفردات|الكلمات/],
+  ];
+  const recTxt = v => uniq([v.r1, v.r2, v.r3, ...(v.imp || [])].filter(Boolean));
+  const TH = REC_TH.map(([lbl, re]) => { const L = V.filter(v => !isFU(v) && recTxt(v).some(x => re.test(x))); return { lbl, re, ts: uniq(L.map(v => v.t)), ex: uniq(L.flatMap(v => recTxt(v).filter(x => re.test(x)))) }; }).filter(x => x.ts.length >= 2);
+  // ما عالجته المنسقة: إجراء التوصيات المشتركة، أو اجتماع أو حلقة نقاشية أو جلسة فردية أو ورشة في الفترة يتناول موضوعها
   const CP = Rp('CP');
-  const cpTxt = CP.map(r => SEC.CP.tx(d(r))).join('؛ ');
-  T.v_common_p = !vN ? '' : (T.common.length ? 'التوصيات المشتركة لمعلمات القسم: ' + T.common.join('؛ ') + '.' : 'لا توجد توصيات مشتركة بين معلمات القسم خلال الفترة.') + (cpTxt ? ' وإجراءات المنسقة: ' + cpTxt + '.' : '');
+  const actTx = r => { const x = d(r); return [x.rec, x.proc, x.t1, x.t2, x.t3, x.ty, x.topic, x.title, x.b, x.c, x.det, x.note, ...(Array.isArray(x.tp) ? x.tp : [])].filter(Boolean).join(' '); };
+  const ACTS = ['CP', 'MT', 'IS', 'WS'].flatMap(k => Rp(k).map(r => ({ k, r, tx: actTx(r) })));
+  const actName = a => { const x = d(a.r); return a.k === 'CP' ? `${x.proc || 'إجراء'}${x.date || a.r.date ? ' (' + dm(x.date || a.r.date) + ')' : ''}` : a.k === 'MT' ? `اجتماع القسم (${dm(a.r.date)})` : a.k === 'IS' ? `جلسة فردية مع أ. ${x.t || ''} (${dm(a.r.date)})` : `ورشة «${(SEC.WS && SEC.WS.title_ ? SEC.WS.title_(x) : x.c || x.b || '')}»`; };
+  TH.forEach(th => { th.acts = ACTS.filter(a => th.re.test(a.tx) || (a.k === 'CP' && (th.ex.includes(d(a.r).rec) || /المشتركة/.test(a.tx))) || (/التوصيات المشتركة/.test(a.tx) && a.k !== 'CP')); });
+  T.common = TH.map(x => x.lbl);
+  T.commonOpen = TH.filter(x => !x.acts.length).map(x => x.lbl);
+  T.v_common_p = !vN ? '' : (TH.length ? 'التوصيات المشتركة بين معلمات القسم: ' + TH.map((x, i) => `(${i + 1}) ${x.lbl} — لدى ${x.ts.map(t => 'أ. ' + t).join('، ')}؛ ` + (x.acts.length ? 'وعالجتها المنسقة من خلال: ' + uniq(x.acts.map(actName)).join('، ') : 'ولم يُوثَّق إجراء للمنسقة لمعالجتها بعد')).join('. ') + '.' : 'لا توجد توصيات مشتركة بين معلمات القسم خلال الفترة.');
   T.topRecs = recStats.filter(x => x.n).sort((a, b) => b.n - a.n || b.k - a.k).slice(0, 5);
   T.topStr = REF.CRIT.map((cr, i) => ({ core: cr.core, n: V.filter(v => v.f1 === cr.label || v.f2 === cr.label).length })).filter(x => x.n).sort((a, b) => b.n - a.n).slice(0, 5);
   T.perTeacher = per;
@@ -381,7 +400,7 @@ function buildReport(ctx) {
     planPct: planN ? planDone / planN : null, att: att, extPct: NM ? exK / NM : 0,
     meetings: nMT(MT), activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
     peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && !/^SB[AC]$/.test(r.item) && inP(r.date || SEC.WS.when(r.d), P)).length,
-    commonRecs: T.common.length, cpActions: CP.length, subCover: SBC.length, subAbs: SBA.length,
+    commonRecs: T.common.length, cpActions: T.common.length - T.commonOpen.length, commonOpen: T.commonOpen.length, subCover: SBC.length, subAbs: SBA.length,
   };
   return { dept, P, coord, NT, teachers, T, rows, K };
 }

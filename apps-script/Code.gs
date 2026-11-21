@@ -798,6 +798,7 @@ function route_(req) {
     case 'myStudents': return { students: myStudents_(u) };
     case 'sabRefresh': CacheService.getScriptCache().remove('sabPA4'); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
+    case 'tr': { const L = (req.list || []).slice(0, 12).map(x => String(x || '').slice(0, 1500)); return { list: L.map(x => { if (!x.trim()) return ''; try { return LanguageApp.translate(x, req.from || 'en', req.to || 'ar'); } catch (e) { return ''; } }) }; }   // ترجمة توصيات منسقة اللغة الإنجليزية
     case 'planUp': return planUp_(u, req);
     case 'planList': return planList_(u, req);
     case 'setSig': return setSig_(u, req);
