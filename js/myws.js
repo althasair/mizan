@@ -12,7 +12,7 @@ const MYWS = [
       deck: [{ t: 'العرض التقديمي', d: 'شرائح الورشة كاملة (61 شريحة) بالقصص والأنشطة.', file: 'ws/sandooq/deck.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#screen', liveT: 'العرض التفاعلي' }],
       invite: [{ t: 'بطاقة الدعوة', d: 'بطاقة صعود إلكترونية اختارت منها كل قائدة اسمها وأكّدت رغبتها.', file: 'ws/sandooq/invite.png', live: 'https://sandooq.alshaimaa-school.com/invite.html?view', liveT: 'الدعوة التفاعلية' },
         { t: 'كشف تسجيل الرغبة', ph: 'a', d: 'من أكّدت رغبتها في الحضور ووقت التأكيد: 12 من 14.', file: 'ws/sandooq/rsvp.pdf' }],
-      eval: [{ t: 'نموذج التقييم', ph: 'b', d: '6 عبارات بمقياس خماسي (المحتوى والمدرّبة) و3 أسئلة مفتوحة.', file: 'ws/sandooq/eval-form.pdf', live: 'https://sandooq.alshaimaa-school.com/evaluation.html?view', liveT: 'النموذج الإلكتروني' },
+      eval: [{ t: 'نموذج التقييم', ph: 'b', d: 'النموذج الإلكتروني الذي عبّأته القائدات: 6 عبارات بمقياس خماسي و3 أسئلة مفتوحة، وتتحول استجاباته إلى «نتائج التقييم».', file: 'ws/sandooq/eval-form.pdf', live: 'https://sandooq.alshaimaa-school.com/evaluation.html?view', liveT: 'النموذج الإلكتروني' },
         { t: 'نتائج التقييم', ph: 'a', d: 'المؤشرات والدلالات ورسائل القائدات للمدرّبة.', file: 'ws/sandooq/eval-results.pdf', live: 'https://sandooq.alshaimaa-school.com/evaluation.html#list', liveT: 'النتائج المباشرة' }],
       att: [{ t: 'كشف الحضور', ph: 'b', d: 'الكشف الفارغ بأسماء المدعوّات الـ 14 قبل الورشة.', file: 'ws/sandooq/att-before.pdf' },
         { t: 'كشف الحضور', ph: 'a', d: 'من حضرت ووقت تسجيلها بمسح رمز QR: 13 حاضرة.', file: 'ws/sandooq/att-after.pdf', live: 'https://sandooq.alshaimaa-school.com/?view#join', liveT: 'تجربة تسجيل الحضور' }]
@@ -22,7 +22,7 @@ const MYWS = [
     parts: {
       deck: [{ t: 'العرض التقديمي', d: 'العرض التفاعلي: الأنماط والمفاتيح ولعبة «أنا في عمرهم» وخريطة صفّي.', live: 'https://katalog.alshaimaa-school.com/warsha.html?view', liveT: 'العرض التفاعلي' }],
       invite: [],
-      eval: [{ t: 'نموذج التقييم', ph: 'b', d: '6 عبارات (المحتوى والمدرّبة) و3 أسئلة مفتوحة.', file: 'ws/katalog/eval-form.pdf', live: 'https://katalog.alshaimaa-school.com/warsha.html?view#eval', liveT: 'النموذج الإلكتروني' },
+      eval: [{ t: 'نموذج التقييم', ph: 'b', d: 'النموذج الإلكتروني الذي تعبّئه المعلمات بعد الورشة: 6 عبارات و3 أسئلة مفتوحة، وتتحول استجاباته إلى «نتائج التقييم».', file: 'ws/katalog/eval-form.pdf', live: 'https://katalog.alshaimaa-school.com/warsha.html?view#eval', liveT: 'النموذج الإلكتروني' },
         { t: 'نتائج التقييم', ph: 'a', d: 'تُضاف بعد تنفيذ الورشة.', pending: 1 }],
       att: [{ t: 'كشف الحضور', ph: 'b', d: 'الكشف الفارغ بأسماء المعلمات الـ 70 مرتبات حسب القسم، والمنسقة أولًا.', file: 'ws/katalog/att-before.pdf' },
         { t: 'كشف الحضور', ph: 'a', d: 'يُضاف بعد تنفيذ الورشة.', pending: 1 }]
@@ -113,7 +113,7 @@ function A_myws(el) {
         <div class="mw-k">${w.stats.map(s => `<div><b>${esc(s[0])}</b><small>${esc(s[1])}</small></div>`).join('')}</div></div></div>
       <div class="mw-tb">${tabs.map(([k, t]) => `<button class="${k === cur ? 'on' : ''}" data-mk="${k}">${t}</button>`).join('')}</div>
       <div class="mw-its">${w.parts[cur].map(it => `<div class="mw-it ${it.pending ? 'off' : ''}"><h4>${esc(it.t)}${it.ph ? `<span class="mw-ph ${it.ph}">${it.ph === 'b' ? 'قبل الاستجابة' : 'بعد الاستجابة'}</span>` : ''}</h4><p>${esc(it.d)}</p>${it.pending ? '<span class="mw-wt">⏳ بعد تنفيذ الورشة</span>' : ''}
-        <div class="mw-bt">${it.file ? `<button data-mv="${esc(it.file)}" data-mt="${esc(w.title + ' · ' + it.t)}">👁️ عرض</button><a class="l" href="${esc(it.file)}" download="${esc(w.title + ' - ' + it.t + (it.ph === 'a' ? ' (بعد)' : it.ph === 'b' ? ' (قبل)' : '') + it.file.slice(it.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(it.file)}">🖨️ طباعة</button>` : ''}${it.live ? `<a class="l" href="${esc(it.live)}" target="_blank" rel="noopener">↗ ${esc(it.liveT)}</a>` : ''}</div></div>`).join('')}</div></div></div>`;
+        <div class="mw-bt">${cur === 'eval' && it.live ? `<button data-mv="${esc(it.live)}" data-mt="${esc(w.title + ' · ' + it.liveT)}">✨ ${esc(it.liveT)}</button>` : ''}${it.file ? `<button ${cur === 'eval' && it.live ? 'class="l" ' : ''}data-mv="${esc(it.file)}" data-mt="${esc(w.title + ' · ' + it.t)}">👁️ ${cur === 'eval' && it.live ? 'النسخة المطبوعة' : 'عرض'}</button><a class="l" href="${esc(it.file)}" download="${esc(w.title + ' - ' + it.t + (it.ph === 'a' ? ' (بعد)' : it.ph === 'b' ? ' (قبل)' : '') + it.file.slice(it.file.lastIndexOf('.')))}">⬇️ تحميل</a><button class="l" data-mp="${esc(it.file)}">🖨️ طباعة</button>` : ''}${it.live && cur !== 'eval' ? `<a class="l" href="${esc(it.live)}" target="_blank" rel="noopener">↗ ${esc(it.liveT)}</a>` : ''}</div></div>`).join('')}</div></div></div>`;
   $('#mwB', el).onclick = () => { S.mwOpen = null; A_myws(el); };
   $$('[data-mk]', el).forEach(b => b.onclick = () => { S.mwTab = Object.assign({}, S.mwTab, { [w.id]: b.dataset.mk }); A_myws(el); });
   $$('[data-mv]', el).forEach(b => b.onclick = () => mwOpen(b.dataset.mv, b.dataset.mt));
@@ -122,9 +122,9 @@ function A_myws(el) {
 const mwIsImg = f => /\.(png|jpe?g)$/i.test(f);
 function mwOpen(f, t) {
   let v = $('#mwV'); if (!v) { v = document.createElement('div'); v.id = 'mwV'; document.body.appendChild(v); }
-  v.innerHTML = `<div class="bx"><div class="br"><b>${esc(t)}</b><span><button id="mwP">🖨️ طباعة</button><a href="${esc(f)}" target="_blank" rel="noopener">↗ فتح في نافذة جديدة</a><button id="mwX">✕ إغلاق</button></span></div>${mwIsImg(f) ? `<img src="${esc(f)}" alt="">` : `<iframe src="${esc(f)}"></iframe>`}</div>`;
+  v.innerHTML = `<div class="bx"><div class="br"><b>${esc(t)}</b><span>${/^https?:/.test(f) ? '' : '<button id="mwP">🖨️ طباعة</button>'}<a href="${esc(f)}" target="_blank" rel="noopener">↗ فتح في نافذة جديدة</a><button id="mwX">✕ إغلاق</button></span></div>${mwIsImg(f) ? `<img src="${esc(f)}" alt="">` : `<iframe src="${esc(/\.pdf$/i.test(f) ? f + '#view=FitH' : f)}"></iframe>`}</div>`;
   v.classList.add('on'); const close = () => { v.classList.remove('on'); v.innerHTML = ''; };
-  $('#mwX', v).onclick = close; v.onclick = e => { if (e.target === v) close(); }; $('#mwP', v).onclick = () => mwPrint(f);
+  $('#mwX', v).onclick = close; v.onclick = e => { if (e.target === v) close(); }; if ($('#mwP', v)) $('#mwP', v).onclick = () => mwPrint(f);
 }
 /* طباعة بالجودة الأصلية: الصورة في صفحة A4 مستقلة، والـ PDF من عارضه مباشرة */
 function mwPrint(f) {
