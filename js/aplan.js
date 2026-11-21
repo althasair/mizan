@@ -132,7 +132,7 @@ function aplCard(dept) {
     const plan = aplPlanCur(dept), mk = S.aplM && APL_MONTHS.includes(S.aplM) ? S.aplM : today().slice(0, 7);
     if (S.aplEd) return aplEditor(dept, plan, draw);
     let n = 0, ok = 0, need = 0;
-    const rows = plan.doms.map(D => `<tr class="apl-dh"><td colspan="6"><b>${esc(D.d)}</b></td></tr>` + D.items.map(it => {
+    const rows = plan.doms.map(D => `<tr class="apl-dh"><td colspan="6"><b>${esc(D.d)}</b>${D.items.length ? '' : ' <small style="color:#B8521A">— لم تُحدَّد إجراءات في هذا المجال بعد، أضيفيها من «✏️ تعديل الخطة»</small>'}</td></tr>` + D.items.map(it => {
       const s = aplStatus(dept, it, mk); n++; if (s.st === 'مكتمل') ok++; if (s.need) need++;
       return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div>${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قرار المنسقة' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}</td><td class="apl-by">${esc(it.by)}</td><td class="apl-due">${dmy(it.due)}</td><td class="apl-due" style="white-space:normal;max-width:140px">${esc(it.ev || '')}</td>
         <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td><td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
@@ -190,7 +190,7 @@ async function aplPrint(dept, mk) {
   let csig = '', vsig = '';
   try { if (co && co.id) csig = (await API.call('signature', { who: co.id })).data || ''; } catch (e) {}
   try { vsig = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) {}
-  const rows = plan.doms.map(D => D.items.map((it, i) => { const s = aplStatus(dept, it, mk);
+  const rows = plan.doms.map(D => !D.items.length ? `<tr><td class="dm f l">${esc(D.d)}</td><td colspan="6" style="color:#888">لم تُحدَّد إجراءات في هذا المجال بعد</td></tr>` : D.items.map((it, i) => { const s = aplStatus(dept, it, mk);
     return `<tr>${`<td class="dm${i === 0 ? ' f' : ''}${i === D.items.length - 1 ? ' l' : ''}">${i === 0 ? esc(D.d) : ''}</td>`}<td class="ac">${esc(it.t)}</td><td>${esc(it.by)}</td><td>${dmy(it.due)}</td><td>${esc(it.ev || '')}</td><td class="st ${APS_C[s.st] || ''}">${esc(s.st)}</td><td>${dmy(t0)}</td></tr>`; }).join('')).join('');
   const sigBox = (ttl, nm, sg, big) => `<div class="sg"><div class="tt">${ttl}</div><div class="nm"><b>${esc(nm)}</b>${sg ? `<img src="${sg}" alt="">` : ''}</div></div>`;
   const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
