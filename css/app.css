@@ -564,3 +564,6 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 .apl-mos{display:flex;gap:4px;flex-wrap:wrap;margin:4px 0 8px}.apl-mos button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font:inherit;font-size:12.5px;cursor:pointer}.apl-mos button.on{background:var(--maroon);border-color:var(--maroon);color:#fff}
 .apl-ev{font-size:11.5px;color:#5A6B7D;margin-top:3px}.apl-t tr.apl-need td{background:#FFF4EA}.apl-t tr.apl-need .apl-ev{color:#B8521A;font-weight:600}
 .apl-ed textarea,.apl-ed input{width:100%;font:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:8px;padding:4px 6px}.apl-ed td{vertical-align:top}
+
+/* متابعة الخطة الإجرائية للنائب الأكاديمي */
+.vpl-oqs{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.vpl-oq{font-size:10.5px;border-radius:6px;padding:1px 6px;background:#F1F1F1;color:#555}.vpl-oq.b{background:#E4F3EA;color:#1F5E3B}.vpl-oq.g{background:#E6EEF8;color:#1E4A82}.vpl-oq.o{background:#FCEADB;color:#8A4B12}.vpl-oq.r{background:#F9E3E6;color:#8A1029}
