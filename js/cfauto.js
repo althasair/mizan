@@ -199,10 +199,80 @@ async function C_mycf(el) {
     <div class="card"><div class="row"><h2 style="margin:0">${esc(D.title)} — ${esc(r.d.sem)}</h2><span class="sp"></span>
       ${r.d.csig ? `<span class="chip ok">وقّعتِها ${dm(r.d.csig)}</span>` : '<button class="btn" id="cfSg">✍️ توقيع الاستلام</button>'} <button class="btn sec" id="cfPr">معاينة وطباعة</button></div>
       <div class="note" style="margin-top:8px">اعتمدتها النائبة الأكاديمية بتاريخ ${dmy(r.d.ok)}. التوقيع يعني الاطلاع على الاستمارة واستلامها.</div></div>
-    <div class="card"><div class="tbl"><table class="t"><tr><th>المجال</th><th>الأدلة</th><th>المتابعة</th></tr>${D.rows.map((x, i) => `<tr>${x.first ? `<td rowspan="${x.span}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.dom)}</td>` : ''}<td>${esc(x.e)}</td><td><span class="chip ${SC_CHIP[r.d.ev[i]] || ''}">${esc(r.d.ev[i] || '—')}</span></td></tr>`).join('')}</table></div></div>
+    <div class="card"><div class="tbl"><table class="t"><tr><th>المجال</th><th>الأدلة</th><th>المتابعة</th></tr>${D.rows.map((x, i) => `<tr>${x.first ? `<td rowspan="${x.span}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.dom)}</td>` : ''}<td style="text-align:justify">${esc((r.d.evx && r.d.evx[i]) || x.e)}</td><td><span class="chip ${SC_CHIP[r.d.ev[i]] || ''}">${esc(cfL(r.d.ev[i] || '—'))}</span></td></tr>`).join('')}</table></div></div>
     <div class="card"><h2>التوصيات العامة</h2><div style="white-space:pre-wrap;line-height:2;text-align:justify">${esc(r.d.gen || '')}</div></div>`;
   $$('[data-m]', el).forEach(b => b.onclick = () => { S.mycf = b.dataset.m; show(); });
   $('#cfPr', el).onclick = async () => { await showPaper(el, D.title, fileInner(D, T, r, 'CF'), ''); $('#pBack').onclick = () => show(); };
   if ($('#cfSg', el)) $('#cfSg', el).onclick = async () => { if (!confirm('توقيع استلام الاستمارة والاطلاع عليها؟')) return;
     const j = await call('cfSign', { id: r.id }); const i = S.records.findIndex(x => x.id === r.id); if (i >= 0) S.records[i] = j.record; toast('تم التوقيع ✓'); show(); };
+}
+
+/* ---------------------------------------------------- الأدلة المكتوبة لكل منسقة (تحلّ محل نص الأدلة الثابت في الطباعة)
+   تُبنى من سجلات الميزان (سجلات المنسقة وما سجّلته المعلمات) بعبارات «حرصت المنسقة على…»، وتعدّلها النائبة كما تشاء */
+function cfEvid(T, sem) {
+  const C = cfCtx(T, sem), { recs, vis, cov, wsDone } = C;
+  const nm = n => { const p = String(n || '').trim().split(/\s+/); return p.length > 2 ? p[0] + ' ' + p[p.length - 1] : p.join(' '); };
+  const q = (a, k = 2) => [...new Set(a.filter(Boolean).map(x => String(x).trim().replace(/\s*\(.*$/, '')))].slice(0, k).map(x => '«' + x + '»').join(' و');
+  const n = x => `(${x})`;
+  const A = (x, w) => x === 1 ? w[0] : x === 2 ? w[1] : `(${x}) ` + (x >= 3 && x <= 10 ? w[2] : w[3]);
+  const W = { mt: ['اجتماعاً واحداً', 'اجتماعين', 'اجتماعات', 'اجتماعاً'], ac: ['نشاطاً واحداً', 'نشاطين', 'أنشطة ومبادرات', 'نشاطاً ومبادرة'], ext: ['مشاركة خارجية واحدة', 'مشاركتين خارجيتين', 'مشاركات خارجية وشراكات مجتمعية', 'مشاركة خارجية وشراكة مجتمعية'], mr: ['مرة واحدة', 'مرتين', 'مرات', 'مرة'], it: ['بنداً واحداً', 'بندين', 'بنود', 'بنداً'], rep: ['تقريراً واحداً', 'تقريرين', 'تقارير', 'تقريراً'], v: ['زيارة واحدة', 'زيارتين', 'زيارات', 'زيارة'], vf: ['زيارة متابعة واحدة', 'زيارتي متابعة', 'زيارات متابعة', 'زيارة متابعة'], t: ['معلمة واحدة', 'معلمتين', 'معلمات', 'معلمة'], pr: ['ممارسة موثقة', 'ممارستين موثقتين', 'ممارسات موثقة', 'ممارسة موثقة'], ws: ['ورشة واحدة', 'ورشتين', 'ورش', 'ورشة'], as: ['تقييماً واحداً', 'تقييمين', 'تقييمات واختبارات داخلية', 'تقييماً واختباراً داخلياً'], an: ['تحليلاً واحداً', 'تحليلين', 'تحليلات كمية ووصفية', 'تحليلاً كمياً ووصفياً'], ra: ['إجراءً واحداً', 'إجراءين', 'إجراءات', 'إجراءً'], pg: ['برنامجاً واحداً', 'برنامجين', 'برامج', 'برنامجاً'], ch: ['تحدياً واحداً', 'تحديين', 'تحديات', 'تحدياً'], cm: ['مسابقة أو نشاط إثرائي', 'مسابقتين وأنشطة إثرائية', 'مسابقات وأنشطة إثرائية', 'مسابقة ونشاطاً إثرائياً'], ach: ['إنجازاً واحداً', 'إنجازين', 'إنجازات', 'إنجازاً'], ex: ['اختباراً واحداً', 'اختبارين', 'اختبارات', 'اختباراً'], rc: ['توصية مشتركة', 'توصيتين مشتركتين', 'توصيات مشتركة', 'توصية مشتركة'], mo: ['شهر واحد', 'شهرين', 'أشهر', 'شهراً'] };
+  const cut = t => String(t || '').split(/[؛]/)[0].trim().replace(/[.،\s]+$/, '');
+  const wsT = r => (r.d.b === REF.OUT_OF_PLAN || !r.d.b ? r.d.c : r.d.b) || '';
+  const done = recs('WS', r => /^تمت/.test(r.d.g || ''));
+  const coordName = T.name;
+  const E = [];
+  // 1) الإدارة والقيادة الأكاديمية
+  { const mt = recs('MT', r => /القيادة المدرسية/.test(r.d.ty || ''));
+    const tp = q(mt.map(r => r.d.t1).filter(t => /خطة|المراجعة الذاتية|التحصيل/.test(t || '')));
+    E[0] = mt.length ? `شاركت المنسقة في ${mt.length === 1 ? 'اجتماع واحد' : A(mt.length, W.mt)} مع القيادة المدرسية${tp ? (mt.length > 1 ? '، منها ' : '، موضوعه ') + tp : ''}، وأسهمت في إعداد الخطة التشغيلية بما يخص القسم.` : 'شاركت المنسقة في إعداد الخطة التشغيلية للمدرسة بما يخص القسم.'; }
+  { const pl = recs('PL'), an = pl.find(r => /السنوية/.test(r.d.c || '')), fs = pl.filter(r => /الفصلية/.test(r.d.c || '')).length, apl = recs('APL').length + recs('APS').length;
+    E[1] = `${an ? 'أعدّت المنسقة خطة القسم السنوية' : 'تابعت المنسقة خطة القسم السنوية'}${fs ? `، وتابعت مطابقة الخطط الفصلية للمعلمات ${A(fs, W.mr)}` : ''}${apl ? `، ووثّقت متابعة ${A(apl, W.it)} من بنود الخطة في المنصة` : ''}.`; }
+  { const ac = recs('AC'); const ext = ac.filter(r => /شراكة|خارجي|التوجيه/.test([r.d.ty, r.d.io].join(' '))).length;
+    E[2] = ac.length ? `حرصت المنسقة على تنفيذ ${A(ac.length, W.ac)} للقسم، منها ${q(ac.map(r => r.d.name), 3)}${ext ? `، وشملت ${A(ext, W.ext)}` : ''}.` : 'لا توجد أنشطة موثقة للقسم في الفصل، ولا يتبنى القسم أنشطة خاصة بالمادة.'; }
+  { const reps = S.reports.filter(r => T.depts.includes(r.dept) && S.periods.some(p => p.name === r.period && p.sem === sem));
+    const an = recs('AS', r => SEC.AS.an(r.d) && /رفع التقرير|التقرير/.test(r.d.an || '')).length;
+    E[3] = `أعدّت المنسقة تقرير القسم الدوري${reps.length ? ` لفترات الفصل` : ''}${an ? `، ورفعت ${A(an, W.rep)} لتحليل النتائج` : ''}${recs('MT').length ? `، ووثّقت محاضر ${A(recs('MT').length, W.mt)} في المنصة` : ''}.`; }
+  // 2) التعليم والتعلم
+  { const pl = recs('PL', r => /الفصلية/.test(r.d.c || '')), ac = pl.map(r => r.d.ac).find(x => x && x.length > 30);
+    E[4] = pl.length ? `تابعت المنسقة الخطط الفصلية واليومية للمعلمات ${A(pl.length, W.mr)}، وأكدت مطابقتها للخطة الفصلية${ac ? `، ومن إجراءاتها: ${cut(ac)}` : ''}.` : 'تابعت المنسقة الخطط اليومية للمعلمات على نظام قطر للتعليم.'; }
+  { const V = recs('V'), seen = new Set(V.map(r => r.d.t)), fu = V.filter(r => /متابعة/.test(r.d.ty || '')).length, nT = Math.round(cov != null ? seen.size / Math.max(cov, 0.01) : seen.size);
+    E[5] = V.length ? `نفّذت المنسقة ${A(vis || V.length, W.v)} صفية شملت ${cov != null && cov >= 0.99 ? 'جميع معلمات القسم' : A(seen.size, W.t)}${fu ? `، منها ${A(fu, W.vf)} للتحقق من تنفيذ التوصيات` : ''}${V.some(r => /الثالثة|الرابعة|الخامسة/.test(r.d.ty || '')) ? '، وكثّفت زياراتها لمن تحتاج إلى دعم' : ''}.` : 'لا توجد زيارات صفية مسجلة في الفصل.'; }
+  { const V = recs('V'), Vd = V.filter(r => (r.d.r1 || '').trim() && !/^لا يوجد/.test(r.d.r1.trim())), ex = Vd.map(r => r.d.r1).find(x => x.length > 20 && x.length < 110);
+    E[6] = V.length ? `حرّرت المنسقة استمارات الإشراف في ${A(V.length, W.v)}، ووثّقت نقاط القوة والتوصيات في ${Vd.length === V.length ? 'جميعها' : A(Vd.length, W.v) + ' منها'}${ex ? `، ومن توصياتها: «${cut(ex)}»` : ''}.` : 'لا توجد استمارات إشراف مسجلة.'; }
+  { const lr = recs('LR', r => typeof lrIsEL === 'function' ? lrIsEL(r.d.k) : /الإلكتروني/.test(r.d.k || '')), ai = done.filter(r => /AI|ذكاء|Gemini|Chalk|تكنولوجيا|رقمي|Canva/i.test(wsT(r))).length;
+    E[7] = lr.length || ai ? `تابعت المنسقة توظيف التكنولوجيا ونظام قطر للتعليم${lr.length ? ` في ${A(lr.length, W.pr)}، ${lr.length > 1 ? 'منها' : 'هي'} ${q(lr.map(r => r.d.e))}` : ''}${ai ? `، وحضرت معلمات القسم ${A(ai, W.ws)} في التقنية والذكاء الاصطناعي` : ''}.` : 'لا يوجد توثيق لمتابعة دمج التكنولوجيا في الفصل.'; }
+  // 3) تقييم تعلّم الطلبة
+  { const as = recs('AS'), ty = {}; as.forEach(r => ty[r.d.ty] = (ty[r.d.ty] || 0) + 1);
+    E[8] = as.length ? `تابعت المنسقة إعداد ${A(as.length, W.as)} (${Object.entries(ty).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join('، ')}) في جميع المستويات.` : 'لا توجد اختبارات داخلية مسجلة في الفصل.'; }
+  { const an = recs('AS', r => SEC.AS.an(r.d) && !/قيد/.test(r.d.an || '')), pend = recs('AS', r => /قيد/.test(r.d.an || '')).length;
+    E[9] = an.length ? `أعدّت المنسقة ${A(an.length, W.an)} للنتائج${an.length > 1 ? '، منها' : ' هو'} ${q(an.map(r => `${r.d.ty} (${r.d.lvl})`))}${pend ? `، وما زال تحليل ${A(pend, W.ex)} قيد الإنجاز` : ''}.` : pend ? `بدأت المنسقة تحليل ${A(pend, W.ex)} من نتائج الاختبارات، وما زالت قيد التحليل.` : 'لا توجد تحليلات موثقة للنتائج في الفصل.'; }
+  { const ra = recs('RA'), im = ra.filter(r => r.d.imp && !/قيد/.test(r.d.imp)), tg = ra.filter(r => r.d.tg && !/جميع/.test(r.d.tg)).length;
+    E[10] = ra.length ? `نفّذ القسم ${A(ra.length, W.ra)} لرفع التحصيل${tg ? `، منها ${tg === 1 ? 'إجراء واحد موجّه' : tg === 2 ? 'إجراءان موجّهان' : A(tg, W.ra) + ' موجّهة'} لفئات محددة` : ''}، ${im.length ? `ووثّقت المنسقة أثر ${A(im.length, W.ra)} منها (${q(im.map(r => r.d.imp), 1).replace(/[«»]/g, '')})` : 'ولم يُوثَّق أثرها بعد'}.` : 'لا توجد إجراءات رفع تحصيل مسجلة.'; }
+  // 4) تطوير أداء المعلمين
+  { const pd = (S.pd || []).filter(x => T.depts.some(dp => String(x.dept).split('|').includes(dp)));
+    E[11] = pd.length ? `شاركت المنسقة في حصر الاحتياجات التدريبية لمعلمات القسم، وأدرجت ${A(pd.length, W.pg)} في خطة التطوير المهني، منها ${q(pd.map(x => x.title))}.` : 'شاركت المنسقة في حصر الاحتياجات التدريبية لمعلمات القسم.'; }
+  { const V = recs('V'), byT = {}; V.forEach(r => byT[r.d.t] = (byT[r.d.t] || 0) + 1); const many = Object.entries(byT).filter(([, c]) => c >= 3).map(([t]) => nm(t));
+    const nw = recs('WS', r => /مستجد/.test(wsT(r)) || /مستجد/.test(r.d.c || '')).length + recs('EX', r => /مستجد/.test(r.d.name || '')).length;
+    E[12] = `وزّعت المنسقة زياراتها وفق احتياج معلمات القسم${many.length ? `، فكثّفت متابعة ${many.slice(0, 3).map(t => 'أ. ' + t).join(' و')}` : ''}${nw ? '، وخصّت المعلمة المستجدة ببرامج دعم' : ''}.`; }
+  { const pl = done.filter(r => r.d.b && r.d.b !== REF.OUT_OF_PLAN), pst = recs('WS', r => /رُحّلت|أُلغيت|تأجيل/.test(r.d.g || '') && !/^تمت/.test(r.d.g || ''));
+    E[13] = `تابعت المنسقة تنفيذ خطة التطوير المهني، ونُفّذت ${A(wsDone, W.ws)}${pl.length ? `، منها من الخطة ${q(pl.map(wsT))}` : ''}${pst.length ? `، ورُحّلت أو أُلغيت ${A(pst.length, W.ws)}` : ''}.`; }
+  { const ex = recs('EX');
+    E[14] = `وثّقت المنسقة ${A(done.length, W.pg)} تدريبية داخلية${ex.length ? ` و${A(ex.length, W.pg)} خارجية لمعلمات القسم` : ''}${done.length ? `، منها ${q(done.map(wsT))}` : ''}.`; }
+  { const o = done.filter(r => r.d.o), cp = recs('CP'), m = done.map(r => r.d.m).find(Boolean);
+    E[15] = o.length || cp.length ? `قاست المنسقة أثر التطوير${o.length ? ` في ${A(o.length, W.ws)} (${cut(o[0].d.o)})` : ''}${cp.length ? `${o.length ? '، و' : ' '}حوّلت ${A(cp.length, W.rc)} إلى إجراءات للقسم (${q(cp.map(r => r.d.proc), 1).replace(/[«»]/g, '')})` : ''}.` : `نُفّذت ورش التطوير${m ? ` وكان من إيجابياتها «${cut(m)}»` : ''}، ولم يُوثَّق قياس أثرها في الممارسات الصفية بعد.`; }
+  // 5) الجوانب المهنية والشخصية
+  { const ex = recs('EX', r => r.d.t === coordName), tw = S.records.filter(r => r.item === 'TWS' && r.d && r.d.t === coordName && C.inS(r)), pres = done.filter(r => (r.d.pres || '').includes(coordName.split(' ')[0]));
+    E[16] = ex.length + tw.length + pres.length ? `حرصت المنسقة على تطوير ذاتها${ex.length + tw.length ? ` بحضور ${ex.length + tw.length === 1 ? 'برنامج واحد' : A(ex.length + tw.length, W.pg) + ' وورش'}` : ''}${pres.length ? `${ex.length + tw.length ? '، و' : ' '}بتقديم ${A(pres.length, W.ws)} لمعلمات القسم منها ${q(pres.map(wsT), 1)}` : ''}.` : 'لا توجد مشاركات مسجلة للمنسقة في التطوير الذاتي في الفصل.'; }
+  { const ch = recs('CH'), x = ch.find(r => r.d.sol);
+    E[17] = ch.length ? `وثّقت المنسقة ${A(ch.length, W.ch)} واتخذت قرارات لمعالجتها${x ? `، منها: ${cut(x.d.ch)}، وكان القرار: ${cut(x.d.sol)}` : ''}.` : 'لا توجد تحديات وقرارات موثقة في الفصل.'; }
+  { const ach = recs('ACH').filter(r => /إنجاز|ممارسة/.test(r.d.c || '')), cm = recs('AC', r => /مسابق|أولمبياد|إثرائ/.test([r.d.ty, r.d.name].join(' '))), lr = recs('LR', r => /مصادر/.test(r.d.k || ''));
+    E[18] = `أثرت المنسقة المادة العلمية${cm.length ? ` بـ${A(cm.length, W.cm)}، منها ${q(cm.map(r => r.d.name))}` : ''}${lr.length ? `، وفعّلت مركز مصادر التعلم ${A(lr.length, W.mr)}` : ''}${ach.length ? `، وحقق القسم ${A(ach.length, W.ach)}` : ''}.`; }
+  { const all = S.records.filter(r => T.depts.includes(r.dept) && C.inS(r) && !['PRQ', 'CF'].includes(r.item)).length;
+    E[19] = `وثّقت المنسقة أعمال القسم في منصة الميزان بانتظام (${all} سجلاً في الفصل)، بما يتيح متابعتها ومراجعتها.`; }
+  { const pv = recs('PV'), tw = S.records.filter(r => r.item === 'TWS' && T.depts.includes(r.dept) && C.inS(r) && /قدّمتُ/.test(r.d.role || '')).length;
+    E[20] = `حرصت المنسقة على علاقة إيجابية مع معلمات القسم وتبادل الخبرات بينهن${pv.length ? `، فوجّهت ${A(pv.length, W.v)} تبادلية` : ''}${tw ? `، وقدّمت معلمات القسم ${A(tw, W.ws)} لزميلاتهن` : ''}.`; }
+  { const ms = []; for (let d = new Date(C.R.from); d <= new Date(C.R.to < today() ? C.R.to : today()); d.setMonth(d.getMonth() + 1)) ms.push(d.toISOString().slice(0, 7));
+    const over = typeof prqUsed === 'function' ? ms.filter(m => prqUsed(T.name, m) > PRQ_LIMIT).length : 0;
+    E[21] = over ? `تجاوزت المنسقة رصيد الاستئذان الشهري في ${A(over, W.mo)}.` : 'التزمت المنسقة بالدوام ورصيد الاستئذان الشهري في «إذنٌ مُيسَّر».'; }
+  return E.map(x => x.replace(/\s+/g, ' ').replace(/ ،/g, '،').trim());
 }

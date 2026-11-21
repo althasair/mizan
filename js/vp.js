@@ -277,6 +277,10 @@ async function markSent(r) {
 
 /* ================================================================== 2+3) متابعة الملفات (استمارات المتابعة الفصلية) */
 const SC_CHIP = { 'مستكمل': 'ok', 'مستكمل جزئياً': 'warn', 'غير مستكمل': 'bad', 'لم يتم قياسه': '' };
+/* مقياس استمارة المنسقة (وصف المقياس في الدليل): القيم الداخلية كما هي، والعرض والطباعة بمسميات المقياس */
+const CF_LBL = { 'مستكمل': 'مستكملة وفاعلة', 'مستكمل جزئياً': 'مستكملة جزئياً', 'غير مستكمل': 'غير مستكمل' };
+const CF_DESC = { 'مستكمل': 'تم تنفيذ الممارسة بكافة عناصرها وشروطها المعتمدة وبمستوى عالٍ من الجودة وفي المواعيد المحددة، مع وجود أدلة وشواهد واضحة تعكس الأثر الإيجابي المستدام للممارسة في تطوير القسم وتحقيق الأهداف المنشودة بكفاءة.', 'مستكمل جزئياً': 'تم تنفيذ الممارسة في جوانب أو مراحل معينة دون غيرها، أو أُنجزت بالكامل ولكن بمستوى جودة متوسط يفتقر إلى الانتظام، أو لم يظهر لها الأثر والفاعلية المطلوبة بالشكل الذي يخدم مستهدفات العمل بوضوح.', 'غير مستكمل': 'لم يتم البدء في تنفيذ الممارسة مطلقاً، أو أُجريت محاولات أولية/شكلية وهامشية جداً لا تفي بالحد الأدنى من المتطلبات والشروط الأساسية والمعايير اللازمة لاعتبار الممارسة قائمة أو متحقق هدفها.' };
+const cfL = v => CF_LBL[v] || v;
 function followTarget(kind) {
   if (kind === 'CF') return S.coords.filter(c => c.active !== false).map(c => ({ key: c.id, name: c.name, dept: c.dept[0], depts: c.dept, form: 'coord', role: 'منسقة قسم ' + c.dept.join(' و'), email: staffBy(c.name).email }));
   return S.records.filter(r => r.item === 'AST').map(r => ({ key: r.id, name: r.d.name, dept: 'الإدارية الأكاديمية', form: r.d.form, role: (FORMS.admin.find(a => a.k === r.d.form) || {}).rf || '', email: r.d.email, rec: r }));
@@ -396,6 +400,7 @@ function fileForm(el, kind, T, sem) {
   const SC = FORMS.scaleF;
   /* التعبئة التلقائية (للمنسقات): تملأ ما لم تُقدّره النائبة، ولا تكتب فوق تعديلها */
   const AU = kind === 'CF' ? cfAuto(T, sem) : [];
+  if (kind === 'CF') { d.evx = d.evx || {}; const EV = cfEvid(T, sem); EV.forEach((x, i) => { if (!d.evx[i]) d.evx[i] = x; }); d._ev = EV; }
   if (kind === 'CF') { d.man = d.man || {}; d.auto = {}; AU.forEach((a, i) => { d.auto[i] = a.why; if (!d.ok && !d.man[i] && a.v) d.ev[i] = a.v; }); if (!d.ok && rec && !d.genMan) d.gen = ''; }
   const compose = () => {
     if (kind === 'CF') return cfCompose(T, sem, d, D);
@@ -419,13 +424,13 @@ function fileForm(el, kind, T, sem) {
       <div class="fld"><label>اليوم</label><input id="fDay" value="${esc(dayOf(d.date))}" disabled></div>
       <div class="fld"><label>نوع المتابعة</label><select id="fM">${['ميدانية', 'عن بعد'].map(x => `<option ${d.mode === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
     </form></div>
-    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">${kind === 'CF' ? 'الأدلة والمتابعة' : 'المهام الأكاديمية ومتابعة تنفيذها'}</h2><span class="sp"></span>${kind === 'CF' ? '<button class="btn sm sec" id="cfRe" type="button">🔄 تحديث التعبئة التلقائية</button> ' : ''}<button class="btn sm sec" id="allC" type="button">تعيين الكل «مستكمل»</button></div>${kind === 'CF' ? `<div class="note" style="margin-bottom:8px">عُبّئت الاستمارة تلقائياً من سجلات المنسقة في ${esc(sem)}، وبجانب كل دليل ما بُني عليه التقدير. القرار لكِ: غيّري أي تقدير، ويُحفظ تعديلكِ ولا يكتب التحديث التلقائي فوقه. البنود التي لا سجل لها تظهر «يحتاج تأكيدكِ».</div>` : ''}
+    <div class="card"><div class="row" style="margin-bottom:8px"><h2 style="margin:0">${kind === 'CF' ? 'الأدلة والمتابعة' : 'المهام الأكاديمية ومتابعة تنفيذها'}</h2><span class="sp"></span>${kind === 'CF' ? '<button class="btn sm sec" id="cfRe" type="button">🔄 تحديث التعبئة التلقائية</button> <button class="btn sm sec" id="cfEv" type="button">✍️ إعادة كتابة الأدلة من السجلات</button> ' : ''}<button class="btn sm sec" id="allC" type="button">تعيين الكل «مستكمل»</button></div>${kind === 'CF' ? `<div class="note" style="margin-bottom:8px">عُبّئت الاستمارة تلقائياً من سجلات المنسقة في ${esc(sem)}، وبجانب كل دليل ما بُني عليه التقدير. القرار لكِ: غيّري أي تقدير، ويُحفظ تعديلكِ ولا يكتب التحديث التلقائي فوقه. البنود التي لا سجل لها تظهر «يحتاج تأكيدكِ».</div>` : ''}
     <div class="tbl"><table class="t"><tr>${kind === 'CF' ? '<th>المجال</th><th>المؤشرات</th><th>الأدلة</th>' : '<th>الرقم</th><th>المهام الأكاديمية</th>'}<th style="width:150px">المتابعة</th><th>الملاحظات والتوصيات</th></tr>
     ${D.rows.map((x, i) => { const v = d.ev[i] || ''; const need = ['مستكمل جزئياً', 'غير مستكمل'].includes(v);
       const a = AU[i], hint = !a ? '' : d.man[i] ? `<div class="cfh man">✏️ عدّلتِه — ${esc(a.why)}</div>` : a.src === 'need' && !v ? `<div class="cfh need">⚠ يحتاج تأكيدكِ — ${esc(a.why)}</div>` : a.src === 'vp' ? `<div class="cfh vp">✋ ${esc(a.why)}</div>` : `<div class="cfh auto">📊 ${esc(a.why)}</div>`;
       return `<tr>${kind === 'CF' ? (x.first ? `<td rowspan="${x.span}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.dom)}</td><td rowspan="${x.span}" style="font-size:12px">${esc(x.ind)}</td>` : '') : `<td style="text-align:center">${x.n}</td>`}
-        <td style="font-size:13px">${esc(x.e)}${hint}</td>
-        <td><select data-ev="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:4px">${['', ...SC].map(s => `<option ${v === s ? 'selected' : ''} value="${s}">${s || 'اختاري…'}</option>`).join('')}</select></td>
+        <td style="font-size:13px">${kind === 'CF' ? `<div style="font-size:11px;color:var(--muted)">${esc(x.e)}</div><textarea data-evx="${i}" rows="3" style="width:100%;min-width:260px;border:1px solid var(--line);border-radius:8px;padding:5px 7px;font-size:12.5px;line-height:1.7;text-align:justify;font-family:inherit">${esc(d.evx[i] || '')}</textarea>` : esc(x.e)}${hint}</td>
+        <td><select data-ev="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;padding:4px">${['', ...(kind === 'CF' ? Object.keys(CF_LBL) : SC)].map(s => `<option ${v === s ? 'selected' : ''} value="${s}" ${kind === 'CF' && s ? `title="${esc(CF_DESC[s])}"` : ''}>${kind === 'CF' ? (s ? cfL(s) : 'اختاري…') : (s || 'اختاري…')}</option>`).join('')}</select></td>
         <td>${kind === 'AF' ? afNoteCell(x, i, d) : need ? `<input list="dlN${i}" data-nt="${i}" value="${esc(d.nt[i] || x.r[0])}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-size:12.5px">${dl('dlN' + i, x.r)}` : v === 'مستكمل' ? `<span style="font-size:11.5px;color:var(--muted)">تبقى فارغة في الاستمارة · يُضاف الشكر في التوصيات</span>` : ''}</td></tr>`; }).join('')}</table></div></div>
     ${kind === 'CF' ? cfFileHTML(T, sem).html : ''}
     ${kind === 'CF' && (d.alt || []).length ? `<div class="card noprint" style="border:1.5px dashed var(--line)"><h2>توصيات إضافية مقترحة <span class="sub">خارج الاستمارة — لا تُطبع ولا تُرسل إلا إذا أضفتِها إلى التوصيات العامة</span></h2>${d.alt.map((x, k) => `<div style="display:flex;gap:8px;align-items:flex-start;margin:7px 0;font-size:13px;line-height:1.8"><span style="flex:1;text-align:justify">• ${esc(x)}</span><button class="btn sm" data-alta="${k}" type="button">+ إضافة</button><button class="btn sm ghost" data-altx="${k}" type="button">استبعاد</button></div>`).join('')}</div>` : ''}
@@ -438,12 +443,14 @@ function fileForm(el, kind, T, sem) {
     el.innerHTML = h;
     const grab = () => { d.date = $('#fD').value; d.mode = $('#fM').value; $$('[data-ev]', el).forEach(s => { if (s.value) d.ev[s.dataset.ev] = s.value; else delete d.ev[s.dataset.ev]; });
       $$('[data-nt]', el).forEach(i => d.nt[i.dataset.nt] = i.value.trim());
+      if (kind === 'CF') $$('[data-evx]', el).forEach(t => d.evx[t.dataset.evx] = t.value.trim());
       if (kind === 'AF') { if ($('#afTh')) d.th = +$('#afTh').value; } else Object.keys(d.nt).forEach(k => { if (!['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k])) delete d.nt[k]; });
       d.pos = $$('[data-pos]', el).filter(c => c.checked).map(c => c.dataset.pos); d.neg = $$('[data-neg]', el).filter(c => c.checked).map(c => c.dataset.neg); d.gen = $('#gen').value; };
     const regen = () => { grab(); d.gen = compose(); d.genMan = 0; };
     $('#gen').oninput = () => { d.genMan = 1; };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
     $$('[data-ev]', el).forEach(s => s.onchange = () => { if (kind === 'CF') d.man[s.dataset.ev] = 1; regen(); const k = s.dataset.ev; if (kind === 'AF' && ['مستكمل جزئياً', 'غير مستكمل'].includes(d.ev[k]) && !d.nt[k]) { d.nt[k] = D.rows[k].r[0]; d.gen = compose(); } draw(); });
+    if ($('#cfEv')) $('#cfEv').onclick = () => { if (!confirm('إعادة كتابة جميع الأدلة من سجلات المنصة؟ سيُستبدل ما عدّلتِه في خانات الأدلة.')) return; grab(); d._ev.forEach((x, i) => d.evx[i] = x); draw(); toast('أُعيدت كتابة الأدلة — احفظي الاستمارة'); };
     if ($('#cfRe')) $('#cfRe').onclick = () => { grab(); AU.forEach((a, i) => { if (d.man[i]) return; if (a.v) d.ev[i] = a.v; else delete d.ev[i]; }); d.gen = compose(); draw(); toast('تم تحديث التعبئة التلقائية دون المساس بتعديلاتكِ ✓'); };
     $$('[data-pos],[data-neg]', el).forEach(c => c.onchange = () => { regen(); draw(); });
     $$('[data-nts]', el).forEach(s => s.onchange = () => { const i = s.dataset.nts; grab(); if (s.value === '__x') { d.ntx = d.ntx || {}; d.ntx[i] = 1; d.nt[i] = ''; } else { if (d.ntx) delete d.ntx[i]; if (s.value) d.nt[i] = s.value; else delete d.nt[i]; } if (!d.genMan) d.gen = compose(); draw(); });
@@ -459,9 +466,9 @@ function fileForm(el, kind, T, sem) {
       d.alt.splice(+bt.dataset.alta, 1); d.genMan = 1; draw(); toast('أُضيفت إلى التوصيات العامة — احفظي الاستمارة'); });
     $$('[data-altx]', el).forEach(bt => bt.onclick = () => { grab(); d.alt.splice(+bt.dataset.altx, 1); draw(); toast('استُبعدت — احفظي الاستمارة'); });
     $('#fb').onclick = () => { S.fopen = null; show(); };
-    const save = async () => { grab(); d.name = T.name; d.role = T.role; d.form = T.form;
+    const save = async () => { grab(); d.name = T.name; d.role = T.role; d.form = T.form; const _e = d._ev; delete d._ev;
       const j = await call('save', { rec: { id: rec && rec.id, dept: T.dept, item: kind, date: d.date, sum: (kind === 'CF' ? 'متابعة ملفات المنسقة: ' : 'متابعة ملفات: ') + T.name + ' — ' + sem, d, key: T.key + '|' + sem } });
-      const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); return j.record; };
+      const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record); d._ev = _e; return j.record; };
     $('#fs').onclick = async () => { await save(); toast('تم الحفظ ✓'); show(); };
     if ($('#fp')) $('#fp').onclick = async () => { const r = await save(); await showPaper(el, D.title, await withCSig(fileInner(D, T, r, kind), T, kind), '<button class="btn tf" id="pSend">إرسال للموظفة</button>'); $('#pBack').onclick = () => show(); $('#pSend').onclick = () => sendFile(D, T, r, kind); };
     if ($('#fsend')) $('#fsend').onclick = async () => { const r = await save(); sendFile(D, T, r, kind); };
@@ -475,7 +482,7 @@ function fileInner(D, T, r, kind) {
   const d = r.d; const SC = FORMS.scaleF;
   const rows = D.rows.map((x, i) => { const v = d.ev[i] || ''; const nt = kind === 'AF' || ['مستكمل جزئياً', 'غير مستكمل'].includes(v) ? (d.nt[i] || '') : '';
     return `<tr>${kind === 'CF' ? (x.first ? `<td class="dm" rowspan="${x.span}">${x.di + 1}.</td><td class="dm" rowspan="${x.span}">${esc(x.dom)}</td><td rowspan="${x.span}" class="j" style="font-size:9.5px">${esc(x.ind)}</td>` : '') : (i === 0 ? `<td class="dm" rowspan="${D.rows.length}">${esc(D.role)}</td>` : '') + `<td style="text-align:center;width:5%">${x.n}</td>`}
-      <td style="font-size:10px">${esc(x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
+      <td style="font-size:10px" class="j">${esc(kind === 'CF' && d.evx && d.evx[i] ? d.evx[i] : x.e)}</td><td style="text-align:center;font-weight:bold;width:13%">${esc(kind === 'CF' ? cfL(v) : v)}</td>${kind === 'CF' ? '' : `<td class="j" style="font-size:9.5px;width:30%">${esc(nt)}</td>`}</tr>`; }).join('');
   const head = kind === 'CF' ? '<tr><th>م</th><th>المجال</th><th>المؤشرات</th><th>الأدلة</th><th>المتابعة</th></tr>' : '<tr><th>المسمى المستهدف</th><th>الرقم</th><th>المهام الأكاديمية</th><th>متابعة تنفيذ المهام</th><th>الملاحظات والتوصيات</th></tr>';
   const sigs = kind === 'CF' ? `<td></td><td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td><td></td>` : D.sig.map(s => s === 'نائب المدير للشؤون الأكاديمية' ? `<td>النائبة الأكاديمية<br><span class="vpn">أ. ${VP_NAME}{{SIG}}</span></td>` : s === D.sig[0] ? `<td>${s}<br>أ. ${esc(T.name)}${kind === 'CF' ? '{{CSIG}}' : ''}</td>` : `<td>${s}</td>`).join('');
   return `<h1>${esc(D.title)}</h1><div class="sub">${esc(d.sem)} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
@@ -485,6 +492,7 @@ function fileInner(D, T, r, kind) {
     <tr><td class="k">اليوم</td><td>${esc(dayOf(d.date))}</td><td class="k">التاريخ</td><td>${dmy(d.date)}</td></tr>
     <tr><td class="k">نوع المتابعة</td><td colspan="3">${d.mode === 'ميدانية' ? '☑' : '☐'} ميدانية &nbsp;&nbsp; ${d.mode === 'عن بعد' ? '☑' : '☐'} عن بعد</td></tr></table>
   <table>${head}${rows}</table>
+  ${kind === 'CF' ? `<table><tr><th colspan="2">وصف المقياس</th></tr>${Object.keys(CF_DESC).map(k => `<tr><td class="k" style="width:18%;text-align:center">${cfL(k)}</td><td class="j" style="font-size:9.5px">${CF_DESC[k]}</td></tr>`).join('')}</table>` : ''}
   ${kind === 'CF' ? `<div class="gen"><div class="h">التوصيات العامة</div><div class="fnote" style="padding:2px 8px">${D.notes.map(n => '* ' + esc(n)).join('<br>')}</div><div class="b">${esc(d.gen || '')}</div></div>` : `<div class="gen"><div class="h">التوصيات العامة</div><div class="b">${esc(d.gen || '')}</div></div>`}
   <div class="fnote">تنويه: يستخدم هذا النموذج من قبل نائب المدير للشؤون الأكاديمية بصورة فصلية.</div>
   <table class="sg"><tr>${sigs}</tr></table>`;
