@@ -197,6 +197,7 @@ function saveRecord_(u, rec) {
   const coordOwn = u.role === 'coord' && ['TPV', 'TWS', 'TAS', 'XCMP'].indexOf(rec.item) >= 0;   // المنسقة تسجّل زياراتها التبادلية وورشها بنفسها
   if (u.role === 'teacher' || coordOwn) {
     if (TEACHER_ITEMS.indexOf(rec.item) < 0) fail_('يمكن للمعلمة تسجيل مبادراتها وأنشطتها فقط');
+    if (rec.item === 'TPA' && !rec.id) fail_('التواصل مع أولياء الأمور يُسجَّل في منصة سبع سنابل فقط، ويصل منها تلقائياً إلى تقرير القسم');
     rec.d = rec.d || {}; rec.d.t = u.name; rec.dept = u.dept[0];
     const T = rows_(SH.teachers).rows; const dOf = n => { const x = T.find(r => r[1] === n); return x ? String(x[0]) : ''; };
     if (rec.item === 'TPV') rec.d.vdept = dOf(rec.d.v);
@@ -573,31 +574,34 @@ function sabPA_() {
     const T = rows_(SH.teachers).rows.filter(x => x[1]);
     const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
     const short = n => { const k = normAr_(n); const t = T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k); return t ? String(t[1]) : String(n); };
+    // القسم يُؤخذ من قائمة معلمات الميزان حسب اسم المعلمة، لا من اسم القسم في سبع سنابل (قد يختلف: «الدراسات الاجتماعية» مقابل «العلوم الاجتماعية»)
+    const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
+    const dOf = (n, dp) => { const t = tRow(n); return t ? String(t[0]) : (depts[normAr_(dp)] || dp); };
     JSON.parse(r.getContentText()).forEach(x => {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
       const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
       if (Number(g('type')) === 6) {   // تعزيز الطالبات وشهاداتهن (العنوان وأسباب التكريم)
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SRF', date: String(g('date')), sum: 'تعزيز — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SRF', date: String(g('date')), sum: 'تعزيز — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 4 || Number(g('type')) === 7) {   // التغذية الراجعة، والأنشطة وتعلّم الأقران: تنعكس في «إجراءات رفع التحصيل» بتقرير المنسقة
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: Number(g('type')) === 4 ? 'SFB' : 'SAC', date: String(g('date')), sum: (Number(g('type')) === 4 ? 'تغذية راجعة' : 'نشاط وتعلّم أقران') + ' — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: Number(g('type')) === 4 ? 'SFB' : 'SAC', date: String(g('date')), sum: (Number(g('type')) === 4 ? 'تغذية راجعة' : 'نشاط وتعلّم أقران') + ' — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), link: String(g('link') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 1) {   // تحليل النتائج وتحديد المستهدفات: ينعكس في «تحليل وقراءة النتائج» بتقرير المنسقة
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SAN', date: String(g('date')), sum: 'تحليل النتائج — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SAN', date: String(g('date')), sum: 'تحليل النتائج — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 3) {   // حصة إثرائية
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
-      out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: depts[g('dept')] || g('dept'), item: 'TPA', date: String(g('date')), sum: 'من سبع سنابل',
+      out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'TPA', date: String(g('date')), sum: 'من سبع سنابل',
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }

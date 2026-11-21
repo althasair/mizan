@@ -141,7 +141,7 @@ function T_page(el, cfg) {
     const rp = S.periods.find(x => r.date >= x.from && r.date <= x.to); if (!r.date || !rp || r.date > p.to) return toast('التاريخ يجب أن يكون ضمن أرباع العام الدراسي، وليس بعد ' + dmy(p.to), 1);
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.user.dept[0], item: cfg.item, date: r.date, sum: cfg.sum(r), d: r } });
     const i = S.records.findIndex(x => x.id === j.record.id); if (i >= 0) S.records[i] = j.record; else S.records.push(j.record);
-    if (copy) { S.edit = null; refresh(); paCopy(r); return; }
+    if (copy && cfg.item !== 'TPA') { S.edit = null; refresh(); paCopy(r); return; }
     S.edit = null; toast(rp.name !== p.name ? `تم الحفظ ✓ — نُسب إلى ${rp.name} حسب تاريخه` : 'تم الحفظ ✓ — ويظهر في تقرير القسم'); refresh();
     if (cfg.item === 'TA' && !rec) taCelebrate(mine('TA').filter(inCur).length, r.kind);
     if (cfg.item === 'TPV' && !rec) { const n = mine('TPV').filter(x => monthOf(x.date) === monthOf(r.date)).length; const h = pvCheer(n); if (h) { const m = document.createElement('div'); m.className = 'modal'; m.innerHTML = `<div class="box" style="max-width:520px">${h}<div class="row" style="margin-top:10px"><button class="btn" id="cOk">شكراً</button></div></div>`; document.body.appendChild(m); fillVps(m); chime(n >= 3); $('#cOk', m).onclick = () => m.remove(); } }
