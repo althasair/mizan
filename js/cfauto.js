@@ -30,7 +30,7 @@ function cfAuto(T, sem) {
   A[0] = vp('لا تُسجَّل المشاركة في الخطة التشغيلية في المنصة — تقديركِ');
   { const apl = recs('APL').length + recs('APS').length, pl = recs('PL').length;
     const pls = T.depts.map(dp => typeof aplPlanOf === 'function' ? aplPlanOf(dp) : null).filter(Boolean);
-    const pct = pls.length ? (() => { const st = aplStat(pls[0], aplDone(S.records, T.depts[0], R.to)); return ` · ما تحقق من الخطة ${st.pct}%`; })() : '';
+    const pct = pls.length ? (() => { const st = aplStat(pls[0], aplDone(S.records, T.depts[0], R.to)); return st.all ? ` · ما تحقق من الخطة ${st.pct}%` : ''; })() : '';
     A[1] = one(apl + pl, `بنود الخطة المتابَعة: ${apl} · سجلات التخطيط: ${pl}${pct}`, 'لا توجد متابعة مسجلة للخطة السنوية في الفصل'); }
   { const ac = recs('AC').length; A[2] = one(ac, `الأنشطة والمبادرات الموثقة: ${ac}`, 'لا توجد أنشطة موثقة للقسم في الفصل'); }
   { const ended = S.periods.filter(p => p.sem === sem && p.to < today());
@@ -114,7 +114,7 @@ function cfFacts(T, sem) {
   const im = recs('RA', r => r.d.imp).length;
   if (im >= 2) out.push(`وثّقت أثر (${im}) من إجراءات رفع التحصيل، وهذا يدل على وعيها بقياس الأثر لا مجرد تنفيذ الإجراء`);
   const pls = T.depts.map(dp => typeof aplPlanOf === 'function' ? aplPlanOf(dp) : null).filter(Boolean);
-  if (pls.length) { const st = aplStat(pls[0], aplDone(S.records, T.depts[0], R.to)); if (st.pct >= 40) out.push(`بلغ ما تحقق من خطة القسم السنوية (${st.pct}%)، وهذا يدل على التزامها بالتخطيط ومتابعته`); }
+  if (pls.length) { const st = aplStat(pls[0], aplDone(S.records, T.depts[0], R.to)); if (st.all && st.pct >= 40) out.push(`بلغ ما تحقق من خطة القسم السنوية (${st.pct}%)، وهذا يدل على التزامها بالتخطيط ومتابعته`); }
   const an = recs('AS', r => SEC.AS.an(r.d)).length + recs('SAN').length;
   if (an >= 2 && out.length < 3) out.push(`وثّقت (${an}) قراءات وتحليلات للنتائج، وهذا يدل على اعتمادها على البيانات في دعم تعلّم الطالبات`);
   return out.slice(0, 3);
