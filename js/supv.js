@@ -15,8 +15,9 @@ function A_supv(el) {
     <div style="display:flex;gap:10px;flex-wrap:wrap;margin:8px 0 12px">${kpi(L.length, 'زيارة للموجهين', '#F3ECEF')}${kpi(depts.length, 'قسمًا زاره الموجه', '#EEF3F8')}${kpi(nM + ' من ' + L.length, 'سُجّل لها إجراء المنسقة', nM === L.length ? '#E4F3EA' : '#FCEADB')}${kpi(nD + ' من ' + L.length, 'حُدّد لها تاريخ قياس الأثر', nD === L.length ? '#E4F3EA' : '#FCEADB')}</div>
     ${!L.length ? '<div class="empty">لا توجد زيارات للموجهين مسجّلة بعد.</div>' : depts.map(d => { const R = L.filter(r => r.dept === d);
       return `<h3 style="margin:14px 0 6px;color:var(--maroon)">${esc(d)} <small style="color:var(--muted);font-weight:400">(${R.length})</small></h3>
-      <div class="apl-tw"><table class="apl-t"><thead><tr><th>التاريخ</th><th>المعلمة</th><th>الصف</th><th>الموجه/ة</th><th>التوصيات</th><th>إجراء المنسقة</th><th>تاريخ قياس الأثر</th></tr></thead><tbody>
+      <div class="apl-tw"><table class="apl-t"><thead><tr><th>التاريخ</th><th>المعلمة</th><th>الصف</th><th>الموجه/ة</th><th>محور الزيارة ونقاط القوة</th><th>التوصيات</th><th>إجراء المنسقة</th><th>تاريخ قياس الأثر</th></tr></thead><tbody>
       ${R.map(r => `<tr><td class="apl-due">${dm(String(r.date).slice(0, 10))}</td><td style="white-space:nowrap">${esc(r.d.t || '')}</td><td class="apl-due">${esc(r.d.s || '')}</td><td style="white-space:nowrap">${esc(who(r) || '—')}</td>
+        <td style="text-align:justify;font-size:12.5px">${[r.d.goal ? '<b>المحور:</b> ' + esc(r.d.goal) : '', ...[r.d.f1, r.d.f2].filter(Boolean).map(x => '✓ ' + esc(x))].filter(Boolean).join('<br>') || '<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:justify">${[r.d.i1, r.d.i2, r.d.i3].filter(Boolean).map(esc).join('<br>') || '<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:justify">${r.d.mech ? esc(r.d.mech) : miss}</td><td class="apl-due">${r.d.fud ? dmy(r.d.fud) : miss}</td></tr>`).join('')}</tbody></table></div>`; }).join('')}</div>`;
 }
