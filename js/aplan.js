@@ -39,6 +39,10 @@ const aplBar = (k, n) => `<span class="apl-bar"><i style="width:${n ? Math.round
    نقرة واحدة على حالة المتابعة (على المسار / متأخر / …) أو على بند فرعي تحقق، والحفظ يجري في الخلفية دون انتظار */
 const APS_ST = ['على المسار', 'متأخر', 'متأخر جداً', 'لم يبدأ', 'مكتمل'];
 const APS_C = { 'على المسار': 'g', 'متأخر': 'o', 'متأخر جداً': 'r', 'لم يبدأ': 'n', 'مكتمل': 'b' };
+/* مفتاح حالات المتابعة (قائمة نموذج الوزارة) — يظهر في بداية الخطة على الشاشة وفي الطباعة */
+const APS_KEY = { 'مكتمل': 'نُفِّذ الإجراء كاملًا في موعده.', 'على المسار': 'إجراء مستمر أو قيد التنفيذ، ويسير وفق موعده المخطط (ومنه الإجراءات الممتدة طوال العام).', 'متأخر': 'حلّ موعده ولم يُستكمل بعد، والتأخير بسيط يمكن تداركه قريبًا.', 'متأخر جداً': 'تجاوز موعده بفترة طويلة، ويحتاج إلى إجراء عاجل لإنجازه.', 'لم يبدأ': 'لم يحن موعد تنفيذه بعد.' };
+const APS_HEX = { g: '#1F7A4D', o: '#D98A00', r: '#A4012D', n: '#6B7280', b: '#1E5AA8' };
+const apsKeyHTML = pr => `<div class="aps-key" style="border:1px solid ${pr ? '#B9A7AD' : 'var(--line)'};border-radius:${pr ? '2mm' : '12px'};padding:${pr ? '1.5mm 2.5mm' : '8px 12px'};margin:${pr ? '0 0 2.5mm' : '8px 0 10px'};font-size:${pr ? '7.8pt' : '12.5px'};line-height:1.7;background:${pr ? '#FBF8F9' : 'var(--paper,#FBF8F9)'}"><b style="color:#7A1F3D">مفتاح حالات المتابعة:</b> ` + APS_ST.slice().reverse().map(v => `<span style="white-space:nowrap;margin-inline-end:${pr ? '3mm' : '12px'}"><i style="display:inline-block;width:${pr ? '2.6mm' : '10px'};height:${pr ? '2.6mm' : '10px'};border-radius:2px;background:${APS_HEX[APS_C[v]]};vertical-align:middle"></i> <b>${v}</b>: </span>${APS_KEY[v]} `).join('') + (pr ? '' : `<div style="margin-top:4px;color:#8A4B12">🟧 الصف البرتقالي: بحاجة إلى قرار المنسقة · ⚙️ تلقائي (إطار متقطع): حُسبت الحالة من تسجيلات الميزان وسبع سنابل · ✍️ قرار المنسقة: اختارتها بنفسها.</div>`) + `</div>`;
 const aplQueue = []; let aplBusy = false;
 function aplMark(t) { const m = $('#aplSv'); if (m) m.textContent = t; }
 function aplPush(fn) { aplQueue.push(fn); aplRun(); }
@@ -137,6 +141,7 @@ function aplCard(dept) {
       return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div>${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قرار المنسقة' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}</td><td class="apl-by">${esc(it.by)}</td><td class="apl-due">${dmy(it.due)}</td><td class="apl-due" style="white-space:normal;max-width:140px">${esc(it.ev || '')}</td>
         <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td><td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
     box.innerHTML = `<h2>✅ متابعة تنفيذ الخطة السنوية <span class="sub">تُحسب حالة كل إجراء تلقائياً مما سجّلته المعلمات وسجّلتِه في الميزان وسبع سنابل. راجعي ما ظهر بالبرتقالي فهو بحاجة إلى قراركِ، ويمكنكِ تغيير أي حالة بنقرة. الحفظ تلقائي.</span></h2>
+      ${apsKeyHTML(0)}
       <div class="apl-mos">${aplMonths().map(k => `<button class="${k === mk ? 'on' : ''}" data-mo="${k}">${APL_MN(k)}</button>`).join('')}</div>
       <div class="apl-sum"><b>${n ? Math.round(ok / n * 100) : 0}%</b><div>${aplBar(ok, n)}<small>مكتمل ${ok} من ${n} إجراءً في شهر ${APL_MN(mk)}${need ? ` · <span style="color:#B8521A;font-weight:700">${need} بحاجة إلى قراركِ</span>` : ''}</small></div>
         <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span>
@@ -213,6 +218,7 @@ async function aplPrint(dept, mk) {
   <img class="top" src="${IMG.top}"><img class="bot" src="${IMG.bot}"><img class="mark" src="${IMG.mark}">
   <div class="pg"><table class="hold"><thead class="sp"><tr><td></td></tr></thead><tfoot class="sp"><tr><td></td></tr></tfoot><tbody><tr><td><div class="in">
   <h1>الخطة السنوية لقسم ${esc(dept)}</h1><div class="sub">العام الأكاديمي 2026-2027م · مدرسة الشيماء الثانوية للبنات · المتابعة حتى تاريخ ${dmy(t0)}</div>
+  ${apsKeyHTML(1)}
   <table class="p"><thead><tr><th>المجال</th><th>الإجراءات والأنشطة الإشرافية والبرامج</th><th>المنفّذ</th><th>موعد الانتهاء</th><th>أدلة التنفيذ</th><th>المتابعة</th><th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="note">يستخدم المنسق هذا النموذج في بداية العام الدراسي للتخطيط لجميع أعمال القسم، مع مراعاة الإيجاز والتركيز على الإجراءات الرئيسة، وتتم متابعة إجراءات الخطة شهرياً.<br>تعتمد الخطة من الموجه التربوي.</div>
   <div class="sigs"><div class="sgc">${sigBox('منسقة قسم ' + esc(dept), 'أ. ' + coName, csig)}${sigBox('النائبة الأكاديمية', 'أ. آسيا الذبياني', vsig)}<div class="pr">مديرة المدرسة: أ. شيخة الرميحي</div></div></div>

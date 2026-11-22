@@ -90,6 +90,7 @@ async function A_vplan(el) {
           <td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
     const P = vplPer(q);
     el.innerHTML = `<div class="card apl"><h2>✅ متابعة ${esc(plan.title)} <span class="sub">${esc(plan.dom)} · تُحسب حالة كل إجراء تلقائياً مما سجّلته المعلمات والمنسقات في الميزان وسبع سنابل في جميع الأقسام خلال الربع. راجعي ما ظهر بالبرتقالي فهو بحاجة إلى قراركِ، ويمكنكِ تغيير أي حالة بنقرة. الحفظ تلقائي.</span></h2>
+      ${apsKeyHTML(0)}
       <div class="apl-mos">${Qs.map(x => `<button class="${x === q ? 'on' : ''}" data-q="${x}">${VPL_QN[x - 1]}</button>`).join('')}</div>
       <div class="apl-sum"><b>${n ? Math.round(ok / n * 100) : 0}%</b><div>${aplBar(ok, n)}<small>${VPL_QN[q - 1]} (${P ? dm(P.from) + ' – ' + dm(P.to) : ''}): ${APS_ST.filter(v => cnt[v]).map(v => `${v} ${cnt[v]}`).join(' · ')} من ${n} إجراءً${need ? ` · <span style="color:#B8521A;font-weight:700">${need} بحاجة إلى قراركِ</span>` : ''}</small></div>
         <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span><button class="btn sm" id="vplPr">🖨️ طباعة متابعة الخطة (نموذج الوزارة)</button></div></div>
@@ -146,7 +147,7 @@ async function vplPrint(plan, q) {
   <img class="top" src="${IMG.top}"><img class="bot" src="${IMG.bot}"><img class="mark" src="${IMG.mark}">
   <div class="pg"><table class="hold"><thead class="sp"><tr><td></td></tr></thead><tfoot class="sp"><tr><td></td></tr></tfoot><tbody><tr><td><div class="in">
   <h1>${esc(plan.title)}</h1><div class="sub">متابعة ${Qs.map(x => VPL_QN[x - 1]).join(' و')} · العام الأكاديمي 2026-2027م · مدرسة الشيماء الثانوية للبنات · المتابعة حتى تاريخ ${dmy(t0)}</div>
-  <div class="dom">${esc(plan.dom)}:</div>
+  ${apsKeyHTML(1)}<div class="dom">${esc(plan.dom)}:</div>
   <table class="p"><thead><tr><th>مؤشرات الأداء الاستراتيجي</th><th>الأهداف</th><th>الإجراءات والأنشطة الإشرافية والبرامج</th><th>الجهة المنفذة</th><th>زمن التنفيذ</th><th>أدلة التنفيذ</th>${Qs.map(x => `<th>متابعة ${VPL_QN[x - 1]}</th>`).join('')}<th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table>
   <div class="sigs"><div class="sgc"><div class="sg"><div class="tt">النائبة الأكاديمية</div><div class="nm"><b>أ. آسيا الذبياني</b>${vsig ? `<img src="${vsig}" alt="">` : ''}</div></div><div class="pr">مديرة المدرسة: أ. شيخة الرميحي</div></div></div>
   </div></td></tr></tbody></table></div><script>window.onload=()=>setTimeout(()=>print(),600)<\/script></body></html>`);
