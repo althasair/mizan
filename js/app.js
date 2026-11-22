@@ -35,6 +35,7 @@ async function start() {
 }
 async function boot() {
   const j = await call('boot');
+  S.bootAt = Date.now();
   Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
@@ -372,6 +373,10 @@ async function C_report(el, deptArg) {
   setTitle('تقرير أعمال القسم');
   const rp = repFor(dept, p.name);
   const frozen = rp && rp.snap && ['موقّع من المنسقة', 'معتمد'].includes(rp.status);
+  /* مزامنة فورية: عند فتح التقرير (غير الموقّع) يُجلب آخر ما سجّلته المعلمات والمنسقة بصمت، ثم يُعاد بناء التقرير */
+  if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 20000) {
+    S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: j.records, reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
+      if (el.isConnected) refresh(); }).catch(() => { S._repSync = 0; }); }
   const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
   let sig = '';
   if (rp && (rp.status === 'معتمد' || rp.feedback)) { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }

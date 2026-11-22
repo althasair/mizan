@@ -271,9 +271,18 @@ function buildReport(ctx) {
   const firstBy = (list, keyf) => { const s = new Set(); return list.filter(r => { const k = keyf(r); if (s.has(k)) return false; s.add(k); return true; }); };
   const RAf = firstBy(RA, r => d(r).item), ACf = firstBy(AC, r => d(r).name);
 
-  /* ---------- ما تسجّله المعلمات بأنفسهن (الميزان برقم المعلمة) ---------- */
+  /* ---------- ما تسجّله المعلمات بأنفسهن (الميزان برقم المعلمة) ----------
+     يظهر فور حفظه. ما له مدة يظهر في كل فترة يمتد إليها: التكليف «طوال العام» في كل فترات العام بعد تاريخه،
+     و«خلال الفصل الدراسي» في فترات فصله، والبرنامج أو المشروع الممتد (له تاريخ انتهاء) في كل فترة يتقاطع معها */
+  const yKey = x => { const y = +String(x).slice(0, 4), m = +String(x).slice(5, 7); return m >= 8 ? y : y - 1; };
+  const semKey = x => { const m = +String(x).slice(5, 7); return yKey(x) + '-' + (m >= 8 || m === 1 ? 1 : 2); };
+  const tIn = r => { const dt = String(r.date || '').slice(0, 10); if (!dt) return false; const d0 = r.d || {};
+    if (r.item === 'TAS' && d0.scope === 'طوال العام') return dt <= P.to && yKey(dt) === yKey(P.to);
+    if (r.item === 'TAS' && d0.scope === 'خلال الفصل الدراسي') return dt <= P.to && (semKey(dt) === semKey(P.to) || semKey(dt) === semKey(P.from));
+    if (r.item === 'TA' && d0.to && d0.to > dt) return dt <= P.to && String(d0.to).slice(0, 10) >= P.from;
+    return inP(dt, P); };
   {
-    const TT = it => ctx.recs.filter(r => r.item === it && inP(r.date, P) && r.d && !r.d.q1); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
+    const TT = it => ctx.recs.filter(r => r.item === it && tIn(r) && r.d && !r.d.q1); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
     const mineD = it => TT(it).filter(r => r.dept === dept || (extraT.includes(r.d.t)));
     const lst = a => (Array.isArray(a) ? a : [a]).filter(Boolean).map(x => String(x).replace(/[.،؛\s]+$/, ''));
     const add = (k, txt) => { if (!txt) return; T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt : (T[k] ? T[k] + ' ' + txt : txt); };
@@ -334,12 +343,16 @@ function buildReport(ctx) {
     { const TS = mineD('TAS'); const by = {}; TS.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.tas_lines = Object.entries(by).map(([t, L]) => { const it = uniq(L.flatMap(r => lst(r.d.what).map(w => w + (r.d.scope === 'طوال العام' && !/طوال العام/.test(w) ? ' (طوال العام)' : ''))));
         return { st: Math.min(it.length, 3), n: it.length, tx: `أ. ${t}: تم تكليفها بـ ` + it.join('، ') + '.' }; }).sort((a, b) => b.n - a.n); }
-    const TAt = mineD('TA').filter(r => !r.d.q1);
+    // ما كان على مستوى المدارس أو خارج المدرسة يُعرض في «الأنشطة الخارجية»، والباقي في «الداخلية»
+    const TAext = r => /المدارس|خارجية|دولية/.test(r.d.lvl || '');
+    const TAall = mineD('TA').filter(r => !r.d.q1), TAt = TAall.filter(r => !TAext(r)), TAx = TAall.filter(TAext);
+    if (TAx.length) { const by = {}; TAx.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      T.ac_xlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.lvl ? ` (${r.d.lvl})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
     if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
   }
   /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
-  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !r.d.q1 && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
+  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !r.d.q1 && tIn(r) && (r.dept === dept || extraT.includes(r.d.t)));
   const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA'), tEX = TQ('TEX');
   const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {
@@ -386,7 +399,7 @@ function buildReport(ctx) {
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
       ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), ...(T.v_spec || []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
-    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext]]]],
+    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext, ...(T.ac_xlines ? [{ lines: T.ac_xlines, head: 'ما سجّلته المعلمات:' }] : [])]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],
