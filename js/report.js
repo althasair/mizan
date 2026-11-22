@@ -92,7 +92,16 @@ function buildReport(ctx) {
   /* التطوير الداخلي */
   const WSall = R('WS').map(r => ({ r, x: d(r), w: SEC.WS.when(d(r)) || r.date }));
   const WS = WSall.filter(o => inP(o.w, P));
-  const done = WS.filter(o => (o.x.g || '').startsWith('تمت')), post = WS.filter(o => o.x.g && !(o.x.g || '').startsWith('تمت'));
+  /* فصل الورش: ما نفّذه القسم (المقدِّمة من معلمات القسم أو ورشة من خطته) عن ورش حضرتها معلمات القسم وقدّمتها جهة أخرى (القيادة العليا أو غيرها) */
+  const nA = x => String(x || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^\u0621-\u064A ]/g, ' ').replace(/\s+/g, ' ').trim();
+  const deptStaff = (ctx.staff || []).filter(t => t.dept === dept).map(t => nA(t.name).split(' ')).filter(w => w.length);
+  const byDept = o => { const pr = nA(o.x.pres); if (!pr) return true;
+    return deptStaff.some(w => pr.includes(w[0]) && pr.includes(w[w.length - 1])); };
+  const isOwn = o => byDept(o) && !((o.x.b === REF.OUT_OF_PLAN || !o.x.b) && o.x.pres && !byDept(o));
+  const attended = WS.filter(o => (o.x.g || '').startsWith('تمت') && !isOwn(o));
+  const done = WS.filter(o => (o.x.g || '').startsWith('تمت') && isOwn(o)), post = WS.filter(o => o.x.g && !(o.x.g || '').startsWith('تمت') && isOwn(o));
+  const attTx = o => { const ti = (o.x.b === REF.OUT_OF_PLAN || !o.x.b) ? o.x.c : o.x.b, who = o.r.by && o.r.by === ctx.coordName ? 'منسقة القسم أ. ' + o.r.by : (o.r.by ? 'أ. ' + o.r.by : 'منسقة القسم');
+    return `حضرت ${who} ${o.x.type || 'ورشة'} «${ti}» التي قدّمتها ${String(o.x.pres).replace(/^\s*(أ\s*\.|الأستاذة)\s*/, 'أ. ')}` + ((o.x.h || o.x.planned) ? ` بتاريخ ${dmy(o.x.h || o.x.planned)}` : '') + (o.x.o ? '، وأثرها: ' + o.x.o : ''); };
   // نسبة تنفيذ الخطة = بنود خطة القسم المقررة في الفترة التي نُفّذت ÷ بنود الخطة المقررة في الفترة (كل بند يُحسب مرة واحدة)
   const nrm = x => String(x || '').trim().replace(/\s+/g, ' ');
   const planItems = ctx.pd.filter(p => String(p.dept || '').split('|').includes(dept) && inP(p.date, P));
@@ -101,12 +110,13 @@ function buildReport(ctx) {
   const attK = done.filter(o => o.x.k !== '' && o.x.k != null && +o.x.j > 0);
   const att = attK.length ? attK.reduce((a, o) => a + (+o.x.k), 0) / attK.reduce((a, o) => a + (+o.x.j), 0) : null;
   T.pd_done_n = done.length; T.pd_plan_n = planN; T.pd_plan_done = planDone; T.pd_att = att;
-  T.pd_int = (!done.length && !post.length)
-    ? 'لم تُسجَّل برامج تطوير مهني داخلية خلال الفترة.' + (planN ? ` (مقرر في خطة القسم (${planN}) من البرامج خلال الفترة ولم تُسجَّل حالة تنفيذه بعد).` : '')
+  const ownTx = (!done.length && !post.length)
+    ? 'لم تُسجَّل برامج تطوير مهني نفّذها القسم خلال الفترة.' + (planN ? ` (مقرر في خطة القسم (${planN}) من البرامج خلال الفترة ولم تُسجَّل حالة تنفيذه بعد).` : '')
     : (planN ? `نفّذ القسم (${planDone}) من أصل (${planN}) من البرامج المقررة في خطة التطوير المهني خلال الفترة بنسبة ${pct(planDone, planN)}. ` : '')
       + (done.length ? 'قام القسم بتنفيذ: ' + done.map(o => SEC.WS.tx(o.x)).join('؛ ') + '. ' : '')
       + (post.length ? 'كما تم ' + post.map(o => SEC.WS.tx(o.x)).join('؛ ') + '. ' : '')
       + (att != null ? `وبلغت نسبة حضور المعلمات للبرامج المسجَّل فيها عدد الحاضرات ${Math.round(att * 100)}%.` : '');
+  T.pd_int = ownTx + (attended.length ? ' وفي برامج قدّمتها جهات من خارج القسم: ' + attended.map(attTx).join('؛ ') + '.' : '');
 
   /* التطوير الخارجي */
   const EX = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
