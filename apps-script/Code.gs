@@ -606,7 +606,7 @@ function sabPA_() {
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 120);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 1800);
   return out;
 }
 
@@ -635,7 +635,7 @@ function sabAdm_() {
         : { t: String(t[1]), s: a.section || '', subj: a.subject || '', whole: !!a.whole, n: a.whole ? 0 : stu.length, stu: stu, det: String(a.detail || ''), src: 'sab3' };
       out.push({ id: id, dept: String(t[0]), item: it, date: date, sum: 'من سبع سنابل (النماذج)', d: d, by: 'سبع سنابل', at: '', up: '' }); });
   } catch (e) { return []; }
-  try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 300); c.put('sabAdmN', String(k), 300); } } catch (e) {}
+  try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 1800); c.put('sabAdmN', String(k), 1800); } } catch (e) {}
   return out;
 }
 
@@ -660,10 +660,11 @@ function sabRQ_() {
         d: { t: t ? String(t[1]) : sv('name'), per: m.per, pn: m.pn || '', rows: m.rows || [], so: m.so || [], src: 'sab3' }, by: 'سبع سنابل', at: sv('cappAt'), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabRQ1', txt, 120);
+  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabRQ1', txt, 1800);
   return out;
 }
 
+/* تخفيف القراءات من قاعدة سبع سنابل (حد Firebase المجاني اليومي): ما يُجلب منها يُحفظ مؤقتًا 30 دقيقة، وزر «تحديث ومزامنة» يجلبه فورًا */
 /* ------------------------------------------------------------------ إحصاءات المعلمات إلى «سبع سنابل» */
 // الأنشطة والمبادرات (AC) والزيارات التبادلية (PV) والإنجازات (ACH) تُكتب في قاعدة سبع سنابل (shared/mizan)
 // فتظهر في لوحة الصدارة ونجوم المعلمات تلقائياً بعد كل حفظ في الميزان
@@ -796,7 +797,7 @@ function route_(req) {
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'myStudents': return { students: myStudents_(u) };
-    case 'sabRefresh': CacheService.getScriptCache().remove('sabPA4'); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
+    case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA4', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
     case 'tr': { const L = (req.list || []).slice(0, 12).map(x => String(x || '').slice(0, 1500)); return { list: L.map(x => { if (!x.trim()) return ''; try { return LanguageApp.translate(x, req.from || 'en', req.to || 'ar'); } catch (e) { return ''; } }) }; }   // ترجمة توصيات منسقة اللغة الإنجليزية
     case 'planUp': return planUp_(u, req);

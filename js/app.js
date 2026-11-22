@@ -374,7 +374,7 @@ async function C_report(el, deptArg) {
   const rp = repFor(dept, p.name);
   const frozen = rp && rp.snap && ['موقّع من المنسقة', 'معتمد'].includes(rp.status);
   /* مزامنة فورية: عند فتح التقرير (غير الموقّع) يُجلب آخر ما سجّلته المعلمات والمنسقة بصمت، ثم يُعاد بناء التقرير */
-  if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 20000) {
+  if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 300000) {
     S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: j.records, reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
       if (el.isConnected) refresh(); }).catch(() => { S._repSync = 0; }); }
   const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
