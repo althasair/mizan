@@ -67,7 +67,7 @@ function aplDel(r) {
 const apsOf = (dept, mid) => S.records.filter(r => r.dept === dept && r.item === 'APS' && r.d && r.d.mid === mid).sort((a, b) => (b.date + b.at).localeCompare(a.date + a.at))[0];
 /* الحالة المعروضة: ما اختارته المنسقة، وإلا تُستنتج من البنود الفرعية */
 function apsShow(dept, it, done) {
-  const r = apsOf(dept, it.id); if (r) return { st: r.d.st, date: r.date, set: 1 };
+  const r = apsOf(dept, it.id); if (r) return { st: r.d.st, date: r.d.mo ? aplEndDay(r.d.mo) : r.date, set: 1 };
   const k = it.subs.filter(s => done[s.id] || s.once).length;
   if (k === it.subs.length) { const ds = it.subs.map(s => done[s.id] && done[s.id].date).filter(Boolean).sort(); return { st: 'مكتمل', date: ds.pop() || '', q1: it.subs.every(s => s.once) }; }
   if (k > it.subs.filter(s => s.once).length) { const ds = it.subs.map(s => done[s.id] && done[s.id].date).filter(Boolean).sort(); return { st: 'على المسار', date: ds.pop() || '' }; }
@@ -127,6 +127,12 @@ function aplAuto(dept, it, mk) {
   if (mk <= '2026-09' && !ever.length) return out('على المسار', 1, 'لا يوجد تسجيل بعد', '');
   return out('متأخر', 1, ever.length ? 'آخر تنفيذ ' + dm(lastD) + ' — لا يوجد تسجيل منذ شهرين' : 'لا يوجد ما يثبت تنفيذه حتى الآن', '');
 }
+/* تاريخ المتابعة = آخر يوم عمل (الأحد–الخميس) في شهر المتابعة، أو في نهاية الفترة إن مُرّر تاريخ */
+function aplEndDay(mk) {
+  const d = mk.length > 7 ? new Date(mk + 'T12:00:00') : new Date(+mk.slice(0, 4), +mk.slice(5, 7), 0, 12);
+  while (d.getDay() === 5 || d.getDay() === 6) d.setDate(d.getDate() - 1);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
 /* قرار المنسقة لشهر معيّن يتقدّم على الحساب التلقائي */
 const apsFor = (dept, mid, mk) => S.records.filter(r => r.dept === dept && r.item === 'APS' && r.d && r.d.mid === mid && (r.d.mo || String(r.date).slice(0, 7)) === mk).sort((a, b) => String(b.at || b.date).localeCompare(String(a.at || a.date)))[0];
 function aplStatus(dept, it, mk) { const a = aplAuto(dept, it, mk), o = apsFor(dept, it.id, mk); return o ? Object.assign({}, a, { st: o.d.st, need: false, set: 1, date: o.d.date || o.date }) : a; }
@@ -143,7 +149,7 @@ function aplCard(dept) {
     const rows = plan.doms.map(D => `<tr class="apl-dh"><td colspan="6"><b>${esc(D.d)}</b>${D.items.length ? '' : ' <small style="color:#B8521A">— لم تُحدَّد إجراءات في هذا المجال بعد، أضيفيها من «✏️ تعديل الخطة»</small>'}</td></tr>` + D.items.map(it => {
       const s = aplStatus(dept, it, mk); n++; if ((s.st === 'مكتمل' || s.st === 'على المسار') && !s.need) ok++; if (s.st === 'مكتمل') okC++; if (s.need) need++;
       return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div>${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قرار المنسقة' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}</td><td class="apl-by">${esc(it.by)}</td><td class="apl-due">${dmy(it.due)}</td><td class="apl-due" style="white-space:normal;max-width:140px">${esc(it.ev || '')}</td>
-        <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td><td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
+        <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td><td class="apl-dt">${s.st ? dm(aplEndDay(mk)) : '—'}</td></tr>`; }).join('')).join('');
     box.innerHTML = `<h2>✅ متابعة تنفيذ الخطة السنوية <span class="sub">تُحسب حالة كل إجراء تلقائياً مما سجّلته المعلمات وسجّلتِه في الميزان وسبع سنابل. راجعي ما ظهر بالبرتقالي فهو بحاجة إلى قراركِ، ويمكنكِ تغيير أي حالة بنقرة. الحفظ تلقائي.</span></h2>
       ${apsKeyHTML(0)}
       <div class="apl-mos">${aplMonths().map(k => `<button class="${k === mk ? 'on' : ''}" data-mo="${k}">${APL_MN(k)}</button>`).join('')}</div>
@@ -151,14 +157,14 @@ function aplCard(dept) {
         <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span>
         ${can ? '<button class="btn sm sec" id="aplEdB">✏️ تعديل الخطة</button>' : ''}<button class="btn sm" id="aplPr">🖨️ حفظ وطباعة الخطة (نموذج الوزارة)</button></div></div>
       <div class="apl-tw"><table class="apl-t"><thead><tr><th>الإجراءات والأنشطة الإشرافية والبرامج</th><th>المنفّذ</th><th>موعد الانتهاء</th><th>أدلة التنفيذ</th><th>المتابعة <small>(${APL_MN(mk)})</small></th><th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="apl-note">⚙️ تلقائي: حُسبت الحالة من التسجيلات · ✍️ قرار المنسقة: اخترتِها بنفسكِ. وتاريخ المتابعة في الطباعة هو تاريخ يوم الطباعة، أي أن المتابعة حتى تاريخه.</div>`;
+      <div class="apl-note">⚙️ تلقائي: حُسبت الحالة من التسجيلات · ✍️ قرار المنسقة: اخترتِها بنفسكِ. وتاريخ المتابعة هو آخر يوم عمل في شهر المتابعة.</div>`;
     $$('[data-mo]', box).forEach(b => b.onclick = () => { S.aplM = b.dataset.mo; draw(); });
     $('#aplPr', box).onclick = () => aplPrint(dept, mk);
     if ($('#aplEdB', box)) $('#aplEdB', box).onclick = () => { S.aplEd = 1; draw(); };
     $$('[data-st]', box).forEach(b => b.onclick = () => {
       const mid = b.dataset.mid, v = b.dataset.st, r = apsFor(dept, mid, mk), it = plan.doms.flatMap(D => D.items).find(i => i.id === mid);
       if (r && r.d.st === v) return;
-      const rec = { dept, item: 'APS', date: today(), sum: `${it.t}: ${v}`.slice(0, 400), d: { mid, main: it.t, st: v, mo: mk, date: today() } };
+      const rec = { dept, item: 'APS', date: today(), sum: `${it.t}: ${v}`.slice(0, 400), d: { mid, main: it.t, st: v, mo: mk, date: aplEndDay(mk) } };
       if (r) { Object.assign(r, { date: rec.date, sum: rec.sum, d: rec.d, at: new Date().toISOString() }); aplPush(async () => { const j = await API.call('save', { rec: Object.assign({}, rec, { id: r.real || r.id }) }); r.id = j.record.id; }); }
       else aplSave(rec);
       draw();
@@ -198,7 +204,7 @@ async function aplPrint(dept, mk) {
   const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
   try { w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>'); } catch (e) {}
   const plan = aplPlanCur(dept), co = (S.coords || []).find(c => (c.dept || []).includes(dept)) || (S.user.role === 'coord' ? S.user : null);
-  const coName = (co && co.name) || plan.co || '', t0 = today();
+  const coName = (co && co.name) || plan.co || '', t0 = aplEndDay(mk);
   let csig = '', vsig = '';
   try { if (co && co.id) csig = (await API.call('signature', { who: co.id })).data || ''; } catch (e) {}
   try { vsig = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) {}

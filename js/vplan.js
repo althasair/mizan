@@ -88,7 +88,7 @@ async function A_vplan(el) {
         const other = Qs.filter(x => x !== q).map(x => { const o = vplStatus(I, it, x); return `<span class="vpl-oq ${APS_C[o.st] || ''}">${vplShort(x)}: ${esc(o.st || '—')}</span>`; }).join('');
         return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div><b style="color:var(--maroon)">${esc(it.n)}</b> ${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قراركِ' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}${other ? `<div class="vpl-oqs">${other}</div>` : ''}</td>
           <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td>
-          <td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
+          <td class="apl-dt">${s.st && vplPer(q) ? dm(aplEndDay(vplPer(q).to)) : '—'}</td></tr>`; }).join('')).join('');
     const P = vplPer(q);
     el.innerHTML = `<div class="card apl"><h2>✅ متابعة ${esc(plan.title)} <span class="sub">${esc(plan.dom)} · تُحسب حالة كل إجراء تلقائياً مما سجّلته المعلمات والمنسقات في الميزان وسبع سنابل في جميع الأقسام خلال الربع. راجعي ما ظهر بالبرتقالي فهو بحاجة إلى قراركِ، ويمكنكِ تغيير أي حالة بنقرة. الحفظ تلقائي.</span></h2>
       ${apsKeyHTML(0)}
@@ -96,13 +96,13 @@ async function A_vplan(el) {
       <div class="apl-sum"><b>${n ? Math.round(ok / n * 100) : 0}%</b><div>${aplBar(ok, n)}<small>${VPL_QN[q - 1]} (${P ? dm(P.from) + ' – ' + dm(P.to) : ''}): ${APS_ST.filter(v => cnt[v]).map(v => `${v} ${cnt[v]}`).join(' · ')} من ${n} إجراءً${need ? ` · <span style="color:#B8521A;font-weight:700">${need} بحاجة إلى قراركِ</span>` : ''}</small></div>
         <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span><button class="btn sm" id="vplPr">🖨️ طباعة متابعة الخطة (نموذج الوزارة)</button></div></div>
       <div class="apl-tw"><table class="apl-t"><thead><tr><th>الإجراءات والأنشطة الإشرافية والبرامج</th><th>المتابعة <small>(${VPL_QN[q - 1]})</small></th><th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table></div>
-      <div class="apl-note">⚙️ تلقائي: حُسبت الحالة من التسجيلات في الربع · ✍️ قراركِ: اخترتِها بنفسكِ. الطباعة تشمل متابعة كل ربع حتى ${VPL_QN[q - 1]}، وتاريخ المتابعة فيها هو تاريخ يوم الطباعة.</div></div>`;
+      <div class="apl-note">⚙️ تلقائي: حُسبت الحالة من التسجيلات في الربع · ✍️ قراركِ: اخترتِها بنفسكِ. الطباعة تشمل متابعة كل ربع حتى ${VPL_QN[q - 1]}، وتاريخ المتابعة هو آخر يوم عمل في الربع.</div></div>`;
     $$('[data-q]', el).forEach(b => b.onclick = () => { S.vplQ = +b.dataset.q; draw(); });
     $('#vplPr', el).onclick = () => vplPrint(plan, q);
     $$('[data-st]', el).forEach(b => b.onclick = () => {
       const mid = b.dataset.mid, v = b.dataset.st, r = vpsFor(mid, q), it = plan.inds.flatMap(I => I.items).find(i => i.id === mid);
       if (r && r.d.st === v) return;
-      const rec = { dept: VPL_DEPT, item: 'VPS', date: today(), sum: `الخطة الإجرائية ${it.n} (${VPL_QN[q - 1]}): ${v}`.slice(0, 400), d: { mid, n: it.n, q, st: v, date: today() } };
+      const rec = { dept: VPL_DEPT, item: 'VPS', date: today(), sum: `الخطة الإجرائية ${it.n} (${VPL_QN[q - 1]}): ${v}`.slice(0, 400), d: { mid, n: it.n, q, st: v, date: vplPer(q) ? aplEndDay(vplPer(q).to) : today() } };
       if (r) { Object.assign(r, { date: rec.date, sum: rec.sum, d: rec.d, at: new Date().toISOString() }); aplPush(async () => { const j = await API.call('save', { rec: Object.assign({}, rec, { id: r.real || r.id }) }); r.id = j.record.id; }); }
       else aplSave(rec);
       draw();
@@ -116,7 +116,7 @@ async function vplPrint(plan, q) {
   /* تُفتح نافذة الطباعة فور الضغط (قبل جلب التواقيع والصور) حتى لا يحجبها المتصفح */
   const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
   try { w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>'); } catch (e) {}
-  const t0 = today(), Qs = vplQs().filter(x => x <= q);
+  const t0 = vplPer(q) ? aplEndDay(vplPer(q).to) : today(), Qs = vplQs().filter(x => x <= q);
   let vsig = ''; try { vsig = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) {}
   const nl = s => esc(s || '').replace(/\n/g, '<br>');
   /* سطور الجهة والزمن والأدلة تتوزّع على صفوف المؤشر (سطر لكل صف) فلا يطول الصف الأول */
