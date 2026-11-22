@@ -36,6 +36,7 @@ async function start() {
 async function boot() {
   const j = await call('boot');
   S.bootAt = Date.now();
+  S.sv = j.sv || 0; S.sab = j.sab || null;
   Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
@@ -50,6 +51,20 @@ async function boot() {
 }
 
 /* ------------------------------------------------------------------ الدخول */
+/* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
+const SV_NEED = 6;
+function sabHealthHTML() {
+  if (!isAdmin()) return '';
+  if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>
+    <div style="font-size:14px;line-height:1.9">لهذا لا تصل إجراءات المعلمات من سبع سنابل إلى التقارير. انسخي ملف «كود الميزان Code.gs» الأخير، ثم في Apps Script: الصقيه مكان الكود كله ← <b>Save</b> ← <b>Deploy</b> ← <b>Manage deployments</b> ← ✏️ <b>Edit</b> ← Version: <b>New version</b> ← <b>Deploy</b>. يختفي هذا التنبيه تلقائيًا بعد النشر الصحيح.</div></div>`;
+  const n = (S.sab && S.sab.n) || {}, err = S.sab && S.sab.err;
+  const L = [['SAC', 'الأنشطة وتعلّم الأقران'], ['SFB', 'التغذية الراجعة'], ['SEN', 'الحصص الإثرائية'], ['SRF', 'التعزيز'], ['SAN', 'تحليل النتائج'], ['TPA', 'التواصل مع أولياء الأمور'], ['SRQ', 'قراءات النتائج المعتمدة']];
+  const tot = L.reduce((a, [k]) => a + (n[k] || 0), 0);
+  return `<div class="card" style="border-right:4px solid ${err || !tot ? '#B3261E' : '#2E7D4F'}"><h2 style="margin:0 0 6px">🌾 الربط مع سبع سنابل ${err || !tot ? '<span style="color:#B3261E;font-size:13px">— متعطّل</span>' : '<span style="color:#2E7D4F;font-size:13px">— يعمل ✓</span>'}</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">${L.map(([k, t]) => `<span class="chip" style="background:${n[k] ? '#E4F3EA' : '#F4F4F6'}">${t}: <b>${n[k] || 0}</b></span>`).join('')}</div>
+    ${err ? `<div style="margin-top:8px;color:#B3261E;font-size:13px">سبب التعطّل: ${esc(err)}</div>` : ''}</div>`;
+}
+
 function renderLogin() {
   document.body.innerHTML = `
   <div class="login pattern">

@@ -162,7 +162,8 @@ function boot_(u) {
   const recs = listRecords_(u);
   const reps = listReports_(u);
   let stuN = 0; if (u.role === 'admin') { const ph = SpreadsheetApp.getActive().getSheetByName('أرقام أولياء الأمور'); if (ph) stuN = ph.getDataRange().getValues().slice(1).filter(r => r[1]).length; }
-  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, stuN: stuN, server: now_(), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
+  let sabInfo = null; if (u.role === 'admin') { const cn = {}; recs.filter(x => /^sab/.test(String(x.id))).forEach(x => cn[x.item] = (cn[x.item] || 0) + 1); sabInfo = { n: cn, err: CacheService.getScriptCache().get('sabErr') || '' }; }
+  return { user: { id: u.id, role: u.role, dept: u.dept, name: u.name }, sv: SERVER_V, sab: sabInfo, periods: per, cal: cal, pd: pd, staff: staff, coords: coords, records: recs, reports: reps, stuN: stuN, server: now_(), indibatAt: PropertiesService.getScriptProperties().getProperty('indibatAt') || '' };
 }
 function recObj_(r) {
   let d = {}; try { d = JSON.parse(r[5] || '{}'); } catch (e) {}
@@ -567,11 +568,13 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
+const SERVER_V = 6;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
 function sabPA_() {
   const hit = cacheGetBig_('sabPA5'); if (hit) return hit;
   let out = [];
   try {
-    const tok = sabAccess_(); if (!tok) return [];
+    const tok = sabAccess_(); if (!tok) { sabErr_('تعذّر الحصول على مفتاح الدخول إلى سبع سنابل (FB_SA)'); return []; }
     const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
       method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
       payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '1' }, { integerValue: '3' }, { integerValue: '6' }, { integerValue: '4' }, { integerValue: '7' }] } } } } } }) });
@@ -582,7 +585,7 @@ function sabPA_() {
     // القسم يُؤخذ من قائمة معلمات الميزان حسب اسم المعلمة، لا من اسم القسم في سبع سنابل (قد يختلف: «الدراسات الاجتماعية» مقابل «العلوم الاجتماعية»)
     const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
     const dOf = (n, dp) => { const t = tRow(n); return t ? String(t[0]) : (depts[normAr_(dp)] || dp); };
-    if (r.getResponseCode() !== 200) return [];
+    if (r.getResponseCode() !== 200) { sabErr_('سبع سنابل ردّت بالرمز ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160)); return []; }
     JSON.parse(r.getContentText()).forEach(x => {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
@@ -610,7 +613,8 @@ function sabPA_() {
       out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'TPA', date: isoD_(g('date')), sum: 'من سبع سنابل',
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
-  } catch (e) { return []; }
+  } catch (e) { sabErr_('خطأ: ' + e.message); return []; }
+  try { CacheService.getScriptCache().remove('sabErr'); } catch (e) {}
   cachePutBig_('sabPA5', out, 1800);
   return out;
 }
@@ -770,7 +774,7 @@ function bootSec_(u) {
 /* ------------------------------------------------------------------ الموجّه */
 function route_(req) {
   const a = req.action;
-  if (a === 'ping') return { ok: true, name: 'الميزان', at: now_() };
+  if (a === 'ping') return { ok: true, name: 'الميزان', at: now_(), v: SERVER_V };
   if (a === 'login') return login_(req.pin, req.app);
   if (a === 'fbToken') return fbToken_(req.pin);
   if (a === 'fbStudents') return { students: myStudents_(fbUser_(req.idToken)) };   // سبع سنابل: أسماء طالبات شعب المعلمة بجلستها هناك، دون رقم سري

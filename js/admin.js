@@ -16,7 +16,7 @@ function A_home(el) {
   const approved = Rs.filter(x => x.rp && x.rp.status === 'معتمد').length;
   const recs = Rs.reduce((a, x) => a + x.R.K.records, 0);
   const vp = vpPlanData();
-  el.innerHTML = `
+  el.innerHTML = `${sabHealthHTML()}
   <div class="hero"><div class="pat pattern"></div><h2>أهلاً أ. ${esc(S.user.name)}</h2><p>${esc(p.name)} · من ${dmy(p.from)} إلى ${dmy(p.to)} · هذه اللوحة خاصة بكِ ولا تظهر لأي منسقة</p></div>
   <div class="grid g4">
     ${kpi('تقارير موقّعة من المنسقات', `${signed} / ${D.length}`, `معتمدة: ${approved}`)}
