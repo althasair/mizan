@@ -563,8 +563,12 @@ function sabAccess_() {
   const r = UrlFetchApp.fetch('https://oauth2.googleapis.com/token', { method: 'post', payload: { grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer', assertion: head + '.' + body + '.' + sig }, muteHttpExceptions: true });
   const tok = JSON.parse(r.getContentText()).access_token; if (tok) c.put('sabTok', tok, 3000); return tok || null;
 }
+/* حفظ مؤقت مجزّأ (حد الخانة الواحدة 100 ألف حرف) لما يُجلب من سبع سنابل، ولا يُحفظ الفارغ حتى لا يُخفي البيانات بعد عطل مؤقت */
+function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
+function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
+const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
 function sabPA_() {
-  const c = CacheService.getScriptCache(); const hit = c.get('sabPA4'); if (hit) { try { return JSON.parse(hit); } catch (e) {} }
+  const hit = cacheGetBig_('sabPA5'); if (hit) return hit;
   let out = [];
   try {
     const tok = sabAccess_(); if (!tok) return [];
@@ -578,35 +582,36 @@ function sabPA_() {
     // القسم يُؤخذ من قائمة معلمات الميزان حسب اسم المعلمة، لا من اسم القسم في سبع سنابل (قد يختلف: «الدراسات الاجتماعية» مقابل «العلوم الاجتماعية»)
     const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
     const dOf = (n, dp) => { const t = tRow(n); return t ? String(t[0]) : (depts[normAr_(dp)] || dp); };
+    if (r.getResponseCode() !== 200) return [];
     JSON.parse(r.getContentText()).forEach(x => {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
       const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
       if (Number(g('type')) === 6) {   // تعزيز الطالبات وشهاداتهن (العنوان وأسباب التكريم)
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SRF', date: String(g('date')), sum: 'تعزيز — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SRF', date: isoD_(g('date')), sum: 'تعزيز — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 4 || Number(g('type')) === 7) {   // التغذية الراجعة، والأنشطة وتعلّم الأقران: تنعكس في «إجراءات رفع التحصيل» بتقرير المنسقة
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: Number(g('type')) === 4 ? 'SFB' : 'SAC', date: String(g('date')), sum: (Number(g('type')) === 4 ? 'تغذية راجعة' : 'نشاط وتعلّم أقران') + ' — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: Number(g('type')) === 4 ? 'SFB' : 'SAC', date: isoD_(g('date')), sum: (Number(g('type')) === 4 ? 'تغذية راجعة' : 'نشاط وتعلّم أقران') + ' — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), link: String(g('link') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 1) {   // تحليل النتائج وتحديد المستهدفات: ينعكس في «تحليل وقراءة النتائج» بتقرير المنسقة
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SAN', date: String(g('date')), sum: 'تحليل النتائج — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SAN', date: isoD_(g('date')), sum: 'تحليل النتائج — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
       if (Number(g('type')) === 3) {   // حصة إثرائية
-        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SEN', date: String(g('date')), sum: 'حصة إثرائية — سبع سنابل',
+        out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'SEN', date: isoD_(g('date')), sum: 'حصة إثرائية — سبع سنابل',
           d: { t: short(g('teacher')), s: g('section'), subj: g('subject'), whole: !!g('whole'), n: g('whole') ? 0 : stu.length, stu: stu, det: String(g('detail') || ''), src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
         return;
       }
-      out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'TPA', date: String(g('date')), sum: 'من سبع سنابل',
+      out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'TPA', date: isoD_(g('date')), sum: 'من سبع سنابل',
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabPA4', txt, 1800);
+  cachePutBig_('sabPA5', out, 1800);
   return out;
 }
 
@@ -635,7 +640,7 @@ function sabAdm_() {
         : { t: String(t[1]), s: a.section || '', subj: a.subject || '', whole: !!a.whole, n: a.whole ? 0 : stu.length, stu: stu, det: String(a.detail || ''), src: 'sab3' };
       out.push({ id: id, dept: String(t[0]), item: it, date: date, sum: 'من سبع سنابل (النماذج)', d: d, by: 'سبع سنابل', at: '', up: '' }); });
   } catch (e) { return []; }
-  try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 1800); c.put('sabAdmN', String(k), 1800); } } catch (e) {}
+  if (out.length) try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 1800); c.put('sabAdmN', String(k), 1800); } } catch (e) {}
   return out;
 }
 
@@ -660,7 +665,7 @@ function sabRQ_() {
         d: { t: t ? String(t[1]) : sv('name'), per: m.per, pn: m.pn || '', rows: m.rows || [], so: m.so || [], src: 'sab3' }, by: 'سبع سنابل', at: sv('cappAt'), up: '' });
     });
   } catch (e) { return []; }
-  const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabRQ1', txt, 1800);
+  if (out.length) { const txt = JSON.stringify(out); if (txt.length < 95000) c.put('sabRQ1', txt, 1800); }
   return out;
 }
 
@@ -797,7 +802,7 @@ function route_(req) {
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'myStudents': return { students: myStudents_(u) };
-    case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA4', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
+    case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA5N', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
     case 'tr': { const L = (req.list || []).slice(0, 12).map(x => String(x || '').slice(0, 1500)); return { list: L.map(x => { if (!x.trim()) return ''; try { return LanguageApp.translate(x, req.from || 'en', req.to || 'ar'); } catch (e) { return ''; } }) }; }   // ترجمة توصيات منسقة اللغة الإنجليزية
     case 'planUp': return planUp_(u, req);
