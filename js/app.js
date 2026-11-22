@@ -104,7 +104,7 @@ function navHTML() {
       <div class="grp">ورشي التدريبية</div>${it('a_myws', '🎓 ورشي التدريبية', 'cert')}
       <div class="grp">التقارير</div>${it('a_reports', 'تقارير الأقسام والاعتماد', 'doc')}${it('a_anrep', 'التقارير التحليلية المطبوعة', 'chart')}
       ${PR ? `<div class="grp">حضوري الصفي</div>${it('p_visit', 'حضور ' + (typeof prWho === 'function' ? prWho()[0] : 'مديرة المدرسة'), 'scale')}${it('p_plan', 'خطة الحضور السنوية', 'cal')}<div class="grp">للاطلاع</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}`
-        : `<div class="grp">خطتي</div>${it('a_vplan', 'خطتي الإجرائية — تحسين تعلم الطلبة', 'doc')}<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
+        : `<div class="grp">خطتي</div>${it('a_vplan', 'خطتي الإجرائية — تحسين تعلم الطلبة', 'doc')}<div class="grp">حضوري الصفي</div>${it('a_vpvisit', 'حضور النائب الأكاديمي', 'scale')}${it('a_supv', 'توصيات التوجيه التربوي', 'doc')}${it('a_visits', 'خطة زيارات المعلمات', 'cal')}${it('a_cvisits', 'زيارات المنسقات وملاحظاتي', 'doc')}${it('p_visit', 'حضور مديرة المدرسة (اطلاع)', 'scale')}`}
       <div class="grp">المعلمات</div>${it('a_tacts', 'مبادرات المعلمات وأنشطتهن', 'star')}${it('c_trep', 'تقارير أعمال المعلمات', 'doc')}
       <div class="grp">متابعة الملفات</div>${it('a_cfiles', 'ملفات المنسقات', 'doc')}${it('a_afiles', 'ملفات الإدارية الأكاديمية', 'user')}
       ${PR ? '' : `<div class="grp">الإعدادات</div>${it('a_accounts', 'الحسابات والأرقام السرية', 'user')}`}`;
@@ -148,7 +148,7 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { c_mycf: C_mycf, home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, c_dlog: C_dlog, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep, a_myws: A_myws, a_vplan: A_vplan };
+  const map = { c_mycf: C_mycf, home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_supv: A_supv, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, c_dlog: C_dlog, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep, a_myws: A_myws, a_vplan: A_vplan };
   try {
     if (typeof isSec === 'function' && isSec()) return S_prq(el);
     if (isTeacher() && !['t_pv', 't_ws', 't_ach', 't_act', 't_ds', 't_tas', 't_rep', 't_prq', 't_xcmp'].includes(v)) return T_home(el);
