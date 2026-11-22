@@ -53,14 +53,10 @@ function buildReport(ctx) {
   const ASn = AS.filter(r => SEC.AS.an(d(r)));
   T.as_anal = sec(ASn, r => SEC.AS.an(d(r)), 'لم يُسجَّل تحليل للنتائج خلال الفترة.', 'تمت قراءة النتائج وتحليلها: ');
   /* قراءة نتائج القسم المعتمدة من المنسقة في سبع سنابل: مؤشرات مختصرة + مقترحات الفترة القادمة */
-  /* «قراءة النتائج» بند فرعي مستقل تحت «الاختبارات التحصيلية» (جدول ملوّن + رسم بياني لـ70% و90% + فئات الطالبات)، وبند الاختبارات يبقى كما كتبته المنسقة؛
+  /* مؤشرات القراءة المعتمدة (جدول ملوّن + رسم 70% و90% + فئات الطالبات) تُضاف داخل بند «تحليل وقراءة النتائج» تحت ما كتبته المنسقة؛
      من آخر قراءة اعتمدتها المنسقة حتى نهاية الفترة (وإن اعتُمدت قبل الفترة) */
   { const RQ = ctx.recs.filter(r => r.dept === dept && r.item === 'SRQ' && r.d && (r.d.rows || []).length && String(r.date).slice(0, 10) <= P.to).sort((a, b) => (+b.d.per || 0) - (+a.d.per || 0) || String(b.date).localeCompare(String(a.date)) || String(b.at).localeCompare(String(a.at)));
-    if (RQ.length) { const q = RQ[0].d; T.as_rq = { res: q.rows, pn: q.pn }; T.as_next = (q.so || []).length ? { lines: q.so.map(x => ({ st: 0, tx: String(x).replace(/[.،؛\s]+$/, '') + '.' })) } : null; }
-    else { T.as_rq = 'لم تصل مؤشرات قراءة نتائج القسم من «سبع سنابل» بعد.';
-      // تشخيص مؤقت للنائب فقط: كم قراءة معتمدة وصلت من الخادم، ولأي الأقسام، وهل مؤشراتها فارغة
-      if (typeof isAdmin === 'function' && isAdmin()) { const A = ctx.recs.filter(r => r.item === 'SRQ'); const mine = A.filter(r => r.dept === dept);
-        T.as_rq += ` [تشخيص: وصل من الخادم ${A.length} قراءة معتمدة` + (A.length ? ` للأقسام: ${uniq(A.map(r => r.dept + (r.d && (r.d.rows || []).length ? '' : ' (فارغة)') + ' ' + String(r.date).slice(5, 10))).join('، ')}` : '') + `؛ لهذا القسم ${mine.length}]`; } } }
+    if (RQ.length) { const q = RQ[0].d; T.as_anal = { res: q.rows, pn: q.pn, pre: /^لم /.test(T.as_anal) ? '' : T.as_anal }; T.as_next = (q.so || []).length ? { lines: q.so.map(x => ({ st: 0, tx: String(x).replace(/[.،؛\s]+$/, '') + '.' })) } : null; } }
   /* تحليل النتائج الذي سجّلته المعلمات في سبع سنابل */
   { const SA = ctx.recs.filter(r => r.dept === dept && r.item === 'SAN' && r.d && inP(String(r.date).slice(0, 10), P));
     if (SA.length) { const by = {}; SA.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
@@ -397,7 +393,7 @@ function buildReport(ctx) {
   /* هيكل التقرير الرسمي */
   const rows = [
     ['التخطيط', [['الخطة السنوية للقسم', [T.pl_annual]], ['متابعة الخطط الفصلية', [T.pl_sem]]]],
-    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['قراءة النتائج', [T.as_rq]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
+    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
