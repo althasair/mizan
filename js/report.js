@@ -57,7 +57,7 @@ function buildReport(ctx) {
      من آخر قراءة اعتمدتها المنسقة حتى نهاية الفترة (وإن اعتُمدت قبل الفترة) */
   { const RQ = ctx.recs.filter(r => r.dept === dept && r.item === 'SRQ' && r.d && (r.d.rows || []).length && String(r.date).slice(0, 10) <= P.to).sort((a, b) => (+b.d.per || 0) - (+a.d.per || 0) || String(b.date).localeCompare(String(a.date)) || String(b.at).localeCompare(String(a.at)));
     if (RQ.length) { const q = RQ[0].d; T.as_ach = { res: q.rows, pn: q.pn, pre: ASa.length ? T.as_ach : '' }; T.as_next = (q.so || []).length ? { lines: q.so.map(x => ({ st: 0, tx: String(x).replace(/[.،؛\s]+$/, '') + '.' })) } : null; }
-    else T.as_ach = ASa.length ? T.as_ach : 'لم تُعتمد قراءة نتائج القسم في «سبع سنابل» بعد، وتظهر مؤشرات النتائج هنا (التحصيل، والراسبات، ودون 70%، و70% فأعلى، و90% فأعلى، وفئات الطالبات) فور اعتماد المنسقة لها.'; }
+    else T.as_ach = ASa.length ? T.as_ach + ' ولم تُعتمد قراءة نتائج القسم في «سبع سنابل» بعد، وتظهر مؤشرات النتائج ورسمها البياني هنا فور اعتماد المنسقة لها.' : 'لم تُعتمد قراءة نتائج القسم في «سبع سنابل» بعد، وتظهر مؤشرات النتائج هنا (التحصيل، والراسبات، ودون 70%، و70% فأعلى، و90% فأعلى، وفئات الطالبات) فور اعتماد المنسقة لها.'; }
   /* تحليل النتائج الذي سجّلته المعلمات في سبع سنابل */
   { const SA = ctx.recs.filter(r => r.dept === dept && r.item === 'SAN' && r.d && inP(String(r.date).slice(0, 10), P));
     if (SA.length) { const by = {}; SA.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
