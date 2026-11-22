@@ -252,7 +252,7 @@ function C_section(sec, el) {
   el.innerHTML = `
     <div class="note">${esc(sec.note)}</div>
     ${locked ? '<div class="note warn">تقرير هذه الفترة موقّع ومقفل؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
-    ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div><div class="card apl" id="aplC"></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}
+    ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div><div class="card apl" id="aplC"></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}${sec.k === 'OV' ? ovLeadHTML(p) : ''}
     <div class="card" id="fc"><h2>${editing ? 'تعديل سجل' : 'إضافة سجل جديد'} <span class="sub">الحقول المعلَّمة بـ * مطلوبة</span></h2>
       <form class="form" id="frm" autocomplete="off">${sec.f.map(f => fieldHTML(f, base)).join('')}
         <div class="preview"><b>هكذا ستظهر في التقرير</b><span id="pv"></span></div>
@@ -302,6 +302,17 @@ function C_section(sec, el) {
   $$('[data-ed]', el).forEach(b => b.onclick = () => { S.edit = b.dataset.ed; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });
   $$('[data-del]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذا السجل؟')) return; await call('delete', { id: b.dataset.del }); S.records = S.records.filter(x => x.id !== b.dataset.del); toast('تم الحذف'); refresh(); });
   $$('[data-pd]', el).forEach(b => b.onclick = () => { S.prefill = { b: b.dataset.pd }; S.edit = null; refresh(); setTimeout(() => $('#fc').scrollIntoView({ behavior: 'smooth' }), 50); });
+}
+/* زيارات النائب الأكاديمي ومديرة المدرسة تصل إلى بند «زيارات القيادة» تلقائياً من حضورهما الصفي (للاطلاع، دون متابعة توصيات) */
+function ovLeadHTML(p) {
+  const L = S.records.filter(r => r.dept === S.dept && r.d && inP(r.date, p) && (r.item === 'LVV' || r.item === 'VPV' || r.item === 'PRV'))
+    .map(r => ({ k: r.item === 'LVV' ? r.d.k : r.item === 'PRV' ? 'pr' : 'vp', date: String(r.date).slice(0, 10), t: r.d.t, s: r.d.s, goal: r.d.topic || r.d.goal || r.d.note || '', st: (r.d.st || []).slice(0, 2), im: (r.d.im || []).slice(0, 2) }))
+    .sort((a, b) => b.date.localeCompare(a.date));
+  const cut = x => String(x || '').split(/[:：]/)[0].trim();
+  const row = x => `<div class="rec"><div style="flex:1"><div><b>${x.k === 'pr' ? '🏫 مديرة المدرسة' : '🎓 النائب الأكاديمي'}</b> · الأستاذة ${esc(x.t || '')}${x.s ? ' (' + esc(x.s) + ')' : ''} · ${dm(x.date)}${x.goal ? ' · ' + esc(x.goal) : ''}</div>
+    ${x.st.length ? `<div style="font-size:13px;color:#2E6B45">نقاط القوة: ${x.st.map(cut).map(esc).join('، ')}</div>` : ''}${x.im.length ? `<div style="font-size:13px;color:#8A4A12">التوصيات: ${x.im.map(cut).map(esc).join('، ')}</div>` : ''}</div></div>`;
+  return `<div class="card"><h2>🎓 زيارات النائب الأكاديمي ومديرة المدرسة <span class="chip">${L.length}</span> <span class="sub">تصل تلقائياً من حضورهما الصفي وتنعكس في تقريركِ الشهري، ولا تحتاج إلى متابعة توصيات</span></h2>
+    <div class="list">${L.map(row).join('') || '<div class="empty">لا توجد زيارات للنائب الأكاديمي أو المديرة في هذه الفترة</div>'}</div></div>`;
 }
 /* الخطة السنوية للقسم: رفع الملف إلى مجلد الميزان الخاص، مع بقاء النسخ السابقة */
 async function planUpCard(dept) {

@@ -17,6 +17,6 @@ function A_supv(el) {
       return `<h3 style="margin:14px 0 6px;color:var(--maroon)">${esc(d)} <small style="color:var(--muted);font-weight:400">(${R.length})</small></h3>
       <div class="apl-tw"><table class="apl-t"><thead><tr><th>التاريخ</th><th>المعلمة</th><th>الصف</th><th>الموجه/ة</th><th>التوصيات</th><th>إجراء المنسقة</th><th>تاريخ قياس الأثر</th></tr></thead><tbody>
       ${R.map(r => `<tr><td class="apl-due">${dm(String(r.date).slice(0, 10))}</td><td style="white-space:nowrap">${esc(r.d.t || '')}</td><td class="apl-due">${esc(r.d.s || '')}</td><td style="white-space:nowrap">${esc(who(r) || '—')}</td>
-        <td style="text-align:justify">${[r.d.i1, r.d.i2].filter(Boolean).map(esc).join('<br>') || '<span style="color:var(--muted)">—</span>'}</td>
+        <td style="text-align:justify">${[r.d.i1, r.d.i2, r.d.i3].filter(Boolean).map(esc).join('<br>') || '<span style="color:var(--muted)">—</span>'}</td>
         <td style="text-align:justify">${r.d.mech ? esc(r.d.mech) : miss}</td><td class="apl-due">${r.d.fud ? dmy(r.d.fud) : miss}</td></tr>`).join('')}</tbody></table></div>`; }).join('')}</div>`;
 }
