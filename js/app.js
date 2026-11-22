@@ -229,7 +229,7 @@ function fieldHTML(f, r) {
   else if (f.ty === 'area') inp = `<textarea data-n="${f.n}">${esc(v)}</textarea>`;
   else if (f.ty === 'multi') {   // اختيار متعدد من قائمة، مع إضافة ما ليس فيها
     const o = optsFor(f, r), cur = String(v).split(/[،,]\s*/).map(x => x.trim()).filter(Boolean), all = o.concat(cur.filter(x => !o.includes(x)));
-    inp = `<input type="hidden" data-n="${f.n}" value="${esc(cur.join('، '))}"><div class="mchk" data-mc="${f.n}">${all.map(x => `<label class="${cur.includes(x) ? 'on' : ''}"><input type="checkbox" value="${esc(x)}" ${cur.includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div><input type="text" class="mchk-add" data-ma="${f.n}" placeholder="أداة أخرى؟ اكتبيها ثم اضغطي Enter">`;
+    inp = `<input type="hidden" data-n="${f.n}" value="${esc(cur.join('، '))}"><div class="mchk" data-mc="${f.n}">${all.map(x => `<label class="${cur.includes(x) ? 'on' : ''}"><input type="checkbox" value="${esc(x)}" ${cur.includes(x) ? 'checked' : ''}>${esc(x)}</label>`).join('')}</div><input type="text" class="mchk-add" data-ma="${f.n}" placeholder="${esc(f.ph || 'أداة أخرى؟ اكتبيها ثم اضغطي Enter')}">`;
   }
   else {
     const o = optsFor(f, r);
