@@ -106,12 +106,15 @@ const APL_RULES = [
   [/التعليم الإلكتروني|مصادر التعلم/, ['LR', 'V'], 'rec'],
   [/التعلم النشط|الأسئلة الصفية|الفروق الفردية|البيئة الصفية|الأنشطة الصفية|الأنشطة العملية|تنمية مهارات|مواءمة الأنشطة|إجراءات السلامة|البرامج الوقائية|الأنشطة الرياضية/, ['V', 'LVV'], 'rec'],
 ];
+const APL_YEARLONG = /اجتماع|التوصيات|زيارات|الخطط|تغذية راجعة|التعلم النشط|الأسئلة|الفهم القرائي|الفروق|البيئة الصفية|الأنشطة الصفية|تقييمات بنائية|الموهوبات|رفع التحصيل|قراءة النتائج|الأقل من|تقارير كمية|إجراءات رفع|إعادة بناء|ملفات المعلمات/, APL_ONEOFF = /منتصف|الأول|قبلي|القبلية|الرخص|ورشة|ممارسة متميزة/;
 function aplRule(t) { for (const [re, src, ty] of APL_RULES) if (re.test(t)) return { src, ty }; return { src: [], ty: 'man' }; }
 function aplEv(dept, src, from, to) { return S.records.filter(r => r.dept === dept && src.includes(r.item) && r.date && String(r.date).slice(0, 10) >= from && String(r.date).slice(0, 10) <= to && !(r.item === 'PL' && /السنوية/.test((r.d || {}).c || '') && false)); }
 const aplEvTxt = L => { const c = {}; L.forEach(r => { const k = APL_LBL[r.item] || r.item; c[k] = (c[k] || 0) + 1; }); return Object.entries(c).map(([k, n]) => `${k} (${n})`).join('، '); };
 /* الحالة التلقائية للإجراء في شهر معيّن */
 function aplAuto(dept, it, mk) {
-  const R = aplRule(it.t), start = '2026-08-30', mEnd = aplEnd(mk), mFrom = mk + '-01', due = it.due || '2027-05-31';
+  const R = aplRule(it.t), start = '2026-08-30', mEnd = aplEnd(mk), mFrom = mk + '-01';
+  /* الإجراء الممتد طوال العام (الاجتماعات، متابعة التوصيات، الزيارات…) لا يكتمل قبل نهاية العام ولو كُتب له موعد مبكر */
+  let due = it.due || '2027-05-31'; if (R.ty !== 'once' && APL_YEARLONG.test(it.t) && !APL_ONEOFF.test(it.t) && due < '2027-05-15') due = '2027-05-15';
   const inM = aplEv(dept, R.src, mFrom, mEnd), last2 = aplEv(dept, R.src, aplPrevM(mk) + '-01', mEnd), ever = aplEv(dept, R.src, start, mEnd);
   const lastD = ever.map(r => String(r.date).slice(0, 10)).sort().pop() || '';
   const out = (st, need, ev, date) => ({ st, need: !!need, ev: ev || '', date: date || '' });
