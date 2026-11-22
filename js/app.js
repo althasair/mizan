@@ -52,7 +52,7 @@ async function boot() {
 
 /* ------------------------------------------------------------------ الدخول */
 /* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
-const SV_NEED = 6;
+const SV_NEED = 7;
 function sabHealthHTML() {
   if (!isAdmin()) return '';
   if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>
@@ -163,10 +163,10 @@ function bindNav() { $$('#nav a.it').forEach(a => a.onclick = () => { S.view = a
 function refresh() { $('#nav').innerHTML = navHTML(); bindNav(); show(); window.scrollTo(0, 0); }
 function show() {
   const v = S.view, el = $('#view');
-  const map = { c_mycf: C_mycf, home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_supv: A_supv, a_vcert: A_vcert, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, c_dlog: C_dlog, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep, a_myws: A_myws, a_vplan: A_vplan };
+  const map = { c_mycf: C_mycf, home: isAdmin() ? A_home : C_home, report: C_report, stats: C_stats, a_compare: A_compare, a_boards: A_boards, a_reports: A_reports, a_visits: A_visits, a_supv: A_supv, a_vcert: A_vcert, a_accounts: A_accounts, a_vpvisit: A_vpvisit, p_visit: P_visit, p_plan: P_plan, a_dash: A_dash, a_cfiles: A_cfiles, a_afiles: A_afiles, a_tacts: A_tacts, t_prq: T_prq, a_prq: A_prq, c_tcert: C_tcert, c_dlog: C_dlog, n_act: N_act, t_xcmp: T_xcmp, t_ini: T_ini, t_act: T_act, c_visit: C_visit, t_pv: T_pv, t_ws: T_ws, t_pa: T_pa, t_ach: T_ach, t_lr: T_lr, t_ds: T_ds, t_tas: T_tas, a_cvisits: A_cvisits, a_subs: A_subs, a_anrep: A_anrep, t_rep: T_rep, c_trep: C_trep, a_myws: A_myws, a_vplan: A_vplan };
   try {
     if (typeof isSec === 'function' && isSec()) return S_prq(el);
-    if (isTeacher() && !['t_pv', 't_ws', 't_ach', 't_act', 't_ds', 't_tas', 't_rep', 't_prq', 't_xcmp'].includes(v)) return T_home(el);
+    if (isTeacher() && !['t_pv', 't_ws', 't_ach', 't_act', 't_lr', 't_ds', 't_tas', 't_rep', 't_prq', 't_xcmp'].includes(v)) return T_home(el);
     if (typeof isAct === 'function' && isAct() && !['n_act', 't_prq'].includes(v)) return N_act(el);
     if (v.startsWith('sec:')) return C_section(SEC[v.slice(4)], el);
     (map[v] || map.home)(el);

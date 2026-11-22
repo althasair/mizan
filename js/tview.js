@@ -52,7 +52,7 @@ const listTxt = a => (Array.isArray(a) ? a : [a]).filter(Boolean).join('، ');
 function T_navHTML() {
   const it = (v, t, ic, n) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic] || ICON.dot}<span>${t}</span>${n ? `<span class="n">${n}</span>` : ''}</a>`;
   const n = k => mine(k).filter(inCur).length;
-  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات والفعاليات التبادلية', 'scale', n('TPV') + n('TEX'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${xmMine().length ? it('t_xcmp', 'تعويض طالباتي عن الخروج', 'cal', xmPend()) : ''}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
+  return `${it('home', 'الرئيسية', 'home')}<div class="grp">سجلّي — ${esc(curPer().name)}</div>${it('t_pv', 'الزيارات والفعاليات التبادلية', 'scale', n('TPV') + n('TEX'))}${it('t_ws', 'الورش وتطوير الزملاء', 'doc', n('TWS'))}${it('t_prq', 'إذنٌ مُيسَّر', 'prq', prqMine().filter(r => r.d.st === 'ret').length)}${xmMine().length ? it('t_xcmp', 'تعويض طالباتي عن الخروج', 'cal', xmPend()) : ''}${it('t_ach', 'الإنجازات والمشاركات', 'star', n('TACH'))}${it('t_act', 'الأنشطة والبرامج والمبادرات', 'cal', n('TA'))}${it('t_lr', 'مصادر التعلم والتعليم الإلكتروني', 'doc', n('TLR'))}${it('t_tas', 'التكليفات والأعباء الوظيفية', 'doc', n('TAS'))}${it('t_ds', 'الانضباط الوظيفي', 'scale', n('TDS'))}<div class="grp">تقريري</div>${it('t_rep', 'تقرير أعمالي', 'chart')}`;
 }
 
 function T_home(el) {
@@ -563,5 +563,27 @@ function T_ds(el) {
     sum: r => [r.abs.length ? `غياب ${r.abs.length}` : '', r.perm.length ? `استئذان ${r.perm.length}` : ''].filter(Boolean).join(' · ') || 'لا غياب ولا استئذان',
     head: '<tr><th>التاريخ</th><th>الغياب</th><th>الاستئذان</th><th></th></tr>',
     row: r => `<td>${dmy(r.date)}</td><td style="font-size:12px">${(r.d.abs || []).map(a => `${dmy(a.date)} (${esc(a.type)})`).join('<br>') || ((r.d.perm || []).length ? '—' : 'لا غياب ولا استئذان')}</td><td style="font-size:12px">${(r.d.perm || []).map(x => `${dmy(x.date)}: ${x.h} س (${esc(x.type)})`).join('<br>') || '—'}</td>`,
+  });
+}
+
+/* ================================================================== مصادر التعلم والتعليم الإلكتروني (تسجّلها المعلمة بنفسها وتنعكس في تقرير القسم) */
+function T_lr(el) {
+  const secs = String(meStaff().secs || '').split(/[،,]/).map(x => x.trim()).filter(x => x && x !== '—');
+  const KI = getList('lr_item');
+  T_page(el, {
+    item: 'TLR', title: 'مصادر التعلم والتعليم الإلكتروني', one: 'تفعيل مصادر التعلم أو التعليم الإلكتروني',
+    note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري البند: أدوات التعليم الإلكتروني التي وظّفتِها في حصصكِ (اختاري منها ما يلزم)، أو كتب مركز مصادر التعلم، أو زيارة المركز مع طالباتكِ. ويظهر ما تسجّلينه في تقرير قسمكِ تلقائياً.',
+    blank: { k: KI[0] },
+    form: d => fld('البند', fRadio('k', KI, d.k), 1)
+      + `<div data-lr="el" style="grid-column:1/-1;display:${lrKind(d.k) === 'el' ? 'contents' : 'none'}">${fld('الأدوات الإلكترونية التي وظّفتِها (اختاري ما يلزم)', fMulti('tools', getList('lr_tools'), lrTools(d)), 1) + fld('أين فُعّلت؟', fSel('mode', getList('lr_mode'), d.mode))}</div>`
+      + `<div data-lr="bk" style="grid-column:1/-1;display:${lrKind(d.k) === 'bk' ? 'contents' : 'none'}">${fld('الكتاب أو المصدر', fCombo('bk', getList('lr_books'), d.bk)) + fld('كيف وُظِّف؟', fSel('use', getList('lr_bkuse'), d.use))}</div>`
+      + `<div data-lr="vs" style="grid-column:1/-1;display:${lrKind(d.k) === 'vs' ? 'contents' : 'none'}">${fld('الغرض من الزيارة', fSel('vp', getList('lr_visit'), d.vp)) + fld('عنوان الدرس أو البحث (اختياري)', `<input data-n="topic" value="${esc(d.topic || '')}">`)}</div>`
+      + fld('الشعبة', fSel('s', secs, d.s)) + fld('الأثر', fCombo('imp', getList('lr_impact'), d.imp)),
+    bind: el2 => $$('input[name="r_k"]', el2).forEach(x => x.onchange = () => { const k = lrKind(x.value); $$('[data-lr]', el2).forEach(b => b.style.display = b.dataset.lr === k ? 'contents' : 'none'); }),
+    pre: r => { const k = lrKind(r.k); if (k !== 'el') { delete r.tools; delete r.mode; } if (k !== 'bk') { delete r.bk; delete r.use; } if (k !== 'vs') { delete r.vp; delete r.topic; } },
+    check: r => !r.k ? 'اختاري البند' : lrKind(r.k) === 'el' && !lrTools(r).length ? 'اختاري أداة إلكترونية واحدة على الأقل' : lrKind(r.k) === 'bk' && !r.bk ? 'اختاري الكتاب أو المصدر' : lrKind(r.k) === 'vs' && !r.vp ? 'اختاري الغرض من الزيارة' : '',
+    sum: r => lrWhat(r),
+    head: '<tr><th>التاريخ</th><th>البند</th><th>التفاصيل</th><th>الشعبة</th><th>الأثر</th><th></th></tr>',
+    row: r => `<td>${dmy(r.date)}</td><td><span class="chip">${esc(lrKind(r.d.k) === 'el' ? 'التعليم الإلكتروني' : lrKind(r.d.k) === 'vs' ? 'زيارة المركز' : 'مصادر التعلم')}</span></td><td style="font-size:12.5px">${esc(lrWhat(r.d))}</td><td>${esc(r.d.s || '')}</td><td style="font-size:12px">${esc(r.d.imp || '')}</td>`,
   });
 }

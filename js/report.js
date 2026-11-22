@@ -232,7 +232,7 @@ function buildReport(ctx) {
   T.pa_ind_n = PAi.length; T.pa_ev_n = PAe.length;
 
   /* المصادر والتعليم الإلكتروني */
-  const LR = Rp('LR');
+  const LR = Rp('LR').concat(Rp('TLR'));   // ما سجّلته المنسقة + ما سجّلته المعلمات بأنفسهن
   T.lrc = sec(LR.filter(r => !lrIsEL(d(r).k)), r => SEC.LR.tx(d(r)), 'لم يُسجَّل تفعيل لمركز مصادر التعلم خلال الفترة.', 'فعّلت معلمات القسم مركز مصادر التعلم: ');
   const EL = LR.filter(r => lrIsEL(d(r).k));
   const elBy = [REF.ALL_MEMBERS, 'القسم', coord, ...teachers].map(t => ({ t, tools: uniq(EL.filter(r => d(r).t === t).map(r => lrTools(d(r)).join('، ') + ((x => x ? ` (${x})` : '')([d(r).s ? (/^الصف/.test(d(r).s) ? d(r).s : 'الصف ' + d(r).s) : '', d(r).mode && d(r).mode !== 'داخل الحصة الصفية' ? d(r).mode : '', d(r).nd ? '' : dm(r.date)].filter(Boolean).join('، '))))) })).filter(x => x.tools.length);
