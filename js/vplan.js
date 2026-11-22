@@ -63,7 +63,8 @@ function vplAuto(I, it, q) {
   const R = VPL_R[it.r] || VPL_R.man, ended = P.to < today(), sched = I.q.includes(q) && !(R.k === 'end' && q < 4);
   const L = vplEv(it, P.from, P.to), last = L.map(r => String(r.date).slice(0, 10)).sort().pop() || '';
   const out = (st, need, ev, date) => ({ st, need: !!need, ev: ev || '', date: date || '' });
-  if (L.length) return out('مكتمل', 0, vplEvTxt(L), last);
+  // مكتمل: آخر ربع مقرر للإجراء أو إجراء نهاية العام؛ وقبله «على المسار» لأنه متكرر وبقيت له مرات قادمة
+  if (L.length) return out(R.k === 'end' || q >= Math.max(...I.q) ? 'مكتمل' : 'على المسار', 0, vplEvTxt(L), last);
   if (!sched) return out('لم يبدأ', 0, R.k === 'end' ? 'إجراء نهاية العام' : 'موعده: ' + I.when.replace(/\n/g, '، '), '');
   if (R.k === 'cyc' && q === 1) return out('لم يبدأ', 0, 'يبدأ بعد نتائج أول اختبار', '');
   if (R.k === 'man') return out('على المسار', 1, 'لا يوجد تسجيل يدل عليه في المنصات، فالقرار لكِ', '');
@@ -83,7 +84,7 @@ async function A_vplan(el) {
     let n = 0, ok = 0, need = 0; const cnt = {};
     const rows = plan.inds.map(I => `<tr class="apl-dh"><td colspan="3"><b>${esc(I.n)} ${esc(I.ind)}</b><div style="font-size:12px;font-weight:400;color:#5A4048;margin-top:2px">🎯 ${esc(I.goal)}</div>
         <div style="font-size:11.5px;font-weight:400;color:var(--muted);margin-top:2px">الجهة المنفذة: ${esc(I.by.replace(/\n/g, '، '))} · زمن التنفيذ: ${esc(I.when.replace(/\n/g, '، '))}</div></td></tr>` +
-      I.items.map(it => { const s = vplStatus(I, it, q); n++; cnt[s.st] = (cnt[s.st] || 0) + 1; if (s.st === 'مكتمل') ok++; if (s.need) need++;
+      I.items.map(it => { const s = vplStatus(I, it, q); n++; cnt[s.st] = (cnt[s.st] || 0) + 1; if ((s.st === 'مكتمل' || s.st === 'على المسار') && !s.need) ok++; if (s.need) need++;
         const other = Qs.filter(x => x !== q).map(x => { const o = vplStatus(I, it, x); return `<span class="vpl-oq ${APS_C[o.st] || ''}">${vplShort(x)}: ${esc(o.st || '—')}</span>`; }).join('');
         return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div><b style="color:var(--maroon)">${esc(it.n)}</b> ${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قراركِ' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}${other ? `<div class="vpl-oqs">${other}</div>` : ''}</td>
           <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td>

@@ -40,9 +40,11 @@ const aplBar = (k, n) => `<span class="apl-bar"><i style="width:${n ? Math.round
 const APS_ST = ['على المسار', 'متأخر', 'متأخر جداً', 'لم يبدأ', 'مكتمل'];
 const APS_C = { 'على المسار': 'g', 'متأخر': 'o', 'متأخر جداً': 'r', 'لم يبدأ': 'n', 'مكتمل': 'b' };
 /* مفتاح حالات المتابعة (قائمة نموذج الوزارة) — يظهر في بداية الخطة على الشاشة وفي الطباعة */
-const APS_KEY = { 'مكتمل': 'نُفِّذ الإجراء كاملًا في موعده.', 'على المسار': 'إجراء مستمر أو قيد التنفيذ، ويسير وفق موعده المخطط (ومنه الإجراءات الممتدة طوال العام).', 'متأخر': 'حلّ موعده ولم يُستكمل بعد، والتأخير بسيط يمكن تداركه قريبًا.', 'متأخر جداً': 'تجاوز موعده بفترة طويلة، ويحتاج إلى إجراء عاجل لإنجازه.', 'لم يبدأ': 'لم يحن موعد تنفيذه بعد.' };
+const APS_KEY = { 'مكتمل': 'انتهى الإجراء كله ولن نرجع إليه هذا العام، مثل وضع الخطة السنوية، أو إجراء له مرة واحدة فقط، أو إجراء متكرر نُفّذت آخر مرة منه.', 'على المسار': 'الإجراء متكرر أو ممتد، ونفّذنا ما حلّ موعده منه، وبقيت له مرات قادمة (مثل الخطة العلاجية، وحصر الطالبات بعد كل اختبار).', 'متأخر': 'حلّ موعده ولم يُستكمل بعد، والتأخير بسيط يمكن تداركه قريبًا.', 'متأخر جداً': 'تجاوز موعده بفترة طويلة، ويحتاج إلى إجراء عاجل لإنجازه.', 'لم يبدأ': 'لم يحن موعد تنفيذه بعد.' };
 const APS_HEX = { g: '#1F7A4D', o: '#D98A00', r: '#A4012D', n: '#6B7280', b: '#1E5AA8' };
-const apsKeyHTML = pr => `<div class="aps-key" style="border:1px solid ${pr ? '#B9A7AD' : 'var(--line)'};border-radius:${pr ? '2mm' : '12px'};padding:${pr ? '1.5mm 2.5mm' : '8px 12px'};margin:${pr ? '0 0 2.5mm' : '8px 0 10px'};font-size:${pr ? '7.8pt' : '12.5px'};line-height:1.7;background:${pr ? '#FBF8F9' : 'var(--paper,#FBF8F9)'}"><b style="color:#7A1F3D">مفتاح حالات المتابعة:</b> ` + APS_ST.slice().reverse().map(v => `<span style="white-space:nowrap;margin-inline-end:${pr ? '3mm' : '12px'}"><i style="display:inline-block;width:${pr ? '2.6mm' : '10px'};height:${pr ? '2.6mm' : '10px'};border-radius:2px;background:${APS_HEX[APS_C[v]]};vertical-align:middle"></i> <b>${v}</b>: </span>${APS_KEY[v]} `).join('') + (pr ? '' : `<div style="margin-top:4px;color:#8A4B12">🟧 الصف البرتقالي: بحاجة إلى قرار المنسقة · ⚙️ تلقائي (إطار متقطع): حُسبت الحالة من تسجيلات الميزان وسبع سنابل · ✍️ قرار المنسقة: اختارتها بنفسها.</div>`) + `</div>`;
+const apsKeyHTML = pr => pr
+  ? `<div style="border:1.2px solid #7A1F3D;border-radius:2mm;padding:1.6mm 2.6mm;margin:0 0 2.5mm;font-size:7.8pt;line-height:1.65;background:#FBF4F6"><b style="color:#7A1F3D;font-size:8.6pt">🔑 مفتاح المتابعة</b><br>` + ['مكتمل', 'على المسار', 'متأخر', 'متأخر جداً', 'لم يبدأ'].map(v => `<span style="white-space:nowrap"><i style="display:inline-block;width:2.6mm;height:2.6mm;border-radius:.6mm;background:${APS_HEX[APS_C[v]]};vertical-align:middle"></i> <b>${v}:</b></span> ${APS_KEY[v]}`).join(' &nbsp;·&nbsp; ') + `</div>`
+  : `<div class="aps-key" style="border:2px solid #7A1F3D;border-radius:14px;padding:10px 14px;margin:10px 0 12px;font-size:13px;line-height:1.85;background:linear-gradient(180deg,#FFF8F1,#FBF4F6);box-shadow:0 2px 8px rgba(122,31,61,.08)"><div style="font-weight:800;color:#7A1F3D;font-size:15px;margin-bottom:4px">🔑 مفتاح المتابعة <small style="font-weight:400;color:#6B5A60;font-size:12px">— مرجعكِ في اختيار الحالة</small></div>` + ['مكتمل', 'على المسار', 'متأخر', 'متأخر جداً', 'لم يبدأ'].map(v => `<div><span style="display:inline-block;min-width:92px;text-align:center;border-radius:8px;padding:1px 8px;margin-inline-end:8px;background:${APS_HEX[APS_C[v]]};color:#fff;font-weight:700">${v}</span>${APS_KEY[v]}</div>`).join('') + `<div style="margin-top:6px;padding-top:6px;border-top:1px dashed #D9C4CB"><span style="display:inline-block;min-width:92px;text-align:center;border-radius:8px;padding:1px 8px;margin-inline-end:8px;background:#FCEADB;color:#8A4B12;font-weight:700;border:1px solid #E8B98A">برتقالي</span>بحاجة إلى قراركِ: لا يوجد تسجيل في المنصات يدل على حالته، فاختاري حالته بنفسكِ. · ⚙️ تلقائي: حُسبت الحالة من تسجيلات الميزان وسبع سنابل · ✍️ قراركِ: اخترتِها بنفسكِ.</div></div>`;
 const aplQueue = []; let aplBusy = false;
 function aplMark(t) { const m = $('#aplSv'); if (m) m.textContent = t; }
 function aplPush(fn) { aplQueue.push(fn); aplRun(); }
@@ -116,8 +118,10 @@ function aplAuto(dept, it, mk) {
   if (R.ty === 'once') { if (ever.length || due <= mEnd) return out('مكتمل', 0, ever.length ? aplEvTxt(ever) : 'إجراء بداية العام', lastD || due); return out('على المسار', 0, '', ''); }
   if (R.ty === 'ev') return mk < '2027-02' ? out('لم يبدأ', 0, 'التقييم الأولي في الفصل الثاني', '') : out('على المسار', 1, 'تؤكد المنسقة رفع التقييم في النظام', '');
   if (R.ty === 'man') return mFrom > due ? out('مكتمل', 1, 'بحاجة إلى تأكيدكِ', '') : out('على المسار', 1, 'لا يوجد تسجيل يدل عليه في المنصات، فالقرار لكِ', '');
-  if (R.ty === 'cyc') { if (last2.length) return out('مكتمل', 0, aplEvTxt(last2), lastD); if (mk < '2026-10') return out('لم يبدأ', 0, 'بعد أول اختبار', ''); if (ever.length) return out('على المسار', 0, 'آخر تنفيذ ' + dm(lastD) + ' — بانتظار نتائج الاختبار القادم', lastD); return out('متأخر', 1, 'لا يوجد تحليل أو حصر مسجّل بعد الاختبار', ''); }
-  if (inM.length) return out(mFrom > due ? 'مكتمل' : 'مكتمل', 0, aplEvTxt(inM), lastD);
+  /* مكتمل: انتهى الإجراء كله (آخر مرة منه في موعد انتهائه)، وعلى المسار: متكرر أو ممتد نُفّذ ما حلّ موعده وبقيت له مرات قادمة */
+  const fin = mEnd >= due;
+  if (R.ty === 'cyc') { if (last2.length) return out(fin ? 'مكتمل' : 'على المسار', 0, aplEvTxt(last2), lastD); if (mk < '2026-10') return out('لم يبدأ', 0, 'بعد أول اختبار', ''); if (ever.length) return out('على المسار', 0, 'آخر تنفيذ ' + dm(lastD) + ' — بانتظار نتائج الاختبار القادم', lastD); return out('متأخر', 1, 'لا يوجد تحليل أو حصر مسجّل بعد الاختبار', ''); }
+  if (inM.length) return out(fin ? 'مكتمل' : 'على المسار', 0, aplEvTxt(inM), lastD);
   if (last2.length) return out('على المسار', 0, 'آخر تنفيذ ' + dm(lastD), lastD);
   if (mFrom > due) return ever.length ? out('مكتمل', 0, aplEvTxt(ever), lastD) : out('متأخر', 1, 'انتهى موعده ولا يوجد ما يثبت تنفيذه', '');
   if (mk <= '2026-09' && !ever.length) return out('على المسار', 1, 'لا يوجد تسجيل بعد', '');
@@ -135,15 +139,15 @@ function aplCard(dept) {
   const draw = () => {
     const plan = aplPlanCur(dept), mk = S.aplM && APL_MONTHS.includes(S.aplM) ? S.aplM : today().slice(0, 7);
     if (S.aplEd) return aplEditor(dept, plan, draw);
-    let n = 0, ok = 0, need = 0;
+    let n = 0, ok = 0, okC = 0, need = 0;
     const rows = plan.doms.map(D => `<tr class="apl-dh"><td colspan="6"><b>${esc(D.d)}</b>${D.items.length ? '' : ' <small style="color:#B8521A">— لم تُحدَّد إجراءات في هذا المجال بعد، أضيفيها من «✏️ تعديل الخطة»</small>'}</td></tr>` + D.items.map(it => {
-      const s = aplStatus(dept, it, mk); n++; if (s.st === 'مكتمل') ok++; if (s.need) need++;
+      const s = aplStatus(dept, it, mk); n++; if ((s.st === 'مكتمل' || s.st === 'على المسار') && !s.need) ok++; if (s.st === 'مكتمل') okC++; if (s.need) need++;
       return `<tr class="${s.need ? 'apl-need' : ''}"><td class="apl-a"><div>${esc(it.t)}</div>${s.ev ? `<div class="apl-ev">${s.set ? '✍️ قرار المنسقة' : '⚙️ تلقائي'} · ${esc(s.ev)}</div>` : ''}</td><td class="apl-by">${esc(it.by)}</td><td class="apl-due">${dmy(it.due)}</td><td class="apl-due" style="white-space:normal;max-width:140px">${esc(it.ev || '')}</td>
         <td class="apl-st">${APS_ST.map(v => `<button class="aps ${APS_C[v]}${s.st === v ? ' on' : ''}${s.st === v && !s.set ? ' auto' : ''}" data-st="${v}" data-mid="${it.id}" ${can ? '' : 'disabled'}>${v}</button>`).join('')}</td><td class="apl-dt">${s.date ? dm(s.date) : '—'}</td></tr>`; }).join('')).join('');
     box.innerHTML = `<h2>✅ متابعة تنفيذ الخطة السنوية <span class="sub">تُحسب حالة كل إجراء تلقائياً مما سجّلته المعلمات وسجّلتِه في الميزان وسبع سنابل. راجعي ما ظهر بالبرتقالي فهو بحاجة إلى قراركِ، ويمكنكِ تغيير أي حالة بنقرة. الحفظ تلقائي.</span></h2>
       ${apsKeyHTML(0)}
       <div class="apl-mos">${aplMonths().map(k => `<button class="${k === mk ? 'on' : ''}" data-mo="${k}">${APL_MN(k)}</button>`).join('')}</div>
-      <div class="apl-sum"><b>${n ? Math.round(ok / n * 100) : 0}%</b><div>${aplBar(ok, n)}<small>مكتمل ${ok} من ${n} إجراءً في شهر ${APL_MN(mk)}${need ? ` · <span style="color:#B8521A;font-weight:700">${need} بحاجة إلى قراركِ</span>` : ''}</small></div>
+      <div class="apl-sum"><b>${n ? Math.round(ok / n * 100) : 0}%</b><div>${aplBar(ok, n)}<small>منجز وفق موعده ${ok} من ${n} إجراءً في شهر ${APL_MN(mk)} (مكتمل ${okC} · على المسار ${ok - okC})${need ? ` · <span style="color:#B8521A;font-weight:700">${need} بحاجة إلى قراركِ</span>` : ''}</small></div>
         <div class="apl-tools"><span id="aplSv" class="apl-sv">${aplBusy ? '… جارٍ الحفظ' : ''}</span>
         ${can ? '<button class="btn sm sec" id="aplEdB">✏️ تعديل الخطة</button>' : ''}<button class="btn sm" id="aplPr">🖨️ حفظ وطباعة الخطة (نموذج الوزارة)</button></div></div>
       <div class="apl-tw"><table class="apl-t"><thead><tr><th>الإجراءات والأنشطة الإشرافية والبرامج</th><th>المنفّذ</th><th>موعد الانتهاء</th><th>أدلة التنفيذ</th><th>المتابعة <small>(${APL_MN(mk)})</small></th><th>تاريخ المتابعة</th></tr></thead><tbody>${rows}</tbody></table></div>
