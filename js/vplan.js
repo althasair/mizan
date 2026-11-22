@@ -111,6 +111,9 @@ async function A_vplan(el) {
 
 /* الطباعة على الترويسة الأفقية بنموذج الوزارة نفسه، مع عمود متابعة لكل ربع حتى الربع المختار */
 async function vplPrint(plan, q) {
+  /* تُفتح نافذة الطباعة فور الضغط (قبل جلب التواقيع والصور) حتى لا يحجبها المتصفح */
+  const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
+  try { w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>'); } catch (e) {}
   const t0 = today(), Qs = vplQs().filter(x => x <= q);
   let vsig = ''; try { vsig = (await API.call('signature', { cheer: 1 })).data || ''; } catch (e) {}
   const nl = s => esc(s || '').replace(/\n/g, '<br>');
@@ -121,7 +124,6 @@ async function vplPrint(plan, q) {
     return `<tr><td class="${cls} ind">${f ? esc(I.n) + ' ' + esc(I.ind) : ''}</td><td class="${cls} gl">${f ? esc(I.goal) + tbl(I.tbl) : ''}</td><td class="ac"><b>${esc(it.n)}</b> ${esc(it.t)}</td>
       <td class="${cls}">${part(I.by, i, I.items.length)}</td><td class="${cls}">${part(I.when, i, I.items.length)}</td><td class="${cls} evd">${part(I.ev, i, I.items.length)}</td>
       ${Qs.map(x => { const s = vplStatus(I, it, x); return `<td class="st ${APS_C[s.st] || ''}">${esc(s.st)}</td>`; }).join('')}<td class="dt">${dmy(t0)}</td></tr>`; }).join('')).join('');
-  const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
   w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>');
   const IMG = await aplImgs();
   w.document.open(); w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>متابعة ${esc(plan.title)} - ${VPL_QN[q - 1]} - ${dmy(t0)}</title>

@@ -185,6 +185,9 @@ let APL_IMG = null;
 async function aplImgs() { if (APL_IMG) return APL_IMG; const get = f => fetch('assets/' + f).then(r => r.blob()).then(b => new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.readAsDataURL(b); })).catch(() => '');
   const [top, bot, mark] = await Promise.all(['lhl-top.jpg', 'lhl-bot.jpg', 'lhl-mark.jpg'].map(get)); return (APL_IMG = { top, bot, mark }); }
 async function aplPrint(dept, mk) {
+  /* تُفتح نافذة الطباعة فور الضغط (قبل جلب التواقيع والصور) حتى لا يحجبها المتصفح */
+  const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
+  try { w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>'); } catch (e) {}
   const plan = aplPlanCur(dept), co = (S.coords || []).find(c => (c.dept || []).includes(dept)) || (S.user.role === 'coord' ? S.user : null);
   const coName = (co && co.name) || plan.co || '', t0 = today();
   let csig = '', vsig = '';
@@ -193,7 +196,6 @@ async function aplPrint(dept, mk) {
   const rows = plan.doms.map(D => !D.items.length ? `<tr><td class="dm f l">${esc(D.d)}</td><td colspan="6" style="color:#888">لم تُحدَّد إجراءات في هذا المجال بعد</td></tr>` : D.items.map((it, i) => { const s = aplStatus(dept, it, mk);
     return `<tr>${`<td class="dm${i === 0 ? ' f' : ''}${i === D.items.length - 1 ? ' l' : ''}">${i === 0 ? esc(D.d) : ''}</td>`}<td class="ac">${esc(it.t)}</td><td>${esc(it.by)}</td><td>${dmy(it.due)}</td><td>${esc(it.ev || '')}</td><td class="st ${APS_C[s.st] || ''}">${esc(s.st)}</td><td>${dmy(t0)}</td></tr>`; }).join('')).join('');
   const sigBox = (ttl, nm, sg, big) => `<div class="sg"><div class="tt">${ttl}</div><div class="nm"><b>${esc(nm)}</b>${sg ? `<img src="${sg}" alt="">` : ''}</div></div>`;
-  const w = window.open('', '_blank'); if (!w) return toast('اسمحي بالنوافذ المنبثقة للطباعة', 1);
   w.document.write('<p style="font-family:sans-serif;text-align:center;margin-top:40vh">جارٍ تجهيز الخطة للطباعة…</p>');
   const IMG = await aplImgs();
   w.document.open(); w.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>الخطة السنوية لقسم ${esc(dept)} - متابعة ${dmy(t0)}</title>
