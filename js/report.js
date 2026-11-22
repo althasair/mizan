@@ -353,8 +353,8 @@ function buildReport(ctx) {
       RF.forEach(r => (by[r.d.t] = by[r.d.t] || { a: [], i: [], c: [] }).c.push(r));
       const why = r => String(r.d.det || '').split(' — على: ')[0] || 'شهادة';
       const tl = Object.entries(by).map(([t, o]) => { const P2 = [];
-        if (o.a.length) P2.push(`أنشطتها (${o.a.length}): ` + o.a.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.tg ? ` لـ${r.d.tg}` : '') + (+r.d.n ? ` بمشاركة (${+r.d.n})` : '') + dateTxt(r.date)).join('، '));
-        if (o.i.length) P2.push(`مبادراتها (${o.i.length}): ` + o.i.map(r => `«${nz(r.d.name)}»` + (r.d.tg ? ` لـ${r.d.tg}` : '') + (+r.d.n ? ` بمشاركة (${+r.d.n})` : '') + dateTxt(r.date)).join('، '));
+        if (o.a.length) P2.push(`أنشطتها (${o.a.length}): ` + o.a.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.tg ? ` (الفئة المستهدفة: ${r.d.tg})` : '') + (+r.d.n ? ` بمشاركة (${+r.d.n})` : '') + dateTxt(r.date)).join('، '));
+        if (o.i.length) P2.push(`مبادراتها (${o.i.length}): ` + o.i.map(r => `«${nz(r.d.name)}»` + (r.d.tg ? ` (الفئة المستهدفة: ${r.d.tg})` : '') + (+r.d.n ? ` بمشاركة (${+r.d.n})` : '') + dateTxt(r.date)).join('، '));
         if (o.c.length) { const st = new Set(o.c.flatMap(r => r.d.stu || [])).size; P2.push(`شهاداتها (${o.c.length}) لـ(${st}) من الطالبات: ` + uniq(o.c.map(why)).join('، ')); }
         return { st: Math.min(o.a.length + o.i.length + o.c.length, 3), n: o.a.length + o.i.length + o.c.length, tx: `أ. ${t}: ` + P2.join('؛ ') + '.' }; }).sort((a, b) => b.n - a.n);
       // المنسقة: شهاداتها ومبادراتها ومجالسها وفعالياتها لأولياء الأمور، ولمن وُجّهت، وعدد المستفيدين
@@ -362,7 +362,7 @@ function buildReport(ctx) {
       const grp = (re, L) => L.filter(r => re.test(d(r).c || ''));
       const cT = (lbl, L) => L.length ? `${lbl} (${L.length}): ` + L.map(r => nz(d(r).why || d(r).c) + (+d(r).n ? ` لـ(${+d(r).n}) من أولياء الأمور` : ' لأولياء الأمور') + dateTxt(r.date)).join('، ') : '';
       const cl = [cT('شهاداتها ورسائل الشكر', grp(/شهاد|رسائل شكر/, PAe2)), cT('مبادراتها', grp(/مبادرة/, PAe2)), cT('المجالس واللقاءات والفعاليات', grp(/مجلس|اجتماع|لقاء|درس|ورشة|فعالية|استبانة/, PAe2)),
-        ACp.length ? `الأنشطة والمبادرات (${ACp.length}): ` + ACp.map(r => `«${nz(d(r).name)}» لـ${d(r).tg}` + dateTxt(r.date)).join('، ') : ''].filter(Boolean);
+        ACp.length ? `الأنشطة والمبادرات (${ACp.length}): ` + ACp.map(r => `«${nz(d(r).name)}» (الفئة المستهدفة: ${d(r).tg})` + dateTxt(r.date)).join('، ') : ''].filter(Boolean);
       if (cl.length) tl.unshift({ st: 3, n: 99, tx: `منسقة القسم${coord ? ' أ. ' + coord : ''}: ` + cl.join('؛ ') + '.' });
       const nStu = new Set(RF.flatMap(r => r.d.stu || [])).size + TAp.filter(r => /طالب/.test(r.d.tg || '')).reduce((a, r) => a + (+r.d.n || 0), 0);
       const nPar = PAe2.reduce((a, r) => a + (+d(r).n || 0), 0);
