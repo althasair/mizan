@@ -567,3 +567,15 @@ body.ro .topbar h1::after{content:' · اطلاع فقط';font-size:13px;color:v
 
 /* متابعة الخطة الإجرائية للنائب الأكاديمي */
 .vpl-oqs{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}.vpl-oq{font-size:10.5px;border-radius:6px;padding:1px 6px;background:#F1F1F1;color:#555}.vpl-oq.b{background:#E4F3EA;color:#1F5E3B}.vpl-oq.g{background:#E6EEF8;color:#1E4A82}.vpl-oq.o{background:#FCEADB;color:#8A4B12}.vpl-oq.r{background:#F9E3E6;color:#8A1029}
+/* شهادات تقدير النائب الأكاديمي */
+.vc-ds{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.vc-d{border:1px solid var(--line);border-radius:12px;padding:8px;background:#FCFAF7}
+.vc-dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;font-size:13.5px;color:var(--maroon)}
+.vc-dh .lnk{background:none;border:0;color:#8A6424;font-size:12px;cursor:pointer;text-decoration:underline;font-family:inherit}
+.vc-d label{display:flex;flex-direction:column;cursor:pointer;border:1px solid var(--line);border-radius:10px;padding:5px 10px;margin-bottom:5px;background:#fff;transition:.15s}
+.vc-d label input{display:none}
+.vc-d label span{font-size:13.5px;font-weight:600;white-space:nowrap}
+.vc-d label small{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-d label.on{background:var(--maroon);border-color:var(--maroon);color:#fff}.vc-d label.on small{color:#F3DDE3}
+.vc-co,.vc-n{font-style:normal;font-size:10.5px;border-radius:10px;padding:0 6px;background:#FFF3D6;color:#7A5A12}
+.vc-one{background:#F7EEF1;border-right:4px solid var(--maroon);border-radius:8px;padding:8px 12px;margin-bottom:10px;font-size:14px}
