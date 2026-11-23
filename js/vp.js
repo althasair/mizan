@@ -136,7 +136,7 @@ function sanabilFor(name) {
 }
 function vpVisitForm(el, rec) {
   let F = FORMS.visit; const d = rec ? JSON.parse(JSON.stringify(rec.d)) : { t: S.vpvT || '', date: today(), mode: 'ميدانيّة', kj: 'كليّة', rt: {}, rc: {}, st: ['', '', ''], im: ['', '', ''] };
-  d.rt = d.rt || {}; d.rc = d.rc || {}; d.st = d.st || ['', '', '']; d.im = d.im || ['', '', ''];
+  d.rt = d.rt || {}; d.rc = d.rc || {}; d.rs = d.rs || {}; d.st = d.st || ['', '', '']; d.im = d.im || ['', '', ''];
   cvNotesInit(d, d.st, d.im); d.wsi = d.wsi || {}; d.fu = d.fu || []; if (!d.pre) d.pre = F.preamble.replace('{name}', d.t || '...');
   const KND = S.vkind === 'PRV' ? 'PRV' : 'VPV';
   // الزيارة السابقة: آخر زيارة لها هي (النائب/المديرة) للمعلمة، وإن لم توجد فآخر زيارة لأي زائرة (المنسقة غالباً)
@@ -178,12 +178,14 @@ function vpVisitForm(el, rec) {
     </form>${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لم تصل نتائج التحصيل من سبع سنابل بعد — حدّثي الصفحة بعد لحظات.</div>` : ''}</div>
     ${cvFuCard(d, prev)}
 
-    <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>
-    <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>التوصيات</th></tr>
+    <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — ونقطة القوة والتوصية لكل معيار اختياريتان (قائمة أو كتابة حرة)</span></h2>
+    <div class="tbl"><table class="t vt"><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="font-size:11px;width:70px">${esc(x)}</th>`).join('')}<th>نقاط القوة والتوصيات</th></tr>
     ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
       return `<tr>${first ? `<td rowspan="${n}" style="background:var(--maroon-l);color:var(--maroon);font-weight:700;text-align:center">${esc(x.d)}</td>` : ''}<td style="font-size:12.5px">${esc(x.c)}${x.ind ? `<details style="margin-top:3px"><summary style="cursor:pointer;color:var(--tiffany-d);font-size:11.5px">ما يجب توفره (${x.ind.length})</summary><ul style="margin:4px 0;padding-inline-start:16px;font-size:11.5px;color:var(--muted)">${x.ind.map(t => `<li>${esc(t)}</li>`).join('')}</ul></details>` : ''}</td>
         ${F.scale.map((_, k) => `<td class="ck ${d.rt[i] === k ? 'on' : ''}" data-i="${i}" data-k="${k}" style="text-align:center;cursor:pointer;font-size:18px;color:var(--tiffany-d)">${d.rt[i] === k ? '✓' : ''}</td>`).join('')}
-        <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
+        <td><textarea data-rs="${i}" rows="${d.rs[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid #CDE9E5;background:#F6FBFA;border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="نقطة قوة (اختياري): اكتبي أو اختاري">${esc(d.rs[i] || '')}</textarea>
+          <select data-adds="${i}" style="width:100%;border:1px solid #CDE9E5;border-radius:8px;font-size:11.5px;margin:2px 0 6px;color:var(--ok)"><option value="">+ إضافة نقطة قوة (${(x.s || []).length})…</option>${(x.s || []).map(t => `<option>${esc(t)}</option>`).join('')}</select>
+          <textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="توصية (اختياري): اكتبي أو اختاري">${esc(d.rc[i] || '')}</textarea>
           <select data-add="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ إضافة توصية (${x.r.length})…</option>${x.r.map(t => `<option>${esc(t)}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div></div>
     ${cvWsCard(d, WS)}
     ${cvNotesCard(d, F, '', S.vkind !== 'PRV')}`;
@@ -192,6 +194,7 @@ function vpVisitForm(el, rec) {
       d.t = $('#fT').value.trim(); d.date = $('#fD').value; d.subj = $('#fSub').value.trim(); d.s = $('#fSec').value.trim(); d.topic = $('#fTop').value.trim();
       d.mode = $('#fMode').value; d.kj = $('#fKj').value; d.live = $('#fLive').value; cvNotesGrab(d, el); if (d.t) d.pre = d.pre.replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`); cvWsGrab(d, el, cvWorkshops(d.t, d.date, staffBy(d.t).dept));
       $$('[data-rc]', el).forEach(i => { const v = i.value.trim(); if (v) d.rc[i.dataset.rc] = v; else delete d.rc[i.dataset.rc]; });
+      $$('[data-rs]', el).forEach(i => { const v = i.value.trim(); if (v) d.rs[i.dataset.rs] = v; else delete d.rs[i.dataset.rs]; });
     };
     $('#fT').onchange = () => { const old = d.t; grab(); if (!d.pre || d.pre.includes(old || '...')) d.pre = F.preamble.replace('{name}', d.t); const st = staffBy(d.t); if (!d.subj || !teaches(st, d.subj)) d.subj = subjToks(st)[0] || ''; const sc = String(st.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean); d.s = sc.length === 1 ? sc[0] : ''; if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $('#fD').onchange = () => { $('#fDay').value = dayOf($('#fD').value); };
@@ -199,6 +202,7 @@ function vpVisitForm(el, rec) {
     const reAch = () => { grab(); if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $('#fSec').onchange = reAch; $('#fSub').onchange = () => { grab(); if (d.t && !teaches(staffBy(d.t), d.subj)) { d.t = ''; d.s = ''; } if (d.achAuto || !d.ach) { d.ach = ''; d.achAuto = 1; } draw(); };
     $$('.ck', el).forEach(c => c.onclick = () => { grab(); const i = +c.dataset.i, k = +c.dataset.k; if (d.rt[i] === k) delete d.rt[i]; else { d.rt[i] = k; if ((k === 3 || k === 4) && !d.rc[i]) d.rc[i] = F.items[i].r[0]; if (k < 2 && d.rc[i] === F.items[i].r[0]) delete d.rc[i]; } draw(); });
+    $$('[data-adds]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.adds; const cur = (d.rs[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rs[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     $$('[data-add]', el).forEach(sl => sl.onchange = () => { if (!sl.value) return; grab(); const i = sl.dataset.add; const cur = (d.rc[i] || '').trim(); if (!cur.split('؛ ').includes(sl.value)) d.rc[i] = cur ? cur.replace(/[.؛\s]+$/, '') + '؛ ' + sl.value : sl.value; draw(); });
     cvNotesBind(el, d, fn => { grab(); if (fn) fn(); draw(); });
     $('#vb').onclick = () => { S.vpv = null; show(); };
@@ -213,6 +217,7 @@ function vpVisitForm(el, rec) {
       grab(); if (!d.t || !d.date) { toast('اختاري المعلمة والتاريخ', 1); return null; }
       const st = staffBy(d.t); if (!st.dept) { toast('اسم المعلمة غير موجود في قائمة المعلمات', 1); return null; }
       { const miss = d.fu.filter(x => !x.st); if (miss.length) { toast(`حدّدي مدى تنفيذ توصيات الزيارة السابقة (${miss.length})`, 1); return null; } }
+      if (S.vkind !== 'PRV' && !d.strP && !d.strW && !(d.strX || []).filter(Boolean).length && Object.keys(d.rs || {}).length) d.strX = Object.values(d.rs);
       { const N = cvNotesCheck(d, S.vkind !== 'PRV'); if (!N) return null; d.st = N.str; d.im = N.imp; } cvWsKeep(d, st.dept); d.note = d.topic || d.note || '';
       const K = S.vkind === 'PRV' ? 'PRV' : 'VPV';
       if (K === 'PRV' && !(rec && rec.d && rec.d.by)) { const w = prWho(); d.byT = w[0]; d.by = w[1]; }
@@ -253,9 +258,9 @@ function visitInner(r) {
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانيّة')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئيّة')} جزئيّة &nbsp; ${ys(d.kj, 'كليّة')} كليّة</td></tr>
     ${d.achD ? `<tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>` : `<tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>`}</table>
   ${d.achD && typeof cvAchBox === 'function' ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
-  <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
+  <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">${Object.keys(d.rs || {}).length ? 'نقاط القوة والتوصيات' : 'التوصيات'}<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
-    return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
+    return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${(d.rs || {})[i] ? `<span style="color:#17734A">✓ ${esc(d.rs[i])}</span>${(d.rc || {})[i] ? '<br>' : ''}` : ''}${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${esc((d.fu || []).length ? `\n\n${fuHead(d)}:\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '')}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
   ${typeof cvWsPrint === 'function' ? cvWsPrint(d) : ''}
   <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع ' + esc(d.byT || 'مديرة المدرسة') + '<br>أ. ' + esc(d.by || PR_NAME) : 'توقيع نائب المدير للشؤون الأكاديمية<br>أ. ' + VP_NAME}</td></tr></table>`;
