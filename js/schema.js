@@ -225,7 +225,8 @@ const SECTIONS = [
       { n: 'date', h: 'التاريخ', ty: 'date' },
       { n: 'ty', h: 'نوع النشاط', ty: 'actype', req: 1 },
       { n: 'name', h: 'اسم النشاط / المبادرة', ty: 'dep', on: 'ty', src: r => (REF.AC_TYPES.find(x => x.t === r.ty) || { items: [] }).items, req: 1 },
-      { n: 'io', h: 'داخلي / خارجي', ty: 'sel', l: 'io' },
+      { n: 'io', h: 'مكان التنفيذ: داخلي · خارجي (تشارك الطالبات لدى جهة أو مدرسة أخرى) · شراكة مجتمعية (يستضيف القسم جهة خارجية داخل المدرسة)', ty: 'sel', l: 'ac_io' },
+      { n: 'ptn', h: 'الجهة الخارجية (المستضيفة أو الضيفة)', ty: 'text', show: r => r.io === 'خارجي' || r.io === 'شراكة مجتمعية' || r.ty === 'شراكة مجتمعية' },
       { n: 'e1', h: 'المنفذ (1)', ty: 'member' },
       { n: 'e2', h: 'المنفذ (2)', ty: 'member', opt: 1 },
       { n: 'e3', h: 'المنفذ (3)', ty: 'member', opt: 1 },
@@ -242,7 +243,7 @@ const SECTIONS = [
       if (!ps.length) { const t = REF.AC_TYPES.find(x => x.t === r.ty); return (t ? t.p : 3) === p; }
       return ps.includes(REF.PRIO[p - 1]) || ps.includes('جميع الأولويات');
     },
-    tx: r => `«${r.name}» (${r.ty})` + bt(r.date) + ([r.e1, r.e2, r.e3].some(Boolean) ? '، تنفيذ: ' + execs(r.e1, r.e2, r.e3) : '')
+    tx: r => `«${r.name}» (${r.ty})` + bt(r.date) + (r.ptn ? (acScope(r) === 'cp' ? `، باستضافة ${r.ptn} داخل المدرسة` : acScope(r) === 'ext' ? `، لدى ${r.ptn}` : `، مع ${r.ptn}`) : '') + ([r.e1, r.e2, r.e3].some(Boolean) ? '، تنفيذ: ' + execs(r.e1, r.e2, r.e3) : '')
       + (+r.times > 1 ? `، وتم تفعيله (${r.times}) مرات` : '') + (r.tg ? '، واستهدف ' + r.tg : '') + (r.pos ? '، ومن إيجابياته: ' + r.pos : '') + (r.imp ? '، وأثره: ' + r.imp : '') },
 
   { k: 'PA', g: 'part', t: 'أولياء الأمور', title: 'الشراكة مع أولياء الأمور',
@@ -341,3 +342,8 @@ function pdKind(d, twin) {
   if (PD_OFF_RX.test(all) && !/منصة|إدراك|استثمر وقتك/.test(src)) return 'off';
   return 'self';
 }
+
+/* مكان تنفيذ النشاط: داخلي، أو خارجي (الطالبات يشاركن لدى جهة/مدرسة أخرى)، أو شراكة مجتمعية (القسم يستضيف جهة خارجية داخل المدرسة) */
+function acScope(d) { d = d || {}; return d.io === 'شراكة مجتمعية' || (d.io !== 'خارجي' && d.ty === 'شراكة مجتمعية') ? 'cp' : d.io === 'خارجي' ? 'ext' : 'int'; }
+const TA_SCOPE = ['داخل المدرسة', 'خارج المدرسة (مشاركة الطالبات لدى جهة أو مدرسة أخرى)', 'شراكة مجتمعية (استضافة جهة خارجية داخل المدرسة)'];
+function taScope(d) { d = d || {}; return /^شراكة/.test(d.scope || '') ? 'cp' : /^خارج/.test(d.scope || '') || /المدارس|خارجية|دولية/.test(d.lvl || '') ? 'ext' : 'int'; }

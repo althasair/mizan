@@ -236,9 +236,10 @@ function buildReport(ctx) {
   T.perTeacher = per;
 
   /* الأنشطة */
-  const AC = Rp('AC'); const ACi = AC.filter(r => d(r).io !== 'خارجي'), ACe = AC.filter(r => d(r).io === 'خارجي');
+  const AC = Rp('AC'); const ACi = AC.filter(r => acScope(d(r)) === 'int'), ACe = AC.filter(r => acScope(d(r)) === 'ext'), ACc = AC.filter(r => acScope(d(r)) === 'cp');
+  T.ac_cp = sec(ACc, r => SEC.AC.tx(d(r)), 'لم تُسجَّل شراكات مجتمعية خلال الفترة.', `استضاف القسم (${ACc.length}) من الجهات الخارجية داخل المدرسة ضمن الشراكة المجتمعية: `);
   T.ac_int = sec(ACi, r => SEC.AC.tx(d(r)), 'لم تُسجَّل أنشطة داخلية خلال الفترة.', `نفّذ القسم (${ACi.length}) من الأنشطة والمبادرات الداخلية: `);
-  T.ac_ext = sec(ACe, r => SEC.AC.tx(d(r)), 'لم تُسجَّل أنشطة خارجية خلال الفترة.', `نفّذ القسم (${ACe.length}) من الأنشطة الخارجية: `);
+  T.ac_ext = sec(ACe, r => SEC.AC.tx(d(r)), 'لم تُسجَّل أنشطة خارجية خلال الفترة.', `شاركت طالبات القسم في (${ACe.length}) من الأنشطة خارج المدرسة: `);
 
   /* أولياء الأمور */
   const PA = Rp('PA'); const PAi = PA.filter(r => SEC.PA.ind(d(r))), PAe = PA.filter(r => !SEC.PA.ind(d(r)));
@@ -364,8 +365,8 @@ function buildReport(ctx) {
       T.tas_lines = Object.entries(by).map(([t, L]) => { const it = uniq(L.flatMap(r => lst(r.d.what).map(w => w + (r.d.scope === 'طوال العام' && !/طوال العام/.test(w) ? ' (طوال العام)' : ''))));
         return { st: Math.min(it.length, 3), n: it.length, tx: `أ. ${t}: تم تكليفها بـ ` + it.join('، ') + '.' }; }).sort((a, b) => b.n - a.n); }
     // ما كان على مستوى المدارس أو خارج المدرسة يُعرض في «الأنشطة الخارجية»، والباقي في «الداخلية»
-    const TAext = r => /المدارس|خارجية|دولية/.test(r.d.lvl || '');
-    const TAall = mineD('TA').filter(r => !r.d.q1), TAt = TAall.filter(r => !TAext(r)), TAx = TAall.filter(TAext);
+    const TAext = r => taScope(r.d) === 'ext';
+    const TAall = mineD('TA').filter(r => !r.d.q1), TAt = TAall.filter(r => taScope(r.d) === 'int'), TAx = TAall.filter(TAext), TAc = TAall.filter(r => taScope(r.d) === 'cp');
     /* المجالس والفعاليات والمبادرات والشهادات (الشراكة مع أولياء الأمور): لكل معلمة أنشطتها ومبادراتها الموجّهة لأولياء الأمور وشهاداتها للطالبات، ثم المنسقة، مع أعداد المستفيدات */
     try { const isPar = r => /أولياء/.test(r.d.tg || '');
       const RF = ctx.recs.filter(r => r.item === 'SRF' && r.d && inP(r.date, P) && (r.dept === dept || extraT.includes(r.d.t)));
@@ -390,7 +391,9 @@ function buildReport(ctx) {
       const nStf = TAp.concat(ACp.map(r => ({ d: d(r) }))).filter(r => /معلم|موظف|الهيئة/.test(r.d.tg || '')).reduce((a, r) => a + (+r.d.n || 0), 0);
       if (tl.length) { T.pa_tlines = tl; T.pa_cnt = `عدد المستفيدات: (${nStu}) من الطالبات، و(${nStf}) من الموظفات` + (nPar ? `، و(${nPar}) من أولياء الأمور` : '') + '.'; } } catch (e) { console.warn('pa_tlines', e); }
     if (TAx.length) { const by = {}; TAx.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
-      T.ac_xlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.lvl ? ` (${r.d.lvl})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
+      T.ac_xlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.ptn ? ` لدى ${r.d.ptn}` : '') + (r.d.lvl ? ` (${r.d.lvl})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
+    if (TAc.length) { const by = {}; TAc.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+      T.ac_clines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.ptn ? ` باستضافة ${r.d.ptn}` : '') + (r.d.tg ? ` (الفئة المستهدفة: ${r.d.tg})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
     if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
   }
@@ -442,7 +445,7 @@ function buildReport(ctx) {
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
       ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), ...(T.v_spec || []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
-    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext, ...(T.ac_xlines ? [{ lines: T.ac_xlines, head: 'ما سجّلته المعلمات:' }] : [])]]]],
+    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext, ...(T.ac_xlines ? [{ lines: T.ac_xlines, head: 'ما سجّلته المعلمات:' }] : [])]], ['الشراكة المجتمعية (استضافة جهات خارجية)', [T.ac_cp, ...(T.ac_clines ? [{ lines: T.ac_clines, head: 'ما سجّلته المعلمات:' }] : [])]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev, ...(T.pa_tlines ? [{ lines: T.pa_tlines, head: 'تفصيل المعلمات والمنسقة:' }, T.pa_cnt] : [])]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],

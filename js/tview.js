@@ -455,6 +455,8 @@ function T_act(el) {
       kf('مبادرة', `<label>الحاجة أو المشكلة التي تعالجها</label>${fSel('need', TA_NEEDS, d.need, 'اختاري الحاجة')}`) +
       kf('برنامج مشروع نشاط مبادرة مسابقة', `<label>الفئة المستهدفة <small style="color:var(--muted)">(إن شارك أولياء الأمور اختاري «أولياء الأمور والطالبات»)</small></label>${fSel('tg', TA_TG, d.tg, 'اختاري الفئة')}`) +
       kf('مسابقة', `<label>مستوى المسابقة</label>${fSel('lvl', TA_LVL, d.lvl, 'اختاري المستوى')}`) +
+      kf('برنامج مشروع نشاط مبادرة مسابقة', `<label>مكان التنفيذ</label>${fRadio('scope', TA_SCOPE, d.scope || TA_SCOPE[0])}`, 1) +
+      kf('برنامج مشروع نشاط مبادرة مسابقة', `<label>الجهة الخارجية <small style="color:var(--muted)">(إن كان خارج المدرسة أو شراكة مجتمعية)</small></label><input data-n="ptn" value="${esc(d.ptn || '')}" placeholder="مثال: مركز إحسان، مدرسة ...، جمعية تحفيظ القرآن">`, 1) +
       kf('مبادرة', `<label>المدة</label>${fRadio('dur', ['منتهي', 'ممتد'], d.dur || 'منتهي')}`) +
       `<div class="fld" id="taTo"><label>تاريخ النهاية</label><input type="date" data-n="to" value="${esc(d.to || '')}"></div>` +
       kf('مشروع نشاط مبادرة مسابقة', `<label id="taNL">عدد الطالبات المشاركات</label><input type="number" min="0" data-n="n" value="${esc(d.n || '')}">`) +
@@ -485,7 +487,7 @@ function T_act(el) {
     pre: r => { const k = r.kind; const ow = $('#tf [data-n="own"]'); r.own = !!(ow && ow.checked); r.dur = k === 'مبادرة' ? (r.dur || 'منتهي') : (k === 'برنامج' || k === 'مشروع') ? 'ممتد' : 'منتهي';
       const keep = { 'برنامج': ['goal', 'term', 'tg'], 'مشروع': ['par', 'goal', 'stages', 'out', 'n', 'tg'], 'نشاط': ['par', 'n', 'tg'], 'مبادرة': ['need', 'tg', 'n', 'own'], 'مسابقة': ['lvl', 'n', 'win', 'tg'] }[k] || [];
       ['par', 'goal', 'term', 'stages', 'out', 'need', 'tg', 'lvl', 'n', 'win', 'own'].forEach(x => { if (!keep.includes(x)) delete r[x]; });
-      if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
+      if (!/^(خارج|شراكة)/.test(r.scope || '')) delete r.ptn; if (r.dur !== 'ممتد') delete r.to; if (r.impact === TA_OTHER) r.impact = (($('#taImpO') || {}).value || '').trim(); r.desc = r.impact || ''; },
     check: r => !r.kind ? 'اختاري النوع بعد قراءة التعريف' : !r.name ? 'اكتبي الاسم' 
       : r.kind === 'برنامج' && !r.term ? 'حدّدي مدة البرنامج، فالبرنامج ممتد على فصل أو عام'
       : r.kind === 'مشروع' && !(+r.stages >= 2) ? 'المشروع يتكوّن من مرحلتين أو نشاطين على الأقل؛ إن كان فعالية واحدة فاختاري «نشاط»'
