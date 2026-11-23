@@ -22,6 +22,9 @@ function trRange() {
   const k = S.trk || 'm', t = today();
   if (k === 'w') { const d = new Date((S.trw || t) + 'T12:00:00'); const st = new Date(d); st.setDate(d.getDate() - d.getDay()); const en = new Date(st); en.setDate(st.getDate() + 6);
     const f = st.toISOString().slice(0, 10), to = en.toISOString().slice(0, 10); return { from: f, to, label: `الأسبوع ${dm(f)} – ${dm(to)}`, kind: 'الأسبوعي' }; }
+  if (k === 's') { const ps = (S.periods || []).filter(x => x.sem); const sems = [...new Set(ps.map(x => x.sem))]; const cur = (ps.find(x => x.from <= t && x.to >= t) || ps[0] || {}).sem;
+    const sm = sems.includes(S.trs) ? S.trs : cur; S.trs = sm; const L = ps.filter(x => x.sem === sm);
+    if (L.length) return { from: L.map(x => x.from).sort()[0], to: L.map(x => x.to).sort().slice(-1)[0], label: sm, kind: 'الفصلي' }; }
   if (k === 'p') { const ps = S.periods || []; const p = ps.find(x => x.name === S.trp) || curPer(); S.trp = p.name; return { from: p.from, to: p.to, label: p.name, kind: 'الفصلي' }; }
   if (k === 'mm') { const ms = trMonthList().slice().reverse(); const a = S.trm1 && ms.includes(S.trm1) ? S.trm1 : ms[0], b0 = S.trm2 && ms.includes(S.trm2) ? S.trm2 : ms[ms.length - 1];
     const [m1, m2] = a <= b0 ? [a, b0] : [b0, a]; S.trm1 = m1; S.trm2 = m2; const last = new Date(+m2.slice(0, 4), +m2.slice(5, 7), 0).getDate();
@@ -40,7 +43,7 @@ function trData(name, rng) {
     is: S.records.filter(r => r.item === 'IS' && r.d && r.d.t === name && inM(r)),
     v: S.records.filter(r => r.item === 'V' && r.d && r.d.t === name && inM(r)),
     rf: S.records.filter(r => r.item === 'SRF' && r.d && r.d.t === name && inM(r)),
-    vis: S.records.filter(r => ['V', 'VPV', 'PRV'].includes(r.item) && r.d && r.d.t === name && r.d.rt && inM(r)),
+    vis: S.records.filter(r => ['V', 'VPV', 'PRV', 'LVV', 'TVR'].includes(r.item) && r.d && r.d.t === name && r.d.rt && Object.values(r.d.rt).some(v => v != null && +v < 5) && inM(r)),
     ex: S.records.filter(r => r.item === 'EX' && r.d && (r.d.t === name || r.d.t === REF.ALL_MEMBERS) && inM(r)),
     sfb: S.records.filter(r => ['SFB', 'SAN', 'SAC'].includes(r.item) && r.d && r.d.t === name && inM(r)),
   };
@@ -88,6 +91,7 @@ function trBody(name, rng, D) {
   const SD = trStd(D);
   return `<h1>تقرير أعمال المعلمة ${rng.kind}</h1><div class="sub">أ. ${esc(name)} — ${esc(rng.label)}</div>
   <table><tr>${kpi(D.ta.length, 'أنشطة ومبادرات')}${kpi(D.pv.length + D.host.length, 'زيارات تبادلية')}${kpi(D.ws.length, 'ورش وتطوير')}${kpi(nPA, 'أولياء أمور')}${kpi(D.ach.length, 'إنجازات ومشاركات')}${kpi(D.tas.length, 'تكليفات')}</tr></table>
+  ${trVisHTML(D)}
   <table>
     ${sec('الأنشطة والبرامج والمبادرات', taL, 'لم يُوثَّق خلال الفترة.')}
     ${sec('الزيارات التبادلية', pvL, 'لم يُوثَّق خلال الفترة.')}
@@ -130,17 +134,18 @@ function trPage(el, fixed) {
   setTitle(fixed ? 'تقرير أعمالي' : 'تقارير أعمال المعلمات');
   const months = trMonthList(); S.trm = months.includes(S.trm) ? S.trm : months[0];
   const coordN = new Set((S.coords || []).map(c => c.name).concat((S.staff || []).filter(s => s.role === 'منسقة').map(s => s.name)));
-  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && !coordN.has(s.name) && s.role !== 'منسقة' && (isAdmin() ? (!S.dept || s.dept === S.dept) : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
+  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && (isAdmin() || (!coordN.has(s.name) && s.role !== 'منسقة')) && (isAdmin() ? (!(S.trDept || S.dept) || s.dept === (S.trDept || S.dept)) : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
   S.trt = fixed || (staff.includes(S.trt) ? S.trt : staff[0] || '');
   const RG = trRange();
   const D = S.trt ? trData(S.trt, RG) : null;
   const chip = c => c === 'مبادرة' ? '<span class="chip ok">مبادِرة</span>' : c === 'مجتهدة' ? '<span class="chip tf">مجتهدة</span>' : '<span class="chip warn">بحاجة إلى مضاعفة الجهد</span>';
   el.innerHTML = `<div class="tins">${fixed ? 'معلمتي الغالية، هذا تقرير (أسبوعي أو شهري أو فصلي أو لأي فترة تختارينها) يجمع تلقائياً كل ما وثّقتِه في الميزان وما يصل من سبع سنابل. اختاري نوع التقرير والفترة، ثم اطبعيه أو احفظيه PDF لملفكِ.' : 'اختاري الشهر لتظهر أعمال كل معلمة وتقديرها العام، ثم افتحي تقرير أي معلمة لطباعته. يُبنى التقرير تلقائياً مما وثّقته المعلمة في الميزان وما يصل من سبع سنابل.'}</div>
   <div class="card"><div class="row" style="gap:10px;flex-wrap:wrap">
-    <select id="trK">${[['m', 'شهر واحد'], ['mm', 'من شهر إلى شهر'], ['p', 'فصلي (فترة التقويم)'], ['w', 'أسبوعي'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 'm') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <select id="trK">${[['m', 'شهر واحد'], ['mm', 'من شهر إلى شهر'], ['s', 'الفصل الدراسي كاملاً'], ['p', 'فترة تقويم (ربع)'], ['w', 'أسبوعي'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 'm') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
     ${(S.trk || 'm') === 'm' ? `<select id="trM">${months.map(m => `<option value="${m}" ${m === S.trm ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'mm' ? (() => { const ms = months.slice().reverse(); return `<label style="font-size:12px">من شهر <select id="trM1">${ms.map(m => `<option value="${m}" ${m === S.trm1 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label><label style="font-size:12px">إلى شهر <select id="trM2">${ms.map(m => `<option value="${m}" ${m === S.trm2 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label>`; })() : ''}
     ${S.trk === 'w' ? `<label style="font-size:12px">أسبوع يوم <input type="date" id="trW" value="${S.trw || today()}"></label>` : ''}
+    ${S.trk === 's' ? `<select id="trS">${[...new Set((S.periods || []).map(p => p.sem).filter(Boolean))].map(x => `<option ${x === S.trs ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'p' ? `<select id="trPp">${(S.periods || []).map(p => `<option ${p.name === S.trp ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'c' ? `<label style="font-size:12px">من <input type="date" id="trF" value="${RG.from}"></label><label style="font-size:12px">إلى <input type="date" id="trTo" value="${RG.to}"></label>` : ''}
     ${fixed ? '' : `<select id="trT">${staff.map(t => `<option ${t === S.trt ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`}
@@ -158,6 +163,8 @@ function trPage(el, fixed) {
   $('#trK').onchange = e => { S.trk = e.target.value; show(); };
   if ($('#trW')) $('#trW').onchange = e => { S.trw = e.target.value; show(); };
   if ($('#trPp')) $('#trPp').onchange = e => { S.trp = e.target.value; show(); };
+  if ($('#trS')) $('#trS').onchange = e => { S.trs = e.target.value; show(); };
+  if (D && !FORMS && typeof loadForms === 'function' && !S._trFL) { S._trFL = 1; loadForms().then(() => { S._trFL = 0; if (el.isConnected) show(); }).catch(() => { S._trFL = 0; }); }
   if ($('#trF')) $('#trF').onchange = e => { S.trf = e.target.value; show(); };
   if ($('#trTo')) $('#trTo').onchange = e => { S.trto = e.target.value; show(); };
   if ($('#trT')) $('#trT').onchange = e => { S.trt = e.target.value; show(); };
@@ -231,4 +238,52 @@ function trEvBind(box, name, rng) {
     const w = window.open('', '_blank'); if (!w) { toast('اسمحي بالنوافذ المنبثقة لهذا الموقع ثم أعيدي المحاولة', 1); return; }
     w.document.write(html); w.document.close(); setTimeout(() => w.print(), 700);
   };
+}
+
+/* ================================================================== متوسط تقديرات الحضور الصفي
+   لكل معيار من معايير استمارة الحضور الصفي: تقدير المنسقة والنائب الأكاديمي ومديرة المدرسة خلال الفترة، والمتوسط العام لها جميعاً
+   (السلّم: مستكملة وفاعلة ومبتكرة 100 · مستكملة وفاعلة 88 · معظم الأدلة 75 · بعض الأدلة 60 · غير متوفرة 45؛ «لم يتم قياسه» لا يُحتسب) */
+const trSrc = r => r.item === 'V' ? 'c' : r.item === 'VPV' ? 'v' : r.item === 'PRV' ? 'p' : r.item === 'LVV' ? (r.d.k === 'pr' ? 'p' : 'v') : r.item === 'TVR' ? (r.d.src === 'V' ? 'c' : r.d.src === 'PRV' ? 'p' : 'v') : '';
+const trBand = p => p == null ? '' : p >= 90 ? '#DFF2E6' : p >= 80 ? '#EEF6DA' : p >= 70 ? '#FFF4D6' : p >= 60 ? '#FCE6D4' : '#F9DADA';
+function trVisHTML(D) {
+  const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : null;
+  const head = '<div class="h2" style="font-weight:bold;color:#7A1F33;margin:10px 0 4px">متوسط تقديرات الحضور الصفي (المنسقة والنائب الأكاديمي ومديرة المدرسة)</div>';
+  if (!D.vis.length) return head + '<div style="color:#888;font-size:12px;margin-bottom:6px">لا توجد زيارات صفية مقدَّرة خلال الفترة.</div>';
+  if (!F) return head + '<div style="color:#888;font-size:12px">جارٍ تحميل معايير الحضور الصفي…</div>';
+  const SRC = [['c', 'المنسقة'], ['v', 'النائب'], ['p', 'المديرة']], n = {}; SRC.forEach(([k]) => n[k] = D.vis.filter(r => trSrc(r) === k).length);
+  const avg = (i, k) => { const xs = []; D.vis.forEach(r => { if (k && trSrc(r) !== k) return; const v = r.d.rt[i]; if (v != null && +v < 5) xs.push(TR_RT[+v]); }); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+  const cell = p => `<td style="text-align:center;background:${trBand(p)}">${p == null ? '—' : Math.round(p) + '%'}</td>`;
+  let lastD = '', rows = '';
+  const doms = [...new Set(F.map(x => x.d))];
+  doms.forEach(dn => { const ix = F.map((x, i) => i).filter(i => F[i].d === dn);
+    const dAvg = k => { const xs = ix.map(i => avg(i, k)).filter(x => x != null); return xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null; };
+    rows += `<tr style="font-weight:bold"><td style="background:#F6EFE3">${esc(dn)}</td>${SRC.map(([k]) => n[k] ? cell(dAvg(k)) : '<td style="text-align:center;color:#aaa">—</td>').join('')}${cell(dAvg(null))}</tr>`;
+    ix.forEach(i => { rows += `<tr><td style="font-size:11px;padding-right:12px">${esc(F[i].c)}</td>${SRC.map(([k]) => n[k] ? cell(avg(i, k)) : '<td style="text-align:center;color:#aaa">—</td>').join('')}${cell(avg(i, null))}</tr>`; }); });
+  const all = []; D.vis.forEach(r => F.forEach((x, i) => { const v = r.d.rt[i]; if (v != null && +v < 5) all.push(TR_RT[+v]); }));
+  const tot = all.length ? all.reduce((a, b) => a + b, 0) / all.length : null;
+  return head + `<div style="font-size:11.5px;margin-bottom:4px">عدد الزيارات المقدَّرة: ${SRC.map(([k, l]) => `${l} (${n[k]})`).join(' · ')} — المتوسط العام لجميع الزيارات: <b>${tot == null ? '—' : Math.round(tot) + '% (' + TR_BAND(Math.round(tot)) + ')'}</b></div>
+  <table><tr><th style="width:52%">المعيار</th>${SRC.map(([, l]) => `<th>${l}</th>`).join('')}<th>المتوسط</th></tr>${rows}</table>
+  <div style="font-size:10px;color:#666;margin:3px 0 8px">مستكملة وفاعلة ومبتكرة = 100% · مستكملة وفاعلة = 88% · تتوفر معظم الأدلة = 75% · تتوفر بعض الأدلة = 60% · غير متوفرة = 45%؛ ولا يُحتسب «لم يتم قياسه».</div>`;
+}
+
+/* تقارير أعمال المعلمات للنائب الأكاديمي: مربع لكل قسم (المنسقة ثم معلماتها)، والضغط على الاسم يفتح تقرير أعمالها كاملاً
+   بالنموذج نفسه الذي تراه المعلمة، مع متوسط الحضور الصفي واستمارة التقييم المقترحة */
+function A_trep(el) {
+  if (S.trOpen) {
+    trPage(el, null);
+    const back = document.createElement('div'); back.className = 'row noprint'; back.style.margin = '0 0 10px';
+    back.innerHTML = '<button class="btn sec" id="trBack">→ كل المعلمات</button>'; el.prepend(back);
+    $('#trBack', el).onclick = () => { S.trOpen = 0; S.trDept = ''; show(); };
+    return;
+  }
+  setTitle('تقارير أعمال المعلمات');
+  const ST = (S.staff || []).filter(s => s.name && s.dept);
+  const depts = [...new Set(ST.map(s => s.dept))];
+  const coordOf = d => ST.find(s => s.dept === d && s.role === 'منسقة');
+  el.innerHTML = `<div class="tins">اضغطي على اسم المنسقة أو المعلمة لعرض تقرير أعمالها كاملاً (بالنموذج المعتمد الذي تراه المعلمة)، ومتوسط تقديرات حضورها الصفي، واستمارة التقييم المقترحة؛ وتختارين الفترة من داخل التقرير: شهر، أو عدة أشهر، أو الفصل الدراسي كاملاً.</div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">${depts.map(d => { const c = coordOf(d), T = ST.filter(s => s.dept === d && s !== c);
+    return `<div class="card" style="margin:0;padding:12px"><div style="font-weight:bold;color:var(--maroon);margin-bottom:6px">${esc(d)}</div>
+      ${c ? `<button class="btn sm" data-tr="${esc(c.name)}" data-d="${esc(d)}" style="width:100%;margin-bottom:6px;white-space:nowrap">★ ${esc(c.name)} <small style="opacity:.8">(منسقة)</small></button>` : ''}
+      ${T.map(t => `<button class="btn sm ghost" data-tr="${esc(t.name)}" data-d="${esc(d)}" style="width:100%;margin-bottom:4px;justify-content:flex-start;white-space:nowrap">${esc(t.name)}</button>`).join('')}</div>`; }).join('')}</div>`;
+  $$('[data-tr]', el).forEach(b => b.onclick = () => { S.trOpen = 1; S.trDept = b.dataset.d; S.trt = b.dataset.tr; show(); window.scrollTo(0, 0); });
 }

@@ -105,6 +105,9 @@ function bootTeacher_(u) {
   const students = students_(secs);
   // طلبات الإذن الخاصة بها، وتواصلها مع أولياء الأمور المسجَّل في سبع سنابل (للعرض فقط)
   rows_(SH.rec).rows.filter(r => r[2] === 'PRQ').map(recObj_).filter(x => x.d.t === u.name).forEach(x => recs.push(x));
+  // تقديرات معايير حضوري الصفي (المنسقة والنائب والمديرة) — للمعلمة نفسها فقط، لمتوسطها في «تقرير أعمالي»
+  rows_(SH.rec).rows.filter(r => r[2] === 'V' || r[2] === 'VPV' || r[2] === 'PRV').map(recObj_).filter(x => x.d && x.d.t === u.name && x.d.rt)
+    .forEach(x => recs.push({ id: 'tvr-' + x.id, dept: x.dept, item: 'TVR', date: x.date, sum: '', d: { t: x.d.t, src: x.item, rt: x.d.rt }, by: '', at: '', up: '' }));
   try { const me1 = normAr_(u.name); sabPA_().filter(x => x.d && normAr_(x.d.t) === me1).forEach(x => recs.push(x)); } catch (e) {}
   // وما رُفع منه إلى سبع سنابل عبر نماذج Forms (محفوظ في نسخة النائب الأكاديمي)، والحصص الإثرائية والتغذية الراجعة والتعزيز، ليظهر في «تقرير أعمالي»
   try { const me2 = normAr_(u.name), seen = {}; recs.forEach(x => seen[x.id] = 1); sabAdm_().filter(x => x.d && normAr_(x.d.t) === me2 && !seen[x.id]).forEach(x => recs.push(x)); } catch (e) {}
@@ -175,7 +178,7 @@ function listRecords_(u) {
   // زيارات النائب الأكاديمي والمديرة تنعكس على تقرير المنسقة تلقائياً (المعلمة والصف والمحور ونقاط القوة والتحسين فقط)
   const lead = u.role === 'admin' ? [] : all.filter(x => (x.item === 'VPV' || x.item === 'PRV') && u.dept.indexOf(x.dept) >= 0).map(x => ({
     id: 'lv-' + x.id, dept: x.dept, item: 'LVV', date: x.date, sum: x.sum, by: x.by,
-    d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2) } }));
+    d: { k: x.item === 'PRV' ? 'pr' : 'vp', t: x.d.t || '', s: x.d.s || '', goal: x.d.topic || x.d.note || '', st: (x.d.st || []).slice(0, 2), im: (x.d.im || []).slice(0, 2), rt: x.d.rt || null } }));   // rt: تقديرات المعايير لمتوسط الحضور الصفي في تقرير المعلمة
   return all.filter(x => x.item !== 'PRQ').concat(prqList_(u)).concat(sabPA_()).concat(sabAdm_()).concat(sabRQ_()).concat(indibat_())
     .filter(x => u.role === 'admin' || (x.item === 'CF' && u.role === 'coord' && x.d && x.d.ok && x.d.tk === u.id) || (x.item === 'PRQ' || ADMIN_ITEMS.indexOf(x.item) < 0 && x.item !== 'TDS' && (u.dept.indexOf(x.dept) >= 0 || (x.item === 'XCMP' && u.dept.indexOf('البرامج والأنشطة') >= 0) || (CROSS_ITEMS.indexOf(x.item) >= 0 && x.d && (u.dept.indexOf(x.d.vdept) >= 0 || u.dept.indexOf(x.d.bydept) >= 0)))))
     .concat(lead);
@@ -570,7 +573,7 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
-const SERVER_V = 10;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+const SERVER_V = 11;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
 function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
 /* إجراءات المعلمات في سبع سنابل ← الميزان.
    لتخفيف القراءات (حد Firebase المجاني 50 ألف قراءة يوميًا): تُحفظ نسخة مما جُلب في ورقة «مخزن سبع سنابل»،
