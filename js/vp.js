@@ -175,7 +175,7 @@ function vpVisitForm(el, rec) {
       <div class="fld"><label>كليّة / جزئيّة</label><select id="fKj">${['كليّة', 'جزئيّة'].map(x => `<option ${d.kj === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
       ${isSciT(d.t) || d.sci ? sciPick(d, 'fSci') : ''}
       <div class="fld"><label>ملاحظات (البث المباشر)</label><select id="fLive"><option value="">—</option>${['بث مباشر مدمج', 'بث مباشر غير مدمج'].map(x => `<option ${d.live === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
-    </form>${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
+    </form>${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لم تصل نتائج التحصيل من سبع سنابل بعد — حدّثي الصفحة بعد لحظات.</div>` : ''}</div>
     ${cvFuCard(d, prev)}
 
     <div class="card"><h2>التقديرات <span class="sub">اضغطي على الخانة لوضع ✓ — والتوصية لكل معيار اختيارية (قائمة أو كتابة حرة)</span></h2>

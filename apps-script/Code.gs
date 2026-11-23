@@ -568,7 +568,7 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
-const SERVER_V = 8;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+const SERVER_V = 9;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
 function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
 /* إجراءات المعلمات في سبع سنابل ← الميزان.
    لتخفيف القراءات (حد Firebase المجاني 50 ألف قراءة يوميًا): تُحفظ نسخة مما جُلب في ورقة «مخزن سبع سنابل»،
@@ -673,6 +673,23 @@ function sabAdm_() {
   } catch (e) { return []; }
   if (out.length) try { const s2 = JSON.stringify(out), parts = {}; const k = Math.ceil(s2.length / 90000); for (let i = 0; i < k; i++) parts['sabAdm' + i] = s2.slice(i * 90000, (i + 1) * 90000); if (k <= 40) { c.putAll(parts, 1800); c.put('sabAdmN', String(k), 1800); } } catch (e) {}
   return out;
+}
+
+/* نتائج تحليل سبع سنابل (ana) المنشورة: يقرؤها الميزان من الخادم لتظهر «تحصيل طالبات المعلمة» في استمارة الحضور الصفي
+   (بعد انتقال المنصتين إلى نطاقين مختلفين لم يعد المتصفح يشاركهما البيانات). تُحفظ مؤقتًا 6 ساعات لتخفيف القراءات */
+function sabAna_() {
+  const c = CacheService.getScriptCache();
+  try { const n = c.get('anaTN'); if (n != null) { const P = c.getAll([...Array(+n).keys()].map(i => 'anaT' + i)); const t = [...Array(+n).keys()].map(i => P['anaT' + i] || '').join(''); if (t) return t; } } catch (e) {}
+  try {
+    const tok = sabAccess_(); if (!tok) return '';
+    const base = 'https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents/ana/';
+    const m = JSON.parse(UrlFetchApp.fetch(base + 'meta', { headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true }).getContentText());
+    const n = m.fields && m.fields.n ? Number(m.fields.n.integerValue || m.fields.n.doubleValue || 0) : 0; if (!n) return '';
+    const t = UrlFetchApp.fetchAll([...Array(n).keys()].map(i => ({ url: base + 's' + i, headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true })))
+      .map(r => { const j = JSON.parse(r.getContentText()); return j.fields && j.fields.t ? j.fields.t.stringValue || '' : ''; }).join('');
+    if (t) { const k = Math.ceil(t.length / 90000); if (k <= 80) { const parts = {}; for (let i = 0; i < k; i++) parts['anaT' + i] = t.slice(i * 90000, (i + 1) * 90000); c.putAll(parts, 21600); c.put('anaTN', String(k), 21600); } }
+    return t;
+  } catch (e) { return ''; }
 }
 
 /* قراءة نتائج القسم التي اعتمدتها المنسقة في سبع سنابل: مؤشرات مختصرة ومقترحات الفترة القادمة تنعكس في التقرير الشهري (التحصيل الأكاديمي) */
@@ -833,6 +850,7 @@ function route_(req) {
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'myStudents': return { students: myStudents_(u) };
+    case 'ana': { if (u.role === 'teacher') fail_('غير مصرّح'); return { t: sabAna_() }; }   // نتائج التحليل (تحصيل الشعب) لاستمارة الحضور الصفي
     case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA6N', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
     case 'tr': { const L = (req.list || []).slice(0, 12).map(x => String(x || '').slice(0, 1500)); return { list: L.map(x => { if (!x.trim()) return ''; try { return LanguageApp.translate(x, req.from || 'en', req.to || 'ar'); } catch (e) { return ''; } }) }; }   // ترجمة توصيات منسقة اللغة الإنجليزية

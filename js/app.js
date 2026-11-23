@@ -46,13 +46,21 @@ async function boot() {
   S.coords = (S.coords || []).filter(c => !(c.dept || []).includes('البرامج والأنشطة'));
   S.view = S.view || (typeof isSec === 'function' && isSec() ? 's_prq' : typeof isAct === 'function' && isAct() ? 'n_act' : 'home');
   renderApp();
+  anaLoad();
   if (/[?&#]prq=/.test(location.href) && typeof prqLvl === 'function' && prqLvl()) { S.view = 'a_prq'; refresh(); }
   setTimeout(() => { try { prqCelebrate(); } catch (e) {} try { prqAlert(); } catch (e) {} }, 600);
 }
 
+/* نتائج تحليل سبع سنابل (تحصيل الشعب) لاستمارة الحضور الصفي: تُجلب من الخادم وتُحفظ على هذا المتصفح (تتجدد كل 3 ساعات) */
+async function anaLoad(force) {
+  if (!S.user || S.user.role === 'teacher') return;
+  try { const at = +(localStorage.getItem('mz_anaAt') || 0); if (!force && localStorage.getItem('sab3_tahleel_v1') && Date.now() - at < 3 * 3600e3) return; } catch (e) { return; }
+  try { const j = await call('ana'); if (j && j.t && /"cur"/.test(j.t)) { localStorage.setItem('sab3_tahleel_v1', j.t); localStorage.setItem('mz_anaAt', String(Date.now())); } } catch (e) { console.warn('ana', e); }
+}
+
 /* ------------------------------------------------------------------ الدخول */
 /* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
-const SV_NEED = 8;
+const SV_NEED = 9;
 function sabHealthHTML() {
   if (!isAdmin()) return '';
   if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>

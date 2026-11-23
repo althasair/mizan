@@ -122,7 +122,7 @@ function cvWsPrep(d, t, date, dept, exceptId) {
 }
 function cvWsCard(d, WS) {
   return `<div class="card" style="border-inline-start:4px solid var(--navy)"><h2>أثر الورش التدريبية <span class="sub">الورش التي حضرتها المعلمة منذ بداية العام حتى تاريخ الزيارة — من سجلاتها ومن التقرير الشهري للقسم</span></h2>
-    ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !WS.length ? '<div class="empty">لا توجد ورش مسجّلة للمعلمة حتى تاريخ الزيارة.</div>' : `<div style="font-size:12px;color:#8A8F99;margin-bottom:6px">لكل ورشة: حدّدي هل قِستِ أثرها في هذه الحصة، فإن لوحظ التطبيق فاختاري أين لوحظ.</div>
+    ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !WS.length ? '<div class="empty">لا توجد ورش مسجّلة للمعلمة حتى تاريخ الزيارة.</div>' : `<div style="font-size:12px;color:#8A8F99;margin-bottom:6px">قياس الأثر يمثّل ما رصده المعنيون بالمتابعة (المنسقة والنائب الأكاديمي ومديرة المدرسة) من خلال الحضورات الصفية السابقة ومتابعاتهم، ولا يُشترط أن يكون في هذه الحصة. لكل ورشة اختاري حالة القياس، فإن لوحظ التطبيق فحدّدي أين لوحظ.</div>
       <div class="tbl"><table class="t"><tr><th>الورشة</th><th style="width:96px">التاريخ</th><th style="width:190px">قياس الأثر</th><th>لوحظ من خلال</th></tr>
       ${WS.map((w, i) => { const v = d.wsi[w.k] || {}; const st = v.st || WSI_ST[0]; return `<tr><td style="font-size:12.5px"><b>${esc(w.title)}</b><div style="font-size:11px;color:var(--muted)">${esc(w.src)}${w.by ? ' · ' + esc(w.by) : ''}${w.mon ? ' · الأثر في التقرير الشهري: ' + esc(w.mon) : ''}</div></td>
         <td style="font-size:12px;white-space:nowrap">${dmy(w.date)}<div style="font-size:10.5px;color:var(--muted)">${esc(perKey(w.date))}</div></td>
@@ -138,7 +138,7 @@ function cvWsGrab(d, el, WS) {
 function cvWsKeep(d, dept) { const keys = new Set(cvWorkshops(d.t, d.date, dept).map(w => w.k)); Object.keys(d.wsi || {}).forEach(k => { if (!keys.has(k)) delete d.wsi[k]; }); }
 function cvWsPrint(d) {
   const L = Object.values(d.wsi || {}).filter(v => v && v.title).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
-  return L.length ? `<table style="margin-top:3px"><tr><th colspan="4">أثر الورش التدريبية التي حضرتها المعلمة (منذ بداية العام حتى تاريخ الزيارة)</th></tr><tr><th>الورشة</th><th style="width:13%">التاريخ</th><th style="width:24%">قياس الأثر</th><th style="width:30%">لوحظ من خلال</th></tr>
+  return L.length ? `<table style="margin-top:3px"><tr><th colspan="4">أثر الورش التدريبية التي حضرتها المعلمة (منذ بداية العام حتى تاريخ الزيارة)</th></tr><tr><td colspan="4" style="font-size:9px;color:#555;text-align:justify">يمثّل قياس الأثر ما رصده المعنيون بالمتابعة من خلال الحضورات الصفية السابقة ومتابعاتهم، ولا يُشترط أن يكون قد قيس في هذه الحصة.</td></tr><tr><th>الورشة</th><th style="width:13%">التاريخ</th><th style="width:24%">قياس الأثر</th><th style="width:30%">لوحظ من خلال</th></tr>
     ${L.map(v => `<tr><td style="font-size:9.5px">${esc(v.title)}${v.src ? ` <span style="color:#777">(${esc(v.src)})</span>` : ''}</td><td class="c" style="font-size:9.5px">${dmy(v.date)}</td><td style="font-size:9.5px">${esc(v.st || WSI_ST[0])}</td><td style="font-size:9.5px">${esc((v.via || []).join('، '))}${v.note ? ((v.via || []).length ? ' — ' : '') + esc(v.note) : ''}</td></tr>`).join('')}</table>` : '';
 }
 /* ملاحظات وتوصيات عامّة: عبارة شكر + نقطة قوة واحدة من القائمة وبعبارات الزائرة (إلزامي) + توصية واحدة وبعباراتها (إلزامي) + توصيات إضافية */
@@ -350,7 +350,7 @@ function cvForm(el, rec) {
     ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات في الربع (${esc(P.lbl)})</span><span class="chip">زيارات الربع قبل هذه: ${inM.length}</span>
       ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المقترح (تنبيه لكِ فقط)' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
-    ${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لا تتوفر نتائج سنابل لشعب المعلمة على هذا المتصفح — افتحي «سبع سنابل» مرة واحدة على هذا الجهاز ثم عودي.</div>` : ''}</div>
+    ${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لم تصل نتائج التحصيل من سبع سنابل بعد — حدّثي الصفحة بعد لحظات.</div>` : ''}</div>
 
     ${cvFuCard(d, prev)}
 
