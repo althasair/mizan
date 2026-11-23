@@ -55,7 +55,7 @@ async function tcOpen(list) {
   const docs = [];
   for (const r of list) {
     const d = r.d, sg = await tcSigs(r.dept);
-    docs.push(MCK.doc({ or: d.or || 'L', tpl: d.tpl || 1, title: d.title, name: 'أ. ' + d.t, lead: 'تُمنح هذه الشهادة بكل فخر واعتزاز للمعلمة', meta: 'قسم ' + esc(r.dept),
+    docs.push(MCK.doc({ or: d.or || 'L', tpl: d.tpl || 1, title: d.title, name: 'أ. ' + d.t, lead: 'تُمنح هذه الشهادة بكل فخر واعتزاز للمعلمة', meta: 'قسم ' + esc(d.odept || r.dept),
       reasons: d.reasons, phrase: d.ph, verse: d.verse, date: dmy(r.date),
       sigs: [{ role: 'منسقة القسم', name: 'أ. ' + (sg.name || d.by || ''), img: sg.c }, { role: 'نائب المديرة للشؤون الأكاديمية', name: 'أ. آسيا الذبياني', img: sg.v }] }));
   }
@@ -105,7 +105,8 @@ function C_tcert(el) {
    <div class="tc-main">
     <div class="card"><div class="note">التكريم الصادق يصنع الفرق؛ اتبعي الخطوات الخمس، وتظهر الشهادة أمامكِ في المعاينة الحية قبل إصدارها.</div>
       ${step(1, 'المكرَّمة', 'يمكنكِ اختيار أكثر من معلمة فتصدر شهادة لكل واحدة في ملف واحد')}
-      <div class="tc-ts">${T.map(n => `<label class="${st.t.includes(n) ? 'on' : ''}"><input type="checkbox" data-tt="${esc(n)}" ${st.t.includes(n) ? 'checked' : ''}>${esc(n)}${cnt[n] ? `<i title="شهادات سابقة">${cnt[n]}</i>` : ''}</label>`).join('') || '<div class="empty">لا توجد أسماء في هذا القسم</div>'}</div></div>
+      ${isAdmin() ? '' : `<div class="row" style="gap:6px;margin:2px 0 8px"><button type="button" class="btn sm ${S.tcOth ? 'sec' : ''}" data-tco="0">معلمات قسمي</button><button type="button" class="btn sm ${S.tcOth ? '' : 'sec'}" data-tco="1">💐 زميلة من قسم آخر</button></div>`}
+      ${!isAdmin() && S.tcOth ? `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px">${[...new Set(S.staff.map(x => x.dept).filter(x => x && x !== dept))].sort((a, b) => a.localeCompare(b, 'ar')).map(dd => `<div style="border:1px solid #EADFCF;border-radius:12px;padding:6px 8px;background:#fff"><div style="font-weight:bold;color:var(--maroon);font-size:12.5px;margin-bottom:4px">${esc(dd)}</div><div class="tc-ts">${S.staff.filter(x => x.dept === dd && x.name !== S.user.name).sort((x, y) => (y.role === 'منسقة') - (x.role === 'منسقة')).map(x => x.name).filter((x, i, A) => A.indexOf(x) === i).map(n => `<label class="${st.t.includes(n) ? 'on' : ''}"><input type="checkbox" data-tt="${esc(n)}" ${st.t.includes(n) ? 'checked' : ''}>${esc(n)}</label>`).join('')}</div></div>`).join('')}</div>` : `<div class="tc-ts">${T.map(n => `<label class="${st.t.includes(n) ? 'on' : ''}"><input type="checkbox" data-tt="${esc(n)}" ${st.t.includes(n) ? 'checked' : ''}>${esc(n)}${cnt[n] ? `<i title="شهادات سابقة">${cnt[n]}</i>` : ''}</label>`).join('') || '<div class="empty">لا توجد أسماء في هذا القسم</div>'}</div>`}</div>
 
     <div class="card">${step(2, 'سبب التكريم', 'اختاري ما ينطبق، أو اكتبي سببًا بعباراتكِ')}
       <div class="tc-gr">${TC_G.map(([g, I]) => `<div><h4>${g}</h4>${I.map(i => `<label class="${st.rs.includes(i) ? 'on' : ''}"><input type="checkbox" data-tr="${i}" ${st.rs.includes(i) ? 'checked' : ''}>${TC_R[i]}</label>`).join('')}</div>`).join('')}</div>
@@ -156,11 +157,12 @@ function C_tcert(el) {
       tcFrame(e.target, tcSample(Object.assign({}, st, { tpl: n }), null, st.t[0]), st.or); }), { rootMargin: '200px' }) : null;
     $$('[data-th]', el).forEach(x => io ? io.observe(x) : tcFrame(x, tcSample(Object.assign({}, st, { tpl: +x.dataset.th }), null, st.t[0]), st.or));
   }
+  $$('[data-tco]', el).forEach(b => b.onclick = () => { S.tcOth = b.dataset.tco === '1'; st.t = []; show(); });
   const build = () => {
     grab(); const reasons = st.rs.map(i => TC_R[i]).concat(st.oth ? [st.oth] : []);
     if (!st.t.length) { toast('اختاري المكرَّمة', 1); return null; } if (!reasons.length) { toast('اختاري سبب تكريم واحدًا على الأقل', 1); return null; }
     return st.t.map(t => ({ dept, item: 'CRT', date: today(), sum: TC_T[st.ti] + ' — ' + reasons.slice(0, 2).join('، '),
-      d: { t, reasons, title: TC_T[st.ti], tpl: st.tpl, verse: TC_V[st.vs], ph: TC_P[st.ph], or: st.or, by: S.user.name } }));
+      d: Object.assign({ t, reasons, title: TC_T[st.ti], tpl: st.tpl, verse: TC_V[st.vs], ph: TC_P[st.ph], or: st.or, by: S.user.name }, (() => { const o = (S.staff.find(x => x.name === t) || {}).dept; return o && o !== dept ? { odept: o, tg: 'زميلة من قسم آخر' } : {}; })()) }));
   };
   $('#tcPv').onclick = () => { const R = build(); if (R) tcOpen(R); };
   $('#tcGo').onclick = async () => {
