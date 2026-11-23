@@ -61,7 +61,8 @@ function buildReport(ctx) {
   { const SA = ctx.recs.filter(r => r.dept === dept && r.item === 'SAN' && r.d && inP(String(r.date).slice(0, 10), P));
     if (SA.length) { const by = {}; SA.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       const tx = `حلّلت معلمات القسم نتائج (${SA.length}) من الشعب وحدّدن المهارات المفقودة والمستهدفات في منصة سبع سنابل: ` + Object.entries(by).map(([t, L]) => `أ. ${t} (${uniq(L.map(r => r.d.s)).join('، ')})`).join('؛ ') + '.';
-      T.as_anal = /^لم /.test(T.as_anal) ? tx : T.as_anal + ' ' + tx; } }
+      if (T.as_anal && typeof T.as_anal === 'object') T.as_anal.pre = (T.as_anal.pre ? T.as_anal.pre + ' ' : '') + tx;   // مع جدول القراءة المعتمدة: لا يُستبدل الجدول
+      else T.as_anal = /^لم /.test(T.as_anal) ? tx : T.as_anal + ' ' + tx; } }
 
   /* رفع التحصيل */
   const RA = Rp('RA');
@@ -86,7 +87,7 @@ function buildReport(ctx) {
   { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
     if (RF.length) { const by = {}; RF.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       const why = r => { const m = String(r.d.det || '').split(' — على: '); return { tt: m[0] || 'شهادة', on: m[1] || '' }; };
-      T.ra = (/^لم /.test(T.ra) ? '' : T.ra + ' ') + `وعزّزت معلمات القسم (${new Set(RF.flatMap(r => r.d.stu || [])).size}) من الطالبات بـ(${RF.length}) من الشهادات: ` +
+      T.ra = (/^لم /.test(T.ra) ? '' : T.ra + ' ') + (/^لم /.test(T.ra) ? '' : 'و') + `عزّزت معلمات القسم (${new Set(RF.flatMap(r => r.d.stu || [])).size}) من الطالبات بـ(${RF.length}) من الشهادات: ` +
         Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length}): ` + L.map(r => { const w = why(r); return `${w.tt} للطالبة ${(r.d.stu || []).join('، ')} (${r.d.s || ''}) على ${w.on}`; }).join('؛ ')).join('. ') + '.'; } }
 
   /* التطوير الداخلي */
@@ -119,7 +120,7 @@ function buildReport(ctx) {
   T.pd_int = ownTx + (attended.length ? ' وفي برامج قدّمتها جهات من خارج القسم: ' + attended.map(attTx).join('؛ ') + '.' : '');
 
   /* التطوير الخارجي */
-  const EXa = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
+  const EXm = Rp('EX').filter(r => isMeet(d(r).name)), EXa = Rp('EX').filter(r => !isMeet(d(r).name)); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
   const EX = EXa.filter(r => pdKind(d(r)) === 'off'), EXs = EXa.filter(r => pdKind(d(r)) === 'self');
   const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NM : uniq(EX.map(r => d(r).t)).filter(t => allM.includes(t)).length;
   const exP = uniq(EX.map(r => String(d(r).name || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim())).length;
@@ -136,7 +137,8 @@ function buildReport(ctx) {
   /* الاجتماعات */
   const MT = Rp('MT'); const MTi = MT.filter(r => SEC.MT.io(d(r)) === 'داخلي'), MTe = MT.filter(r => SEC.MT.io(d(r)) === 'خارجي');
   T.mt_int = MTi.length ? `عقد القسم (${nMT(MTi)}) من الاجتماعات الداخلية: ` + MTi.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات داخلية خلال الفترة.';
-  T.mt_ext = MTe.length ? `شارك القسم في (${nMT(MTe)}) من الاجتماعات الخارجية: ` + MTe.map(r => SEC.MT.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل اجتماعات خارجية خلال الفترة.';
+  const exMt = r => `«${String(d(r).name || "").trim()}»` + (d(r).ent ? ` (${d(r).ent})` : '') + ` — أ. ${d(r).t}` + bt(d(r).date || r.date);
+  T.mt_ext = (MTe.length || EXm.length) ? `شارك القسم في (${nMT(MTe) + EXm.length}) من الاجتماعات الخارجية: ` + [...MTe.map(r => SEC.MT.tx(d(r))), ...EXm.map(exMt)].join('؛ ') + '.' : 'لم تُسجَّل اجتماعات خارجية خلال الفترة.';
 
   /* زيارات القيادة */
   const OV0 = Rp('OV');
@@ -302,7 +304,7 @@ function buildReport(ctx) {
     const TT = it => ctx.recs.filter(r => r.item === it && tIn(r) && r.d && !r.d.q1); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
     const mineD = it => TT(it).filter(r => r.dept === dept || (extraT.includes(r.d.t)));
     const lst = a => (Array.isArray(a) ? a : [a]).filter(Boolean).map(x => String(x).replace(/[.،؛\s]+$/, ''));
-    const add = (k, txt) => { if (!txt) return; T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt : (T[k] ? T[k] + ' ' + txt : txt); };
+    const add = (k, txt) => { if (!txt) return; if (T[k] && typeof T[k] === 'object') { T[k].pre = (T[k].pre ? T[k].pre + ' ' : '') + txt; return; } T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt.replace(/^و(?=(سجّل|حضر|شارك|عزّز|نفّذ|قدّم|تُعدّ|في |من ))/, '') : (T[k] ? T[k] + ' ' + txt : txt); };
     const nz = s => String(s || '').replace(/\s+/g, ' ').trim();
     const dateTxt = d0 => d0 ? ` (${dm(d0)})` : '';
     // الزيارات التبادلية التي سجّلتها معلمات القسم
@@ -339,7 +341,9 @@ function buildReport(ctx) {
     T.excel = parts.length ? 'تم توظيف جوانب التميز والاستفادة من كفاءات معلمات القسم: ' + parts.join('؛ و') + '.' : '';
     if (T.excel) add('pd_int', T.excel);
     // ورش حضرتها معلمات القسم
-    const inT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة داخلية'), exT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة خارجية');
+    const mtT = WS.filter(r => r.dept === dept && /^حضرتُ/.test(r.d.role || '') && isMeet(r.d.title));
+    if (mtT.length) add('mt_ext', 'وحضرت معلمات القسم من الاجتماعات الخارجية: ' + mtT.map(r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
+    const inT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة داخلية' && !isMeet(r.d.title)), exT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة خارجية' && !isMeet(r.d.title));
     if (inT.length) add('pd_int', 'وحضرت معلمات القسم: ' + inT.map(r => `أ. ${r.d.t} ورشة «${nz(r.d.title)}» من تقديم أ. ${r.d.by}` + dateTxt(r.date)).join('؛ ') + '.');
     const exTw = r => (S.records || []).find(e => e.item === 'EX' && e.d && e.d.t === r.d.t && nz(e.d.name) === nz(r.d.title));
     const exLine = r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + (r.d.byx ? ` من تقديم ${r.d.byx}` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date);
