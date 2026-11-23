@@ -36,7 +36,7 @@ async function vcSig() { if (VC_SIG === null) { try { VC_SIG = (await API.call('
 function vcDoc(o, sig) {
   return MCK.doc({ all: 1, or: o.or || 'L', tpl: o.tpl || 1, title: o.title, name: 'أ. ' + o.t, lead: 'تُمنح هذه الشهادة بكل فخر واعتزاز إلى', meta: esc(o.job || ''),
     reasons: o.reasons, phrase: o.ph, verse: o.verse, date: o.date,
-    sigs: [{ role: 'مديرة المدرسة', name: 'أ. شيخة الرميحي', img: '' }, { role: 'النائبة الأكاديمية', name: 'أ. آسيا الذبياني', img: sig || '' }] });
+    sigs: [null, { role: 'النائبة الأكاديمية', name: 'أ. آسيا الذبياني', img: sig || '' }] });
 }
 async function vcOpen(list) {
   if (!window.MCK) return toast('تعذّر تحميل قوالب الشهادات', 1);

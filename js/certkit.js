@@ -46,6 +46,12 @@ function wheat(id,x,y,len,rot,sc,col){const f=col||GF(id);let g='<g transform="t
 /* تموّجات الأثر: دوائر متحدة المركز */
 function ripples(cx,cy,r0,n,step,col,w,op){let s='<g fill="none" stroke="'+col+'" opacity="'+(op||1)+'">';for(let i=0;i<n;i++)s+='<circle cx="'+fx(cx)+'" cy="'+fx(cy)+'" r="'+fx(r0+i*step)+'" stroke-width="'+fx(i%3===0?w*2.2:w)+'"/>';return s+'</g>'}
 /* التصاميم: n الاسم، p اللوحة، ts خط العنوان، nc لون الاسم، in هوامش [أعلى،يمين،أسفل،يسار] للعرض L وللطول P، seal: 'bc' وسام بين التوقيعين | 'tc' فوق العنوان | '' داخل الخلفية */
+/* أدوات للتصاميم العصرية */
+const LG=(id,k,a,b,x2,y2)=>'<defs><linearGradient id="'+k+id+'" x1="0" y1="0" x2="'+(x2==null?1:x2)+'" y2="'+(y2==null?1:y2)+'"><stop offset="0" stop-color="'+a+'"/><stop offset="1" stop-color="'+b+'"/></linearGradient></defs>';
+const U=(k,id)=>'url(#'+k+id+')';
+function xRib(W,H,id,a,b){const t=Math.min(W,H)*.08,cx=W/2,y=H*(W>H?.06:.05);return LG(id,'a',a,b)+rect(0,0,W,H,U('a',id))+rect(9,9,W-18,H-18,'#FBFBFA')+
+  P('M9 '+fx(y*.2)+'L'+fx(cx)+' '+fx(y+t*.2)+'L'+fx(cx)+' '+fx(y+t*1.2)+'L9 '+fx(y*.2+t)+'Z',U('a',id),'opacity=".95"')+P('M'+fx(W-9)+' '+fx(y*.2)+'L'+fx(cx)+' '+fx(y+t*.2)+'L'+fx(cx)+' '+fx(y+t*1.2)+'L'+fx(W-9)+' '+fx(y*.2+t)+'Z',b,'opacity=".95"')+
+  P('M'+fx(W-9)+' '+fx(H*.78)+'L'+fx(W*.55)+' '+fx(H-9)+'H'+fx(W*.68)+'L'+fx(W-9)+' '+fx(H*.86)+'Z',U('a',id))+P('M9 '+fx(H*.7)+'L'+fx(W*.18)+' '+fx(H-9)+'H9Z','#EEF1F6')}
 const DS=[
  {o:'L',n:'الزوايا الهندسية',p:'b',ts:'sans',nc:'c',seal:'bc',sk:'star',in:{L:[22,30,16,30],P:[30,24,20,24]},bg:(W,H,c,id)=>{const k=Math.min(W,H)*.2;return fr(W,H,8,.5,c[0])+[[0,0,1,1],[W,0,-1,1],[0,H,1,-1],[W,H,-1,-1]].map(([x,y,a,b])=>P('M'+x+' '+y+'h'+fx(a*k)+'L'+x+' '+fx(y+b*k)+'Z',c[0])+P('M'+fx(x+a*k*.72)+' '+y+'h'+fx(a*k*.22)+'L'+x+' '+fx(y+b*k*.94)+'v'+fx(-b*k*.22)+'Z',c[2])).join('')}},
  {o:'L',n:'الموجة الكحلية الذهبية',p:'n',ts:'sans',nc:'gold',seal:'',in:{L:[24,30,26,30],P:[34,22,34,22]},bg:(W,H,c,id,R)=>{const h=H*.11;return P('M0 0H'+W+'V'+fx(h*.5)+'C'+fx(W*.7)+' '+fx(h*1.4)+' '+fx(W*.35)+' '+fx(-h*.2)+' 0 '+fx(h*.9)+'Z',c[0])+SK('M0 '+fx(h*1.05)+'C'+fx(W*.35)+' '+fx(-h*.05)+' '+fx(W*.7)+' '+fx(h*1.55)+' '+W+' '+fx(h*.65),GF(id),1.6)+P('M0 '+fx(h*1.1)+'C'+fx(W*.35)+' '+fx(h*.1)+' '+fx(W*.7)+' '+fx(h*1.7)+' '+W+' '+fx(h*.75)+'V'+fx(h*1.1)+'C'+fx(W*.7)+' '+fx(h*2.2)+' '+fx(W*.35)+' '+fx(h*.5)+' 0 '+fx(h*1.8)+'Z','#F4EAD0','opacity=".8"')+
@@ -106,10 +112,63 @@ const DS=[
    return rect(0,0,W,H,'#FBF8F2')+stars8(0,0,W,H,'#C9A048',14,.16)+fr(W,H,8,1.2,GF(id))+fr(W,H,10.5,.35,GF(id))+
      P('M'+fx(W-k-6)+' 0H'+fx(W-k+b+6)+'L'+W+' '+fx(k-b-6)+'V'+fx(k+6)+'Z',GF(id))+P(sash,c[0])+P(sash,'url(#d'+id+')','opacity=".5"')+SK('M'+fx(W-k+b/2)+' 0L'+W+' '+fx(k-b/2),'#E8C874',.35,'stroke-dasharray="1.2 1"')+
      P('M0 '+fx(H-k*.55)+'L'+fx(k*.55)+' '+H+'H0Z',c[0])+SK('M0 '+fx(H-k*.55-4)+'L'+fx(k*.55+4)+' '+H,GF(id),1.4)+
-     hang(id,W-k*.5+b*.2,k*.5-1,16,12,c[1],'تميّز')}}
+     hang(id,W-k*.5+b*.2,k*.5-1,16,12,c[1],'تميّز')}},
+ /* ===== التصاميم العصرية (بطلب النائب الأكاديمي، مستوحاة من النماذج التي اختارتها) — كلها بالعرض وبالطول؛ c:1 متاحة للمنسقات أيضاً ===== */
+ {o:'V',c:1,n:'المربعات الحمراء العصرية',p:'r',ts:'serif',nc:'c',seal:'',in:{L:[22,26,18,64],P:[32,22,58,22]},bg:(W,H,c,id)=>{const L=W>H,s=Math.min(W,H);
+   const sq=(x,y,z,f,op)=>'<rect x="'+fx(x-z/2)+'" y="'+fx(y-z/2)+'" width="'+fx(z)+'" height="'+fx(z)+'" rx="'+fx(z*.22)+'" fill="'+f+'" opacity="'+op+'" transform="rotate(45 '+fx(x)+' '+fx(y)+')"/>';
+   return LG(id,'a','#E2262F','#8E0F16')+rect(0,0,W,H,'#F5F5F6')+
+   sq(0,H*(L?.6:.7),s*.42,U('a',id),1)+sq(W*(L?.09:.13),H*(L?.36:.52),s*.17,'#4A4446',.7)+sq(W*.03,H*(L?.27:.44),s*.07,'#F08A1C',1)+
+   sq(W*.93,H*(L?.17:.12),s*.22,U('a',id),1)+sq(W*.8,H*(L?.03:.02),s*.2,'#4A4446',.75)+sq(W*.985,H*(L?.33:.22),s*.07,'#F08A1C',1)+hang(id,L?28:26,0,L?10:12,10,'#1E1E24','تميّز')}},
+ {o:'V',c:0,n:'الموجة الحمراء والوسام الذهبي',p:'r',ts:'serif',nc:'c',seal:'',in:{L:[24,40,20,40],P:[34,26,44,26]},bg:(W,H,c,id)=>{let l='';for(let i=0;i<16;i++)l+=SK('M'+fx(W*.55+i*3)+' 0C'+fx(W*.8)+' '+fx(H*.3+i*2)+' '+fx(W*.9-i)+' '+fx(H*.7)+' '+fx(W*.55+i*4)+' '+H,'#C9A048',.25,'opacity=".7"');
+   return LG(id,'a','#D3242B','#7A0E12',1,0)+rect(0,0,W,H,'#FFFFFF')+P('M0 '+fx(H*.8)+'C'+fx(W*.12)+' '+fx(H*.98)+' '+fx(W*.3)+' '+fx(H*.96)+' '+fx(W*.42)+' '+H+'H0Z',U('a',id))+P('M'+W+' 0V'+fx(H*.75)+'C'+fx(W*.88)+' '+fx(H*.45)+' '+fx(W*.9)+' '+fx(H*.15)+' '+fx(W*.68)+' 0Z',U('a',id))+l+
+   SK('M0 '+fx(H*.76)+'C'+fx(W*.12)+' '+fx(H*.95)+' '+fx(W*.32)+' '+fx(H*.93)+' '+fx(W*.46)+' '+H,GF(id),1.4)+fr(W,H,6,1,GF(id))+rect(W*.78,0,9,H*(W>H?.2:.14),GF(id))+rosette(id,W*.78+4.5,H*(W>H?.22:.15),10,c[1],'تميّز',1,c[0])}},
+ {o:'V',c:0,n:'الخطوط الرمادية والزوايا العنابية',p:'m',ts:'serif',nc:'k',seal:'',in:{L:[22,40,26,40],P:[30,26,40,26]},bg:(W,H,c,id)=>{const L=W>H;
+   return rect(0,0,W,H,'#FFFFFF')+ripples(W/2,H*1.3,20,46,4,'#B8B8BE',.18,.7)+P('M0 '+fx(H*.62)+'L'+fx(W*.3)+' '+H+'H0Z',c[0])+P('M0 '+fx(H*.75)+'L'+fx(W*.2)+' '+H+'H0Z','#1E1E24')+P('M'+W+' '+fx(H*.62)+'L'+fx(W*.7)+' '+H+'H'+W+'Z',c[0])+P('M'+W+' '+fx(H*.75)+'L'+fx(W*.8)+' '+H+'H'+W+'Z','#1E1E24')+
+   SK('M0 '+fx(H*.58)+'L'+fx(W*.34)+' '+H+'M'+W+' '+fx(H*.58)+'L'+fx(W*.66)+' '+H,'#C9C9CF',.6)+fr(W,H,7,.4,'#BDBDC3')+rect(W*.86,0,10,H*(L?.24:.16),c[0])+rosette(id,W*.86+5,H*(L?.26:.17),11,'#1E1E24','تميّز',0)}},
+ {o:'V',c:0,n:'الموجة الكحلية والبرتقالية',p:'n',ts:'sans',nc:'c',seal:'',in:{L:[44,26,20,74],P:[58,24,42,24]},bg:(W,H,c,id)=>{const L=W>H,h=L?H*.42:H*.24;
+   return LG(id,'a','#1E3A6E','#0E1E40',1,0)+LG(id,'o','#F7941D','#E5391E',1,0)+rect(0,0,W,H,'#FFFFFF')+P('M0 0H'+fx(W*.7)+'C'+fx(W*.5)+' '+fx(h*.3)+' '+fx(W*.35)+' '+fx(h*1.05)+' 0 '+fx(h*.95)+'Z',U('a',id))+
+   P('M0 '+fx(h*.8)+'C'+fx(W*.35)+' '+fx(h*.95)+' '+fx(W*.5)+' '+fx(h*.2)+' '+fx(W*.78)+' 0H'+fx(W*.8)+'C'+fx(W*.52)+' '+fx(h*.3)+' '+fx(W*.36)+' '+fx(h*1.18)+' 0 '+fx(h*1.05)+'Z',U('o',id))+
+   P('M0 '+H+'V'+fx(H-h*.4)+'C'+fx(W*.15)+' '+fx(H-h*.5)+' '+fx(W*.35)+' '+fx(H-h*.1)+' '+fx(W*.5)+' '+H+'Z',U('a',id))+P('M0 '+fx(H-h*.32)+'C'+fx(W*.18)+' '+fx(H-h*.5)+' '+fx(W*.38)+' '+fx(H-h*.2)+' '+fx(W*.52)+' '+H+'H'+fx(W*.47)+'C'+fx(W*.34)+' '+fx(H-h*.12)+' '+fx(W*.16)+' '+fx(H-h*.34)+' 0 '+fx(H-h*.2)+'Z',U('o',id))+
+   (L?rosette(id,W*.14,H*.62,14,'#FFFFFF','تميّز',1,'#1E3A6E'):rosette(id,W*.85,H*.2,12,'#FFFFFF','تميّز',1,'#1E3A6E'))}},
+ {o:'V',c:1,n:'الشرائط الكحلية والحمراء المتقاطعة',p:'n',ts:'serif',nc:'c',seal:'',in:{L:[24,40,26,40],P:[34,26,44,26]},bg:(W,H,c,id)=>{const k=Math.min(W,H)*.42,b=k*.24;
+   const band=(x0,y0,dx,dy,f)=>P('M'+fx(x0)+' '+fx(y0)+'l'+fx(dx)+' '+fx(dy)+'l'+fx(b*Math.sign(dx))+' 0l'+fx(-dx)+' '+fx(-dy)+'Z',f);
+   return LG(id,'a','#1B2F5E','#0C1736')+LG(id,'b','#C21F2B','#7C0F16')+rect(0,0,W,H,'#FFFFFF')+
+   P('M'+W+' 0H'+fx(W-k)+'L'+W+' '+fx(k*.8)+'Z',U('a',id))+P('M'+fx(W-k*.75)+' 0H'+fx(W-k*.38)+'L'+fx(W-k*.95)+' '+fx(k*.55)+'H'+fx(W-k*1.32)+'Z',U('b',id))+SK('M'+fx(W-k*.38)+' 0L'+fx(W-k*.95)+' '+fx(k*.55),GF(id),1.2)+
+   '<g transform="translate(0 '+fx(H)+') scale(.55) translate(0 '+fx(-H)+')">'+P('M0 '+H+'H'+fx(k)+'L0 '+fx(H-k*.8)+'Z',U('a',id))+P('M'+fx(k*.75)+' '+H+'H'+fx(k*.38)+'L'+fx(k*.95)+' '+fx(H-k*.55)+'H'+fx(k*1.32)+'Z',U('b',id))+SK('M'+fx(k*.38)+' '+H+'L'+fx(k*.95)+' '+fx(H-k*.55),GF(id),1.2)+'</g>'+
+   SK('M'+fx(W*.06)+' 0V'+fx(H*.12)+'M'+fx(W*.06+6)+' 0V'+fx(H*.12),'#1B2F5E',3)+rosette(id,W*.06+3,H*.14,10,'#7C0F16','تميّز',0)}},
+ {o:'V',c:0,dk:1,n:'الفخامة الكحلية الداكنة',p:'k',ts:'sans',nc:'gold',seal:'',in:{L:[22,34,20,64],P:[34,24,30,24]},bg:(W,H,c,id)=>{const L=W>H;let st='';for(let i=0;i<26;i++)st+=SK('M'+fx(-10+i*4)+' '+H+'L'+fx(W*.35+i*4)+' '+fx(H*.4),'#2B3346',.5);
+   return rect(0,0,W,H,'#151B29')+'<g opacity=".6">'+st+'</g>'+P('M0 0H'+fx(W*.32)+'L0 '+fx(H*.55)+'Z','#9E1B22')+P('M0 0H'+fx(W*.22)+'L0 '+fx(H*.38)+'Z','#6E0F14')+SK('M'+fx(W*.33)+' 0L0 '+fx(H*.57),GF(id),.8)+
+   rect(W*.12,H*.12,W*.76,.25,GF(id),'opacity=".5"')+fr(W,H,6,.5,GF(id))+rosette(id,L?W*.16:W*.18,L?H*.28:H*.16,11,'#151B29','تميّز',1,GF(id))}},
+ {o:'V',c:0,n:'الأشرطة المائلة الكحلية والحمراء',p:'n',ts:'sans',nc:'k',seal:'',in:{L:[22,78,22,26],P:[30,24,64,24]},bg:(W,H,c,id)=>{const L=W>H;
+   if(L)return rect(0,0,W,H,'#FFFFFF')+fr(W,H,6,.4,'#D5D5DA')+P('M'+fx(W*.68)+' 0H'+fx(W*.78)+'L'+fx(W*.86)+' '+H+'H'+fx(W*.76)+'Z','#E5E5EA')+P('M'+fx(W*.74)+' 0H'+W+'V'+H+'H'+fx(W*.84)+'Z','#A31D24')+P('M'+fx(W*.8)+' 0H'+W+'V'+H+'H'+fx(W*.9)+'Z','#14275A')+rosette(id,W*.835,H*.42,13,'#FFFFFF','تميّز',1,'#A31D24');
+   return rect(0,0,W,H,'#FFFFFF')+fr(W,H,6,.4,'#D5D5DA')+P('M0 '+fx(H*.8)+'L'+W+' '+fx(H*.72)+'V'+fx(H*.76)+'L0 '+fx(H*.84)+'Z','#E5E5EA')+P('M0 '+fx(H*.84)+'L'+W+' '+fx(H*.76)+'V'+H+'H0Z','#A31D24')+P('M0 '+fx(H*.89)+'L'+W+' '+fx(H*.81)+'V'+H+'H0Z','#14275A')+rosette(id,W*.8,H*.78,12,'#FFFFFF','تميّز',1,'#A31D24')}},
+ {o:'V',c:0,n:'المضلعات الزرقاء والوسام',p:'n',ts:'serif',nc:'c',seal:'',in:{L:[22,36,46,36],P:[34,26,70,26]},bg:(W,H,c,id)=>{const y=H*(W>H?.82:.86);
+   return LG(id,'a','#1F4E9E','#0B1F4D')+LG(id,'l','#E9EEF7','#FFFFFF')+rect(0,0,W,H,'#FFFFFF')+P('M0 0L'+fx(W*.4)+' 0L0 '+fx(H*.5)+'Z',U('l',id))+P('M'+W+' '+fx(H*.1)+'L'+fx(W*.6)+' '+fx(H*.55)+'L'+W+' '+fx(H*.7)+'Z','#EEF2F9')+
+   P('M0 '+fx(y)+'L'+fx(W*.3)+' '+fx(y+H*.12)+'L'+fx(W*.5)+' '+fx(y-H*.03)+'L'+fx(W*.72)+' '+fx(y+H*.1)+'L'+W+' '+fx(y-H*.02)+'V'+H+'H0Z',U('a',id))+P('M0 '+fx(y+H*.1)+'L'+fx(W*.5)+' '+fx(y-H*.03)+'L'+W+' '+fx(y+H*.12)+'V'+H+'H0Z','#163A7A','opacity=".7"')+
+   fr(W,H,8,.6,GF(id))+rosette(id,W/2,y+H*.04,12,'#163A7A','تميّز',1,'#163A7A')}},
+ {o:'V',c:1,n:'الشريط الأزرق المتقاطع',p:'n',ts:'serif',nc:'k',seal:'tc',sk:'ros',in:{L:[20,46,22,46],P:[30,30,34,30]},bg:(W,H,c,id)=>xRib(W,H,id,'#1F4E9E','#0E2A5C')},
+ {o:'V',c:1,n:'الشريط الأخضر المتقاطع',p:'g',ts:'serif',nc:'k',seal:'tc',sk:'ros',in:{L:[20,46,22,46],P:[30,30,34,30]},bg:(W,H,c,id)=>xRib(W,H,id,'#16806A','#0B4A3C')},
+ {o:'V',c:1,n:'العنابي والذهبي المائل',p:'m',ts:'serif',nc:'gold',seal:'',in:{L:[30,40,22,40],P:[46,26,34,26]},bg:(W,H,c,id)=>{const k=Math.min(W,H);let g='';for(let i=0;i<4;i++)g+=SK('M'+fx(k*.1+i*3)+' '+fx(k*.62+i*2)+'L'+fx(k*.62+i*3)+' '+fx(k*.1+i*2),GH(id),.7)+SK('M'+fx(W-k*.12-i*3)+' '+fx(H-k*.02)+'L'+fx(W-k*.45-i*3)+' '+fx(H-k*.32),GH(id),.5);
+   return LG(id,'a','#8E1018','#4A0509')+rect(0,0,W,H,'#F7F7F7')+P('M0 0H'+fx(k*.95)+'L0 '+fx(k*.72)+'Z',U('a',id))+P('M'+fx(k*.62)+' 0H'+fx(k*.95)+'L'+fx(k*.38)+' '+fx(k*.42)+'Z','#D9D9DC','opacity=".8"')+P('M'+fx(k*.3)+' 0H'+fx(k*.48)+'L0 '+fx(k*.36)+'V'+fx(k*.22)+'Z',GF(id))+g+
+   P('M'+W+' '+H+'H'+fx(W-k*.5)+'L'+W+' '+fx(H-k*.4)+'Z','#E1E1E4')+coin(id,W-k*.18,k*.16,k*.09,'تقدير')}},
+ {o:'V',c:0,n:'الإطار الذهبي والمنحنيات الكحلية',p:'n',ts:'serif',nc:'c',seal:'bc',sk:'coin',in:{L:[24,42,22,42],P:[36,30,30,30]},bg:(W,H,c,id)=>{const i=10,n=10;
+   const panel='M'+fx(i+n)+' '+i+'H'+fx(W-i-n)+'L'+fx(W-i)+' '+fx(i+n)+'V'+fx(H-i-n)+'L'+fx(W-i-n)+' '+fx(H-i)+'H'+fx(i+n)+'L'+i+' '+fx(H-i-n)+'V'+fx(i+n)+'Z';
+   return LG(id,'a','#1F4E9E','#0B1838')+rect(0,0,W,H,U('a',id))+P('M0 0H'+fx(W*.3)+'C'+fx(W*.15)+' '+fx(H*.08)+' '+fx(W*.05)+' '+fx(H*.2)+' 0 '+fx(H*.35)+'Z','#3D6FD1','opacity=".5"')+P('M'+W+' '+H+'H'+fx(W*.7)+'C'+fx(W*.85)+' '+fx(H*.92)+' '+fx(W*.95)+' '+fx(H*.8)+' '+W+' '+fx(H*.65)+'Z','#3D6FD1','opacity=".5"')+
+   P(panel,'#FBFBFA')+P(panel,'none','stroke="'+GF(id)+'" stroke-width="2.2"')+'<g transform="translate('+fx(W/2)+' '+fx(H/2)+') scale(.955) translate('+fx(-W/2)+' '+fx(-H/2)+')">'+P(panel,'none','stroke="'+GF(id)+'" stroke-width=".6"')+'</g>'}},
+ {o:'V',c:1,n:'الموجة الذهبية الكحلية',p:'n',ts:'serif',nc:'c',seal:'tc',sk:'ros',in:{L:[30,40,22,40],P:[44,28,28,28]},bg:(W,H,c,id)=>{const L=W>H,y=H*(L?.15:.12);
+   return LG(id,'a','#1F4E9E','#0B1838')+rect(0,0,W,H,U('a',id))+rect(9,9,W-18,H-18,'#FBFBFA')+'<circle cx="9" cy="'+fx(H-9)+'" r="9" fill="'+U('a',id)+'"/><circle cx="'+fx(W-9)+'" cy="'+fx(H-9)+'" r="9" fill="'+U('a',id)+'"/>'+
+   P('M9 '+fx(y)+'C'+fx(W*.3)+' '+fx(y-H*.16)+' '+fx(W*.6)+' '+fx(y+H*.02)+' '+fx(W-9)+' '+fx(y-H*.14)+'V9H9Z',U('a',id))+P('M9 '+fx(y+3)+'C'+fx(W*.3)+' '+fx(y-H*.13)+' '+fx(W*.6)+' '+fx(y+H*.05)+' '+fx(W-9)+' '+fx(y-H*.11)+'V'+fx(y-H*.17)+'C'+fx(W*.6)+' '+fx(y-H*.04)+' '+fx(W*.3)+' '+fx(y-H*.22)+' 9 '+fx(y-6)+'Z',GF(id))}},
+ {o:'V',c:0,n:'الفضي والذهبي المائل',p:'k',ts:'sans',nc:'gold',seal:'',in:{L:[26,40,24,40],P:[40,26,40,26]},bg:(W,H,c,id)=>{const k=Math.min(W,H);let s='';
+   const bar=(x,y,len,f)=>'<rect x="'+fx(x)+'" y="'+fx(y)+'" width="'+fx(len)+'" height="'+fx(k*.045)+'" rx="'+fx(k*.022)+'" fill="'+f+'" transform="rotate(-45 '+fx(x)+' '+fx(y)+')"/>';
+   [[0,'#D8D8DC'],[1,GF(id)],[2,'#C4C4CA'],[3,'#ECECEF'],[4,GF(id)]].forEach(([i,f])=>{s+=bar(W-k*.42+i*k*.07,k*.06+i*k*.02,k*.42,f)+bar(W-k*.5+i*k*.07,H+k*.08-i*k*.01,k*.42,f)});
+   return LG(id,'a','#F4F4F6','#FFFFFF')+rect(0,0,W,H,U('a',id))+s+fr(W,H,6,.35,'#C9C9CE')+rosette(id,k*.14,k*.14,k*.06,'#1E1E24','تقدير',0)}},
+ {o:'V',c:0,n:'الانسياب البرتقالي والرمادي',p:'o',ts:'sans',nc:'c',seal:'bc',sk:'coin',in:{L:[30,40,20,40],P:[44,26,26,26]},bg:(W,H,c,id)=>{const h=H*(W>H?.26:.2);
+   return LG(id,'o','#FDB813','#F37021',1,0)+rect(0,0,W,H,'#FFFFFF')+P('M'+fx(W*.2)+' 0C'+fx(W*.45)+' '+fx(h*.6)+' '+fx(W*.75)+' '+fx(h*.55)+' '+W+' '+fx(h*1.1)+'V0Z','#D5D5DA')+P('M'+fx(W*.12)+' 0C'+fx(W*.4)+' '+fx(h*.5)+' '+fx(W*.72)+' '+fx(h*.35)+' '+W+' '+fx(h*.85)+'V'+fx(h*.55)+'C'+fx(W*.72)+' '+fx(h*.1)+' '+fx(W*.42)+' '+fx(h*.25)+' '+fx(W*.2)+' 0Z',U('o',id))+
+   P('M0 '+H+'H'+fx(W*.5)+'C'+fx(W*.3)+' '+fx(H-h*.15)+' '+fx(W*.12)+' '+fx(H-h*.35)+' 0 '+fx(H-h*.3)+'Z','#EDEDF0')+fr(W,H,6,.35,'#D5D5DA')}}
+
 
 ];
-const G='#B8903A';const CSS='.cert{position:relative;box-sizing:border-box;background:#fff;color:#2A2A2E;overflow:hidden;font-family:Amiri,"Traditional Arabic",serif;direction:rtl}'+
+const G='#B8903A';const CSS='.cert.dk .ld,.cert.dk .mt,.cert.dk .rs,.cert.dk .vs,.cert.dk .vs small,.cert.dk .cr,.cert.dk .cnw b,.cert.dk .dt,.cert.dk .ph{color:#EDE6D6!important}.cert.dk .rs b,.cert.dk h1{color:#E9C978!important}.cert.dk .cnw{border-color:#E9C978}.cert.dk .lg{filter:brightness(0) invert(1)}'+'.cert{position:relative;box-sizing:border-box;background:#fff;color:#2A2A2E;overflow:hidden;font-family:Amiri,"Traditional Arabic",serif;direction:rtl}'+
  '.cert .bgx{position:absolute;inset:0;width:100%;height:100%;z-index:0}'+
  '.cert .ci{position:absolute;display:flex;flex-direction:column;align-items:center;text-align:center;z-index:2}'+
  '.cert .ch{display:flex;flex-direction:column;align-items:center;gap:.5mm}.cert .lg{height:15mm;object-fit:contain}.cert .vs{font-family:"Amiri Quran",Amiri,serif;font-size:12.5pt;color:var(--c);line-height:1.5}.cert .vs small{font-family:Amiri,serif;font-size:8.5pt;color:#8A7A6A}'+
@@ -134,7 +193,7 @@ function body(o,d,OR){const D=DS[d]||DS[0],c=PAL[D.p],id='k'+(++__cid);const W=O
   const meta=['الصف '+esc(o.grade),'الشعبة <bdi dir="ltr">'+esc(o.sec)+'</bdi>',o.sub?'مادة '+esc(o.sub):''].filter(Boolean).join(' <i>◆</i> ');
   const logo=(typeof MOE!=='undefined')?'<img class="lg" src="data:image/webp;base64,'+MOE+'" alt="">':'';
   const sigs=o.sigs?o.sigs.map(x=>x?sigB(x.role,x.name,x.img||''):'<div></div>'):[o.teacher?sigB('معلمة المادة','أ. '+(typeof shortName==='function'?shortName(o.teacher):o.teacher),o.tsig||''):'<div></div>',sigB('نائب المديرة للشؤون الأكاديمية','أ. '+(S.settings.vp||'آسيا الذبياني'),S.settings.sig||'')];
-  return'<div class="c cert '+(OR==='P'?'po':'la')+' ts-'+D.ts+'" style="--c:'+c[0]+';--c2:'+c[1]+';width:'+W+'mm;height:'+H+'mm">'+
+  return'<div class="c cert '+(OR==='P'?'po':'la')+' ts-'+D.ts+(D.dk?' dk':'')+'" style="--c:'+c[0]+';--c2:'+c[1]+';width:'+W+'mm;height:'+H+'mm">'+
    '<svg class="bgx" viewBox="0 0 '+W+' '+H+'" preserveAspectRatio="none">'+gdef(id)+D.bg(W,H,c,id,R)+'</svg>'+
    '<div class="ci" style="inset:'+IN[0]+'mm '+IN[1]+'mm '+IN[2]+'mm '+IN[3]+'mm">'+
    '<div class="ch">'+logo+'<div class="vs">﴿'+esc(v[0])+'﴾ <small>['+esc(v[1])+']</small></div></div>'+
@@ -146,9 +205,9 @@ function body(o,d,OR){const D=DS[d]||DS[0],c=PAL[D.p],id='k'+(++__cid);const W=O
    '<p class="rs">'+esc(o.rlead||'تقديرًا لتميّزها في')+' <b>'+(o.reasons||[]).map(esc).join('</b>، و<b>')+'</b></p>'+(o.phrase?'<p class="ph">'+esc(o.phrase)+'</p>':'')+'</div>'+
    '<div class="sgs">'+sigs[0]+(D.seal==='bc'?'<div class="bcs">'+sealSm(D.sk)+'</div>':'<div></div>')+sigs[1]+'</div>'+
    '</div><div class="dt">'+esc(o.date||'')+'</div></div>'}
-const LD=DS.map((D,i)=>i).filter(i=>DS[i].o==='L');
+const LD=DS.map((D,i)=>i).filter(i=>DS[i].o==='V'&&DS[i].c).concat(DS.map((D,i)=>i).filter(i=>DS[i].o==='L'));
 /* قائمة النائب الأكاديمي: المبتكرة أولًا ثم كل التصاميم */
-const AD=DS.map((D,i)=>i).filter(i=>DS[i].o==='N').concat(DS.map((D,i)=>i).filter(i=>DS[i].o!=='N'));
-window.MCK={names:()=>LD.map(i=>DS[i].n),namesAll:()=>AD.map(i=>DS[i].n),newCount:()=>DS.filter(D=>D.o==='N').length,doc(o){const LS=o.all?AD:LD;const n=Math.max(1,Math.min(LS.length,+o.tpl||1));const d=LS[n-1];const OR=o.or==='P'?'P':'L';
+const AD=DS.map((D,i)=>i).filter(i=>DS[i].o==='V').concat(DS.map((D,i)=>i).filter(i=>DS[i].o==='N'),DS.map((D,i)=>i).filter(i=>DS[i].o!=='N'&&DS[i].o!=='V'));
+window.MCK={names:()=>LD.map(i=>DS[i].n),namesAll:()=>AD.map(i=>DS[i].n),newCount:()=>DS.filter(D=>D.o==='V'||D.o==='N').length,doc(o){const LS=o.all?AD:LD;const n=Math.max(1,Math.min(LS.length,+o.tpl||1));const d=LS[n-1];const OR=o.or==='P'?'P':'L';
   return'<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>'+esc(o.title||'شهادة')+' - '+esc(o.name)+'</title><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri+Quran&family=Amiri:wght@400;700&family=Aref+Ruqaa:wght@400;700&family=Tajawal:wght@500;700;800;900&family=Marhey:wght@300..700&display=swap"><style>@page{size:A4 '+(OR==='P'?'portrait':'landscape')+';margin:0}*{box-sizing:border-box}body{margin:0;background:#E9E4DA;-webkit-print-color-adjust:exact;print-color-adjust:exact}.c{margin:0 auto}@media print{body{background:#fff}}'+CSS+'.cert .ph{font-family:Tajawal,sans-serif;font-size:11.5pt;color:#7A6A4A;margin:1mm 0 0}.cert .dt{position:absolute;top:9mm;left:14mm;font-family:Tajawal,sans-serif;font-size:9pt;color:#777;z-index:3}</style></head><body>'+body(o,d,OR)+'</body></html>'}};
 })();
