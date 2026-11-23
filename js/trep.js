@@ -134,10 +134,10 @@ function trPage(el, fixed) {
   setTitle(fixed ? 'تقرير أعمالي' : 'تقارير أعمال المعلمات');
   const months = trMonthList(); S.trm = months.includes(S.trm) ? S.trm : months[0];
   const coordN = new Set((S.coords || []).map(c => c.name).concat((S.staff || []).filter(s => s.role === 'منسقة').map(s => s.name)));
-  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && (isAdmin() || (!coordN.has(s.name) && s.role !== 'منسقة')) && (isAdmin() ? (!(S.trDept || S.dept) || s.dept === (S.trDept || S.dept)) : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
+  const staff = fixed ? [fixed] : (S.staff || []).filter(s => s.name && (isAdmin() || (!coordN.has(s.name) && s.role !== 'منسقة')) && (isAdmin() ? true : (S.user.dept || []).includes(s.dept))).map(s => s.name).filter((x, i, a) => a.indexOf(x) === i).sort((a, b) => a.localeCompare(b, 'ar'));
   S.trt = fixed || (staff.includes(S.trt) ? S.trt : staff[0] || '');
   const RG = trRange();
-  const D = S.trt ? trData(S.trt, RG) : null;
+  const D = S.trt && (!isAdmin() || S.trPick) ? trData(S.trt, RG) : null;   // للنائب: لا يظهر تقرير قبل الضغط على «عرض»
   const chip = c => c === 'مبادرة' ? '<span class="chip ok">مبادِرة</span>' : c === 'مجتهدة' ? '<span class="chip tf">مجتهدة</span>' : '<span class="chip warn">بحاجة إلى مضاعفة الجهد</span>';
   el.innerHTML = `<div class="tins">${fixed ? 'معلمتي الغالية، هذا تقرير (أسبوعي أو شهري أو فصلي أو لأي فترة تختارينها) يجمع تلقائياً كل ما وثّقتِه في الميزان وما يصل من سبع سنابل. اختاري نوع التقرير والفترة، ثم اطبعيه أو احفظيه PDF لملفكِ.' : 'اختاري الشهر لتظهر أعمال كل معلمة وتقديرها العام، ثم افتحي تقرير أي معلمة لطباعته. يُبنى التقرير تلقائياً مما وثّقته المعلمة في الميزان وما يصل من سبع سنابل.'}</div>
   <div class="card"><div class="row" style="gap:10px;flex-wrap:wrap">
@@ -148,11 +148,11 @@ function trPage(el, fixed) {
     ${S.trk === 's' ? `<select id="trS">${[...new Set((S.periods || []).map(p => p.sem).filter(Boolean))].map(x => `<option ${x === S.trs ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'p' ? `<select id="trPp">${(S.periods || []).map(p => `<option ${p.name === S.trp ? 'selected' : ''}>${esc(p.name)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'c' ? `<label style="font-size:12px">من <input type="date" id="trF" value="${RG.from}"></label><label style="font-size:12px">إلى <input type="date" id="trTo" value="${RG.to}"></label>` : ''}
-    ${fixed ? '' : `<select id="trT">${staff.map(t => `<option ${t === S.trt ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`}
-    <span class="sp"></span>${S.trt ? '<button class="btn ro-keep" id="trP">طباعة / حفظ PDF</button>' : ''}</div>
-  ${fixed ? '' : `<div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الأعمال</th><th>مبادرات</th><th>زيارات تبادلية</th><th>أولياء أمور</th><th>التقدير</th><th></th></tr>
+    ${fixed || isAdmin() ? '' : `<select id="trT">${staff.map(t => `<option ${t === S.trt ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select>`}
+    <span class="sp"></span>${D ? '<button class="btn ro-keep" id="trP">طباعة / حفظ PDF</button>' : ''}</div>
+  ${!fixed && isAdmin() ? trGridHTML(RG, chip) : fixed ? '' : `<div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الأعمال</th><th>مبادرات</th><th>زيارات تبادلية</th><th>أولياء أمور</th><th>التقدير</th><th></th></tr>
     ${staff.map(t => { const x = trData(t, RG); return `<tr><td style="white-space:nowrap"><b>${esc(t)}</b></td><td>${x.work}</td><td>${x.ini}</td><td>${x.pv.length}</td><td>${x.pa.length + x.paa.length}</td><td>${chip(x.cls)}</td><td><button class="btn sm sec" data-tt="${esc(t)}">عرض</button></td></tr>`; }).join('')}</table></div>`}</div>
-  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, RG, D)}<div id="trSign">${trSignBlock(S.trt, { c: '', v: '' })}</div></div></div>` : '<div class="empty">لا توجد معلمات</div>'}
+  ${D ? `<div class="card"><div class="fp trv">${trBody(S.trt, RG, D)}<div id="trSign">${trSignBlock(S.trt, { c: '', v: '' })}</div></div></div>` : (isAdmin() && !S.trPick ? '' : '<div class="empty">لا توجد معلمات</div>')}
   ${D && !isTeacher() ? `<div class="card" id="trEv">${typeof FORMS !== 'undefined' && FORMS ? trEvalHTML(S.trt, RG, trEval(S.trt, RG, D), true) : '<div class="empty">جارٍ تحميل استمارة التقييم…</div>'}</div>` : ''}`;
   if (D && !isTeacher() && typeof loadForms === 'function' && !FORMS) loadForms().then(() => { const b = $('#trEv', el); if (b) { b.innerHTML = trEvalHTML(S.trt, RG, trEval(S.trt, RG, D), true); trEvBind(b, S.trt, RG); } });
   if (D && !isTeacher() && $('#trEv', el) && FORMS) trEvBind($('#trEv', el), S.trt, RG);
@@ -168,7 +168,7 @@ function trPage(el, fixed) {
   if ($('#trF')) $('#trF').onchange = e => { S.trf = e.target.value; show(); };
   if ($('#trTo')) $('#trTo').onchange = e => { S.trto = e.target.value; show(); };
   if ($('#trT')) $('#trT').onchange = e => { S.trt = e.target.value; show(); };
-  $$('[data-tt]', el).forEach(b => b.onclick = () => { S.trt = b.dataset.tt; show(); setTimeout(() => { const c = $('.trv'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 50); });
+  $$('[data-tt]', el).forEach(b => b.onclick = () => { S.trt = b.dataset.tt; S.trPick = 1; show(); setTimeout(() => { const c = $('.trv'); if (c) c.scrollIntoView({ behavior: 'smooth' }); }, 50); });
   if ($('#trP')) $('#trP').onclick = async () => {
     const imgs = await lhImgs(); const sg = await trSigs(((S.staff || []).find(x => x.name === S.trt) || {}).dept);
     const html = docHTML(trBody(S.trt, RG, trData(S.trt, RG)) + trSignBlock(S.trt, sg), imgs, `تقرير أعمال ${S.trt} ${RG.label}`);
@@ -266,24 +266,19 @@ function trVisHTML(D) {
   <div style="font-size:10px;color:#666;margin:3px 0 8px">مستكملة وفاعلة ومبتكرة = 100% · مستكملة وفاعلة = 88% · تتوفر معظم الأدلة = 75% · تتوفر بعض الأدلة = 60% · غير متوفرة = 45%؛ ولا يُحتسب «لم يتم قياسه».</div>`;
 }
 
-/* تقارير أعمال المعلمات للنائب الأكاديمي: مربع لكل قسم (المنسقة ثم معلماتها)، والضغط على الاسم يفتح تقرير أعمالها كاملاً
-   بالنموذج نفسه الذي تراه المعلمة، مع متوسط الحضور الصفي واستمارة التقييم المقترحة */
-function A_trep(el) {
-  if (S.trOpen) {
-    trPage(el, null);
-    const back = document.createElement('div'); back.className = 'row noprint'; back.style.margin = '0 0 10px';
-    back.innerHTML = '<button class="btn sec" id="trBack">→ كل المعلمات</button>'; el.prepend(back);
-    $('#trBack', el).onclick = () => { S.trOpen = 0; S.trDept = ''; show(); };
-    return;
-  }
-  setTitle('تقارير أعمال المعلمات');
-  const ST = (S.staff || []).filter(s => s.name && s.dept);
-  const depts = [...new Set(ST.map(s => s.dept))];
-  const coordOf = d => ST.find(s => s.dept === d && s.role === 'منسقة');
-  el.innerHTML = `<div class="tins">اضغطي على اسم المنسقة أو المعلمة لعرض تقرير أعمالها كاملاً (بالنموذج المعتمد الذي تراه المعلمة)، ومتوسط تقديرات حضورها الصفي، واستمارة التقييم المقترحة؛ وتختارين الفترة من داخل التقرير: شهر، أو عدة أشهر، أو الفصل الدراسي كاملاً.</div>
-  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px">${depts.map(d => { const c = coordOf(d), T = ST.filter(s => s.dept === d && s !== c);
-    return `<div class="card" style="margin:0;padding:12px"><div style="font-weight:bold;color:var(--maroon);margin-bottom:6px">${esc(d)}</div>
-      ${c ? `<button class="btn sm" data-tr="${esc(c.name)}" data-d="${esc(d)}" style="width:100%;margin-bottom:6px;white-space:nowrap">★ ${esc(c.name)} <small style="opacity:.8">(منسقة)</small></button>` : ''}
-      ${T.map(t => `<button class="btn sm ghost" data-tr="${esc(t.name)}" data-d="${esc(d)}" style="width:100%;margin-bottom:4px;justify-content:flex-start;white-space:nowrap">${esc(t.name)}</button>`).join('')}</div>`; }).join('')}</div>`;
-  $$('[data-tr]', el).forEach(b => b.onclick = () => { S.trOpen = 1; S.trDept = b.dataset.d; S.trt = b.dataset.tr; show(); window.scrollTo(0, 0); });
+/* تقارير أعمال المعلمات للنائب الأكاديمي: مربع لكل قسم (المنسقة ثم معلماتها، ولكل منها تقديرها وزر «عرض»)،
+   والضغط على «عرض» يفتح تقرير أعمالها كاملاً أسفل الصفحة بالنموذج نفسه الذي تراه المعلمة */
+function A_trep(el) { trPage(el, null); }
+function trGridHTML(RG, chip) {
+  const ST = (S.staff || []).filter(s => s.name && s.dept), depts = [...new Set(ST.map(s => s.dept))];
+  const row = (s, co) => { const x = trData(s.name, RG); const on = s.name === S.trt;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;${on ? 'background:#F6EFE3;' : ''}${co ? 'border-bottom:1px solid var(--line);margin-bottom:3px' : ''}">
+      <span style="flex:1;white-space:nowrap;font-size:13px;${co ? 'font-weight:bold;color:var(--maroon)' : ''}">${co ? '★ ' : ''}${esc(s.name)}</span>
+      ${co ? '<span style="font-size:11px;color:var(--muted)">منسقة القسم</span>' : `<span style="font-size:11px;color:var(--muted)">${x.work}</span><span style="white-space:nowrap;font-size:11px">${chip(x.cls)}</span>`}<button class="btn sm sec" data-tt="${esc(s.name)}" style="padding:2px 10px">عرض</button></div>`; };
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:12px">${depts.map(d => {
+    const c = ST.find(s => s.dept === d && s.role === 'منسقة'), T = ST.filter(s => s.dept === d && s !== c);
+    return `<div style="border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff">
+      <div style="font-weight:bold;font-size:15px;color:var(--maroon);margin-bottom:6px;text-align:center">${esc(d)}</div>
+      ${c ? row(c, 1) : ''}${T.map(t => row(t, 0)).join('')}</div>`; }).join('')}</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">★ منسقة القسم · الرقم بجانب اسم المعلمة: عدد أعمالها الموثّقة في الفترة المختارة. اضغطي «عرض» ليظهر تقرير المعلمة أسفل الصفحة.</div>`;
 }
