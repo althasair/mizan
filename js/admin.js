@@ -364,7 +364,7 @@ function sanabilClass(sec0, subj) {
 
 /* ------------------------------------------------------------------ خطة زيارات النائب */
 const CORE12 = ['التربية الإسلامية', 'اللغة العربية', 'اللغة الإنجليزية', 'الرياضيات', 'الكيمياء', 'الفيزياء', 'الأحياء'];
-function vpCfg() { let c = {}; try { c = JSON.parse(localStorage.getItem('mizan_vp_cfg') || '{}'); } catch (e) {} return Object.assign({ start: '2026-11-01', end: '2026-12-03' }, c); }
+function vpCfg() { let c = {}; try { c = JSON.parse(localStorage.getItem('mizan_vp_cfg') || '{}'); } catch (e) {} return Object.assign({ start: '2026-11-01', end: '2026-12-03', from: '2026-11-25', n1: 10 }, c); }
 function vpPlanData(o) {
   o = o || {}; const cfg = vpCfg();
   const sem1 = S.periods.filter(p => p.sem === 'الفصل الأول'); const s1 = { from: sem1[0] ? sem1[0].from : '2026-08-30', to: sem1.length ? sem1[sem1.length - 1].to : '2026-12-31' };
@@ -410,11 +410,18 @@ function vpPlanData(o) {
   const end = new Date(cfg.end + 'T00:00:00');
   while (w <= end) { const we = new Date(w); we.setDate(we.getDate() + 4); if (we >= tNow) weeks.push(new Date(w)); w.setDate(w.getDate() + 7); }
   if (!weeks.length) { const x = new Date(tNow); x.setDate(x.getDate() - x.getDay()); weeks.push(x); }
+  // أيام كل أسبوع (الأحد=0 … الخميس=4)؛ الأسبوع الذي يقع فيه «يوم البدء» يبدأ منه، وله عدد حصص محدد بالأولوية المطلقة
+  const fromD = cfg.from && (!o.item || o.item === 'VPV') ? new Date(cfg.from + 'T00:00:00') : null;
+  const days = weeks.map(wk => { const k = fromD && fromD >= wk && fromD < new Date(wk.getTime() + 5 * 864e5) ? fromD.getDay() : 0; return [0, 1, 2, 3, 4].filter(x => x >= k); });
+  const firstI = fromD ? weeks.findIndex((wk, i) => days[i].length < 5) : -1;
   // توزيع متوازن: معلمة من كل قسم أسبوعياً حسب الأولوية
   const byDept = {}; remain.forEach(t => (byDept[t.dept] = byDept[t.dept] || []).push(t));
   const plan = weeks.map(() => []); let left = remain.length;
+  if (firstI >= 0 && +cfg.n1 > 0 && fromD) { remain.slice(0, Math.min(+cfg.n1, remain.length)).forEach(t => { plan[firstI].push(t); const L = byDept[t.dept]; L.splice(L.indexOf(t), 1); left--; }); }
   weeks.forEach((wk, i) => {
-    const quota = Math.ceil(left / (weeks.length - i));
+    if (i === firstI && +cfg.n1 > 0) return;
+    const rest = weeks.length - i - (firstI > i && +cfg.n1 > 0 ? 1 : 0);
+    const quota = Math.ceil(left / Math.max(1, rest));
     while (plan[i].length < quota && left > 0) {
       const ds = Object.keys(byDept).filter(d => byDept[d].length && !plan[i].some(x => x.dept === d)).sort((a, b) => byDept[b].length - byDept[a].length || byDept[b][0].s - byDept[a][0].s);
       const pickFrom = ds.length ? ds : Object.keys(byDept).filter(d => byDept[d].length).sort((a, b) => byDept[b].length - byDept[a].length);
@@ -423,7 +430,7 @@ function vpPlanData(o) {
     }
     plan[i].sort((a, b) => b.s - a.s);
   });
-  return { cfg, pool, done: visits, remain, weeks, plan, san, G };
+  return { cfg, pool, done: visits, remain, weeks, days, plan, san, G };
 }
 /* يُكمل المسار الناقص (مثل العلمي) من نتائج الحادي عشر للعام الماضي المحفوظة في سبع سنابل على هذا المتصفح — قراءة فقط، أرقام إجمالية */
 function g12Merge(G0) {
@@ -482,12 +489,13 @@ function A_visits(el) {
     ${kpi('أسابيع الخطة', V.weeks.length, `بمعدل ${V.weeks.length ? Math.ceil(V.remain.length / V.weeks.length) : 0} زيارات أسبوعياً`, 'var(--navy)')}
     ${kpi('نتائج سنابل', sanN ? sanN + ' معلمة' : 'غير متاحة', sanN ? 'قراءة فقط من متصفحك' : 'افتحي سنابل في هذا المتصفح', 'var(--tiffany-d)')}
   </div>
-  <div class="card noprint" style="margin-top:16px"><div class="row"><b>بداية الخطة</b><input type="date" id="vs" value="${V.cfg.start}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>نهاية الفصل</b><input type="date" id="ve" value="${V.cfg.end}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><span class="sp"></span><button class="btn" id="addv">تسجيل زيارة منفّذة</button><button class="btn sec" onclick="window.print()">طباعة الخطة</button></div>
+  <div class="card noprint" style="margin-top:16px"><div class="row"><b>بداية الخطة</b><input type="date" id="vs" value="${V.cfg.start}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>نهاية الفصل</b><input type="date" id="ve" value="${V.cfg.end}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>أحضر من يوم</b><input type="date" id="vfr" value="${V.cfg.from || ''}" style="border:1px solid var(--line);border-radius:10px;padding:4px 8px"><b>عدد الحصص حتى نهاية أسبوعه</b><input type="number" min="0" id="vn1" value="${V.cfg.n1 || 0}" style="width:64px;border:1px solid var(--line);border-radius:10px;padding:4px 8px"><span class="sp"></span><button class="btn" id="addv">تسجيل زيارة منفّذة</button><button class="btn sec" onclick="window.print()">طباعة الخطة</button></div>
   <div style="font-size:12.5px;color:var(--muted);margin-top:8px">الأولوية حسب متوسط تحصيل المعلمة في جميع شعبها (الأقل أولاً): العاشر والحادي عشر من نتائج هذا العام في سنابل، والثاني عشر من نتائج طالبات المسار في الحادي عشر العام الماضي لعدم وجود اختبارات لهن بعد. التوزيع: معلمة من كل قسم أسبوعياً قدر الإمكان، وتتحدّث الخطة تلقائياً كلما سجّلتِ زيارة.</div></div>
   ${g12Card(V)}
   ${V.plan.map((L, i) => { const w0 = V.weeks[i];
-    return `<div class="card"><h2>الأسبوع ${i + 1} <span class="sub">${dmy(iso(w0))} – ${dmy(iso(new Date(w0.getTime() + 4 * 864e5)))} · ${L.length} زيارات</span></h2>
-      ${L.length ? `<div class="vw-days">${DAYS.map((dn, di) => { const per = Math.max(1, Math.ceil(L.length / 5)); const D = L.filter((t, j) => Math.min(4, Math.floor(j / per)) === di);
+    const DD = V.days[i] || [0, 1, 2, 3, 4], dOf = k => dmy(iso(new Date(w0.getTime() + k * 864e5)));
+    return `<div class="card"><h2>${DD.length < 5 ? 'هذا الأسبوع' : 'الأسبوع ' + (i + 1)} <span class="sub">${DD.length < 5 ? DD.map(k => DAYS[k] + ' ' + dOf(k)).join(' و') : dOf(0) + ' – ' + dOf(4)} · ${L.length} زيارات${DD.length < 5 ? ' — الأعلى أولوية' : ''}</span></h2>
+      ${L.length ? `<div class="vw-days" style="grid-template-columns:repeat(${DD.length},minmax(0,1fr))">${DD.map((dk, di) => { const dn = DAYS[dk] + ' ' + dOf(dk).replace(/\/\d{4}$/, ''); const per = Math.max(1, Math.ceil(L.length / DD.length)); const D = L.filter((t, j) => Math.min(DD.length - 1, Math.floor(j / per)) === di);
         return `<div class="vw-col"><div class="vw-dh">${dn}<span>${D.length || ''}</span></div>${D.map(t => { const c = VW_COL[depts.indexOf(t.dept) % VW_COL.length]; const m = t.mean;
           const pc = m == null ? ['#F1F1F3', '#777'] : m < 75 ? ['#FDE8EC', '#B4233A'] : m < 80 ? ['#FFF3D6', '#9A6A0A'] : ['#E6F5EE', '#1D7A4C'];
           return `<div class="vw-it" style="border-inline-start-color:${c}"><div class="vw-top"><b>${esc(t.name.split(/\s+/).filter((w, i, A) => i < 2 || i === A.length - 1).join(' '))}</b><span class="vw-pc" style="background:${pc[0]};color:${pc[1]}">${m == null ? '—' : m.toFixed(1) + '%'}</span></div>
@@ -498,8 +506,8 @@ function A_visits(el) {
       return `<div class="row" style="margin:6px 0"><span style="width:190px">${esc(d)}</span><div class="bar sp"><i style="width:${n ? k / n * 100 : 0}%"></i></div><span class="chip">${k}/${n}</span></div>`; }).join('')}</div>
     <div class="card"><h2>الزيارات المنفّذة</h2><div class="list">${V.done.sort((a, b) => (b.date || '').localeCompare(a.date || '')).map(r => `<div class="rec"><div class="dt">${r.date ? dm(r.date) : '—'}</div><div class="tx"><b>${esc(r.d.t)}</b> <small style="color:var(--muted)">${esc(r.dept)}${r.d.s ? ' · ' + esc(r.d.s) : ''}</small>${r.d.note ? `<div class="by">${esc(r.d.note)}</div>` : ''}</div><div class="ops"><button class="btn sm ghost" data-delv="${r.id}">حذف</button></div></div>`).join('') || '<div class="empty">لا توجد</div>'}</div></div>
   </div>`;
-  const saveCfg = () => { localStorage.setItem('mizan_vp_cfg', JSON.stringify({ start: $('#vs').value, end: $('#ve').value })); show(); };
-  $('#vs').onchange = saveCfg; $('#ve').onchange = saveCfg;
+  const saveCfg = () => { localStorage.setItem('mizan_vp_cfg', JSON.stringify({ start: $('#vs').value, end: $('#ve').value, from: $('#vfr').value, n1: +$('#vn1').value || 0 })); show(); };
+  ['#vs', '#ve', '#vfr', '#vn1'].forEach(q => $(q).onchange = saveCfg);
   const visitModal = (name) => {
     const m = document.createElement('div'); m.className = 'modal';
     m.innerHTML = `<div class="box"><h3>تسجيل زيارة منفّذة</h3><form class="form" id="vf" style="grid-template-columns:1fr">
