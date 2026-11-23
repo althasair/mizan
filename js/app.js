@@ -1,5 +1,15 @@
 /* الميزان — الواجهة */
 'use strict';
+/* معلمات خارج الهيئة طوال العام (إجازة): لا تظهر أعمالهن ولا أسماؤهن في الغياب — عرضاً فقط، دون حذف أي سجل من الجدول */
+const STAFF_GONE = ['وضحى الهاجري', 'لينا شقير'];
+function staffGone(L) {
+  const gone = n => STAFF_GONE.includes(String(n || '').trim());
+  return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(r => {
+    if (!r || !r.d || !['a1', 'a2', 'a3'].some(k => gone(r.d[k]))) return r;
+    const d = Object.assign({}, r.d); const A = ['a1', 'a2', 'a3'].map(k => d[k]).filter(x => x && !gone(x));
+    ['a1', 'a2', 'a3'].forEach((k, i) => d[k] = A[i] || ''); return Object.assign({}, r, { d });
+  });
+}
 
 let REF = null;
 const S = { token: null, user: null, periods: [], cal: [], pd: [], staff: [], coords: [], records: [], reports: [], dept: null, period: null, view: 'home', edit: null };
@@ -37,7 +47,7 @@ async function boot() {
   const j = await call('boot');
   S.bootAt = Date.now();
   S.sv = j.sv || 0; S.sab = j.sab || null;
-  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: j.records, reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
+  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: staffGone(j.records), reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
   S.dept = S.dept || (isAdmin() ? null : S.user.dept[0]);
@@ -414,7 +424,7 @@ async function C_report(el, deptArg) {
   const frozen = rp && rp.snap && repLocked(rp, p);
   /* مزامنة فورية: عند فتح التقرير (غير الموقّع) يُجلب آخر ما سجّلته المعلمات والمنسقة بصمت، ثم يُعاد بناء التقرير */
   if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 300000) {
-    S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: j.records, reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
+    S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: staffGone(j.records), reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
       if (el.isConnected) refresh(); }).catch(() => { S._repSync = 0; }); }
   const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
   let sig = '';

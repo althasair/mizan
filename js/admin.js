@@ -550,7 +550,7 @@ function A_subs(el) {
   </div>`;
   $('#syncInd', el).onclick = async e => {
     const b = e.target; b.disabled = true; b.textContent = 'جارٍ المزامنة…';
-    try { const j = await API.call('syncIndibat', {}); S.records = j.records; S.indibatAt = j.indibatAt; toast('تمت المزامنة مع انضباط'); show(); }
+    try { const j = await API.call('syncIndibat', {}); S.records = staffGone(j.records); S.indibatAt = j.indibatAt; toast('تمت المزامنة مع انضباط'); show(); }
     catch (err) { toast(err.message || 'تعذّرت المزامنة', 1); b.disabled = false; b.textContent = 'مزامنة الآن'; }
   };
 }
