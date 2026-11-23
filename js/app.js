@@ -52,7 +52,7 @@ async function boot() {
 
 /* ------------------------------------------------------------------ الدخول */
 /* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
-const SV_NEED = 7;
+const SV_NEED = 8;
 function sabHealthHTML() {
   if (!isAdmin()) return '';
   if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>
@@ -60,9 +60,9 @@ function sabHealthHTML() {
   const n = (S.sab && S.sab.n) || {}, err = S.sab && S.sab.err;
   const L = [['SAC', 'الأنشطة وتعلّم الأقران'], ['SFB', 'التغذية الراجعة'], ['SEN', 'الحصص الإثرائية'], ['SRF', 'التعزيز'], ['SAN', 'تحليل النتائج'], ['TPA', 'التواصل مع أولياء الأمور'], ['SRQ', 'قراءات النتائج المعتمدة']];
   const tot = L.reduce((a, [k]) => a + (n[k] || 0), 0);
-  return `<div class="card" style="border-right:4px solid ${err || !tot ? '#B3261E' : '#2E7D4F'}"><h2 style="margin:0 0 6px">🌾 الربط مع سبع سنابل ${err || !tot ? '<span style="color:#B3261E;font-size:13px">— متعطّل</span>' : '<span style="color:#2E7D4F;font-size:13px">— يعمل ✓</span>'}</h2>
+  return `<div class="card" style="border-right:4px solid ${!tot ? '#B3261E' : err ? '#946410' : '#2E7D4F'}"><h2 style="margin:0 0 6px">🌾 الربط مع سبع سنابل ${!tot ? '<span style="color:#B3261E;font-size:13px">— متعطّل</span>' : err ? '<span style="color:#946410;font-size:13px">— يعمل من آخر نسخة محفوظة</span>' : '<span style="color:#2E7D4F;font-size:13px">— يعمل ✓</span>'}</h2>
     <div style="display:flex;gap:8px;flex-wrap:wrap">${L.map(([k, t]) => `<span class="chip" style="background:${n[k] ? '#E4F3EA' : '#F4F4F6'}">${t}: <b>${n[k] || 0}</b></span>`).join('')}</div>
-    ${err ? `<div style="margin-top:8px;color:#B3261E;font-size:13px">سبب التعطّل: ${esc(err)}</div>` : ''}</div>`;
+    ${err ? `<div style="margin-top:8px;color:#B3261E;font-size:13px">ملاحظة: ${esc(err)}</div>` : ''}</div>`;
 }
 
 function renderLogin() {

@@ -568,25 +568,33 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
-const SERVER_V = 7;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+const SERVER_V = 8;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
 function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
-function sabPA_() {
-  const hit = cacheGetBig_('sabPA5'); if (hit) return hit;
-  let out = [];
-  try {
-    const tok = sabAccess_(); if (!tok) { sabErr_('تعذّر الحصول على مفتاح الدخول إلى سبع سنابل (FB_SA)'); return []; }
-    const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
-      method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true,
-      payload: JSON.stringify({ structuredQuery: { from: [{ collectionId: 'entries' }], where: { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [{ integerValue: '5' }, { integerValue: '1' }, { integerValue: '3' }, { integerValue: '6' }, { integerValue: '4' }, { integerValue: '7' }] } } } } } }) });
-    const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
-    const T = rows_(SH.teachers).rows.filter(x => x[1]);
-    const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
-    const short = n => { const k = normAr_(n); const t = T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k); return t ? String(t[1]) : String(n); };
-    // القسم يُؤخذ من قائمة معلمات الميزان حسب اسم المعلمة، لا من اسم القسم في سبع سنابل (قد يختلف: «الدراسات الاجتماعية» مقابل «العلوم الاجتماعية»)
-    const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
-    const dOf = (n, dp) => { const t = tRow(n); return t ? String(t[0]) : (depts[normAr_(dp)] || dp); };
-    if (r.getResponseCode() !== 200) { sabErr_('سبع سنابل ردّت بالرمز ' + r.getResponseCode() + ': ' + r.getContentText().slice(0, 160)); return []; }
-    JSON.parse(r.getContentText()).forEach(x => {
+/* إجراءات المعلمات في سبع سنابل ← الميزان.
+   لتخفيف القراءات (حد Firebase المجاني 50 ألف قراءة يوميًا): تُحفظ نسخة مما جُلب في ورقة «مخزن سبع سنابل»،
+   ثم لا يُقرأ من سبع سنابل إلا الجديد (ما أُضيف بعد آخر جلب)، وقراءة كاملة مرة واحدة يوميًا فقط لالتقاط التعديل والحذف.
+   وعند تعطّل سبع سنابل تُعرض النسخة المحفوظة فلا تختفي الإجراءات من التقارير. */
+const SAB_STORE = 'مخزن سبع سنابل';
+function sabStoreRead_() { try { const sh = ss_().getSheetByName(SAB_STORE); if (!sh || sh.getLastRow() < 2) return null; const v = sh.getRange(2, 1, sh.getLastRow() - 1, 2).getValues(); const out = []; v.forEach(r => { if (r[1]) try { out.push(JSON.parse(r[1])); } catch (e) {} }); return out; } catch (e) { return null; } }
+function sabStoreWrite_(arr) { try { let sh = ss_().getSheetByName(SAB_STORE); if (!sh) { sh = ss_().insertSheet(SAB_STORE); sh.hideSheet(); }
+  sh.clearContents(); const rows = [['id', 'json']].concat(arr.map(x => [x.id, JSON.stringify(x)])); sh.getRange(1, 1, rows.length, 2).setValues(rows); } catch (e) { sabErr_('تعذّر حفظ نسخة سبع سنابل: ' + e.message); } }
+function sabQuery_(tok, where) {
+  const q = { from: [{ collectionId: 'entries' }] }; if (where) q.where = where;
+  const r = UrlFetchApp.fetch('https://firestore.googleapis.com/v1/projects/sab3-sanabil/databases/(default)/documents:runQuery', {
+    method: 'post', contentType: 'application/json', headers: { Authorization: 'Bearer ' + tok }, muteHttpExceptions: true, payload: JSON.stringify({ structuredQuery: q }) });
+  if (r.getResponseCode() !== 200) { const code = r.getResponseCode(); sabErr_(code === 429 ? 'نفدت حصة القراءة اليومية المجانية في قاعدة سبع سنابل (Firebase)، وتتجدد تلقائيًا الساعة 11 صباحًا. تُعرض الآن آخر نسخة محفوظة.' : 'سبع سنابل ردّت بالرمز ' + code + ': ' + r.getContentText().slice(0, 160)); return null; }
+  return JSON.parse(r.getContentText()).filter(x => x.document);
+}
+function sabConv_(docs) {
+  const out = [];
+  const val = v => v == null ? '' : v.stringValue != null ? v.stringValue : v.integerValue != null ? Number(v.integerValue) : v.doubleValue != null ? v.doubleValue : v.booleanValue != null ? v.booleanValue : v.arrayValue ? (v.arrayValue.values || []).map(val) : '';
+  const T = rows_(SH.teachers).rows.filter(x => x[1]);
+  const depts = {}; T.forEach(x => depts[normAr_(x[0])] = x[0]);
+  const short = n => { const k = normAr_(n); const t = T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k); return t ? String(t[1]) : String(n); };
+  const tRow = n => { const k = normAr_(n); return T.find(x => normAr_(x[2]) === k || normAr_(x[1]) === k) || T.find(x => k && normAr_(x[2]).indexOf(k) === 0); };
+  const dOf = (n, dp) => { const t = tRow(n); return t ? String(t[0]) : (depts[normAr_(dp)] || dp); };
+  docs = docs.filter(x => [1, 3, 4, 5, 6, 7].indexOf(Number(val((x.document.fields || {}).type))) >= 0);
+  docs.forEach(x => {
       if (!x.document) return; const f = x.document.fields || {}; const g = k => val(f[k]);
       const det = String(g('detail')).split(' — '); const stu = g('students') || [];
       const topic = (det.find(s => s.indexOf('السبب: ') === 0) || '').replace('السبب: ', ''), res = (det.find(s => s.indexOf('النتيجة: ') === 0) || '').replace('النتيجة: ', '');
@@ -613,9 +621,28 @@ function sabPA_() {
       out.push({ id: 'sab_' + x.document.name.split('/').pop(), dept: dOf(g('teacher'), g('dept')), item: 'TPA', date: isoD_(g('date')), sum: 'من سبع سنابل',
         d: { t: short(g('teacher')), s: g('section'), n: g('whole') ? 1 : Math.max(1, stu.length), way: det[0] || '', topic: topic, res: res, stu: stu, src: 'sab3' }, by: 'سبع سنابل', at: String(g('at')), up: '' });
     });
-  } catch (e) { sabErr_('خطأ: ' + e.message); return []; }
-  try { CacheService.getScriptCache().remove('sabErr'); } catch (e) {}
-  cachePutBig_('sabPA5', out, 1800);
+  return out;
+}
+function sabPA_() {
+  const hit = cacheGetBig_('sabPA6'); if (hit) return hit;
+  const P = PropertiesService.getScriptProperties(), today = Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd');
+  let store = sabStoreRead_(), out = store || [];
+  try {
+    const tok = sabAccess_(); if (!tok) { sabErr_('تعذّر الحصول على مفتاح الدخول إلى سبع سنابل (FB_SA)'); return out; }
+    const lastAt = P.getProperty('sabAt') || '', full = !store || P.getProperty('sabFull') !== today;
+    const TYPES = { fieldFilter: { field: { fieldPath: 'type' }, op: 'IN', value: { arrayValue: { values: [1, 3, 4, 5, 6, 7].map(n => ({ integerValue: String(n) })) } } } };
+    const docs = sabQuery_(tok, full || !lastAt ? TYPES : { fieldFilter: { field: { fieldPath: 'at' }, op: 'GREATER_THAN', value: { stringValue: lastAt } } });
+    if (docs == null) return out;   // تعطّل: تُعرض النسخة المحفوظة
+    const maxAt = docs.reduce((m, x) => { const a = ((x.document.fields || {}).at || {}).stringValue || ''; return a > m ? a : m; }, lastAt);
+    const fresh = sabConv_(docs);
+    if (full) out = fresh;
+    else if (fresh.length) { const ids = {}; fresh.forEach(x => ids[x.id] = 1); out = out.filter(x => !ids[x.id]).concat(fresh); }
+    if (full || fresh.length) sabStoreWrite_(out);
+    if (full) P.setProperty('sabFull', today);
+    if (maxAt) P.setProperty('sabAt', maxAt);
+    try { CacheService.getScriptCache().remove('sabErr'); } catch (e) {}
+  } catch (e) { sabErr_('خطأ: ' + e.message); return out; }
+  cachePutBig_('sabPA6', out, 1800);
   return out;
 }
 
@@ -806,7 +833,7 @@ function route_(req) {
     case 'upload': return upload_(u, req);
     case 'setStudents': return setStudents_(u, req);
     case 'myStudents': return { students: myStudents_(u) };
-    case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA5N', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
+    case 'sabRefresh': CacheService.getScriptCache().removeAll(['sabPA6N', 'sabRQ1', 'sabAdmN']); return { done: 1 };   // زر «تحديث ومزامنة»: يجلب إجراءات سبع سنابل فورًا
     case 'file': return getFile_(u, req);
     case 'tr': { const L = (req.list || []).slice(0, 12).map(x => String(x || '').slice(0, 1500)); return { list: L.map(x => { if (!x.trim()) return ''; try { return LanguageApp.translate(x, req.from || 'en', req.to || 'ar'); } catch (e) { return ''; } }) }; }   // ترجمة توصيات منسقة اللغة الإنجليزية
     case 'planUp': return planUp_(u, req);
