@@ -155,6 +155,13 @@ function buildReport(ctx) {
     const L = OV.filter(r => SEC.OV.cat(d(r)) === c);
     T[k] = L.length ? `${lab} (${L.length}) من معلمات القسم: ` + L.map(r => SEC.OV.tx(d(r))).join('؛ ') + '.' : 'لا توجد زيارات مسجلة خلال الفترة.';
   });
+  /* زيارة الموجه في فترة سابقة: تظهر في الفترة التي نفّذت فيها المنسقة إجراء المتابعة وقاست أثره، أو ما دامت متابعتها معلّقة */
+  { const y0 = ((S.periods || [])[0] || {}).from || '2026-08-01', seen = new Set();
+    const prevSup = ctx.recs.filter(r => r.dept === dept && r.item === 'OV' && r.d && SEC.OV.cat(d(r)) === 'sup' && String(r.date).slice(0, 10) < P.from && String(r.date).slice(0, 10) >= y0
+      && (r.d.fud ? inP(String(r.d.fud).slice(0, 10), P) : true))
+      .sort((a, b) => String(a.date).localeCompare(String(b.date))).filter(r => { const k = [r.d.t, String(r.date).slice(0, 10)].join('|'); return seen.has(k) ? false : seen.add(k); });
+    if (prevSup.length) { const tx = 'وفي متابعة توصيات زيارات الموجه التربوي السابقة: ' + prevSup.map(r => SEC.OV.tx(d(r)) + (!r.d.mech && !r.d.fud ? ' (لم تُسجَّل متابعة المنسقة بعد)' : '')).join('؛ ') + '.';
+      T.ov_sup = /^لا توجد/.test(T.ov_sup) ? tx.replace(/^وفي /, 'في ') : T.ov_sup + ' ' + tx; } }
   const PV = Rp('PV'); const pvMet = PV.filter(r => d(r).yes === 'نعم').length;
   T.ov_peer = PV.length ? `نفّذت معلمات القسم (${PV.length}) من الزيارات التبادلية` + (PV.some(r => d(r).yes) ? `، لبّى (${pvMet}) منها احتياج المعلمة` : '') + ': ' + PV.map(r => SEC.PV.tx(d(r))).join('؛ ') + '.' : 'لم تُسجَّل زيارات تبادلية خلال الفترة.';
 
@@ -295,13 +302,17 @@ function buildReport(ctx) {
      و«خلال الفصل الدراسي» في فترات فصله، والبرنامج أو المشروع الممتد (له تاريخ انتهاء) في كل فترة يتقاطع معها */
   const yKey = x => { const y = +String(x).slice(0, 4), m = +String(x).slice(5, 7); return m >= 8 ? y : y - 1; };
   const semKey = x => { const m = +String(x).slice(5, 7); return yKey(x) + '-' + (m >= 8 || m === 1 ? 1 : 2); };
+  /* q1: نسخة المعلمة من سجل للمنسقة (يُعدّ هناك فلا يُكرَّر). إن لم يعد سجل المنسقة موجوداً بعد الربع الأول، يُوثَّق من سجل المعلمة */
+  const q1End = ((S.periods || [])[0] || {}).to || '2026-10-11';
+  const recIds = new Set(ctx.recs.map(x => String(x.id)));
+  const q1Dup = r => { if (!(r.d && r.d.q1)) return false; const m = String(r.d.q1).match(/\(([^)]+)\)/); return String(r.date || '').slice(0, 10) <= q1End || !m || recIds.has(m[1]); };
   const tIn = r => { const dt = String(r.date || '').slice(0, 10); if (!dt) return false; const d0 = r.d || {};
     if (r.item === 'TAS' && d0.scope === 'طوال العام') return dt <= P.to && yKey(dt) === yKey(P.to);
     if (r.item === 'TAS' && d0.scope === 'خلال الفصل الدراسي') return dt <= P.to && (semKey(dt) === semKey(P.to) || semKey(dt) === semKey(P.from));
     if (r.item === 'TA' && d0.to && d0.to > dt) return dt <= P.to && String(d0.to).slice(0, 10) >= P.from;
     return inP(dt, P); };
   {
-    const TT = it => ctx.recs.filter(r => r.item === it && tIn(r) && r.d && !r.d.q1); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
+    const TT = it => ctx.recs.filter(r => r.item === it && tIn(r) && r.d && !q1Dup(r)); // q1 = منقول من تقرير المنسقة، لا يُعدّ مرتين
     const mineD = it => TT(it).filter(r => r.dept === dept || (extraT.includes(r.d.t)));
     const lst = a => (Array.isArray(a) ? a : [a]).filter(Boolean).map(x => String(x).replace(/[.،؛\s]+$/, ''));
     const add = (k, txt) => { if (!txt) return; if (T[k] && typeof T[k] === 'object') { T[k].pre = (T[k].pre ? T[k].pre + ' ' : '') + txt; return; } T[k] = /^لم|^لا توجد/.test(T[k] || '') ? txt.replace(/^و(?=(سجّل|حضر|شارك|عزّز|نفّذ|قدّم|تُعدّ|في |من ))/, '') : (T[k] ? T[k] + ' ' + txt : txt); };
@@ -402,10 +413,19 @@ function buildReport(ctx) {
       T.ac_clines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.ptn ? ` باستضافة ${r.d.ptn}` : '') + (r.d.tg ? ` (الفئة المستهدفة: ${r.d.tg})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
     if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
+    const hdr = (k, L, tx) => { if (L && L.length && /^لم /.test(T[k] || '')) T[k] = tx(L.reduce((a, x) => a + (+(String(x.tx).match(/\((\d+)\)/) || [0, 1])[1]), 0)); };
+    hdr('ac_int', T.ac_tlines, n => `نفّذت معلمات القسم (${n}) من الأنشطة والمبادرات الداخلية، وفق التفصيل الآتي:`);
+    hdr('ac_ext', T.ac_xlines, n => `شاركت معلمات القسم وطالباتهن في (${n}) من الأنشطة خارج المدرسة، وفق التفصيل الآتي:`);
+    hdr('ac_cp', T.ac_clines, n => `استضافت معلمات القسم (${n}) من الجهات الخارجية داخل المدرسة ضمن الشراكة المجتمعية، وفق التفصيل الآتي:`);
+    /* الأنشطة وتعلّم الأقران المسجّلة في سبع سنابل (تبقى أيضاً في إجراءات رفع التحصيل) */
+    { const SC = ctx.recs.filter(r => r.dept === dept && r.item === 'SAC' && r.d && inP(r.date, P));
+      if (SC.length) { const by = {}; SC.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+        T.ac_slines = Object.entries(by).sort((a, b) => b[1].length - a[1].length).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${nz(String(r.d.det || 'نشاط').replace(/\s*—\s*/, ': '))}` + (r.d.s ? ` (${r.d.s}` + (+r.d.n ? `، ${r.d.n} طالبات` : '') + ')' : '') + dateTxt(r.date)).join('؛ ') + '.' }));
+        if (/^لم /.test(T.ac_int || '')) T.ac_int = `نفّذت معلمات القسم (${SC.length}) من الأنشطة الصفية وتعلّم الأقران المسجّلة في سبع سنابل، وفق التفصيل الآتي:`; } }
   }
   /* ما سجّلته المعلمات بأنفسهن يصب في الأولويات */
-  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !r.d.q1 && tIn(r) && (r.dept === dept || extraT.includes(r.d.t)));
-  const tTA = TQ('TA').filter(r => !r.d.q1), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA'), tEX = TQ('TEX');
+  const TQ = it => ctx.recs.filter(r => r.item === it && r.d && !q1Dup(r) && tIn(r) && (r.dept === dept || extraT.includes(r.d.t)));
+  const tTA = TQ('TA'), tPV = TQ('TPV'), tWS = TQ('TWS'), tPA = TQ('TPA'), tEX = TQ('TEX');
   const tStu = new Set(); tPA.forEach(r => (r.d.stu && r.d.stu.length ? r.d.stu : [r.id]).forEach(x => tStu.add(x)));
   T.prio = [1, 2, 3, 4].map(p => {
     const parts = [];
@@ -451,7 +471,7 @@ function buildReport(ctx) {
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
       ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), ...(T.v_spec || []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],
-    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : [])]], ['خارجية', [T.ac_ext, ...(T.ac_xlines ? [{ lines: T.ac_xlines, head: 'ما سجّلته المعلمات:' }] : [])]], ['الشراكة المجتمعية (استضافة جهات خارجية)', [T.ac_cp, ...(T.ac_clines ? [{ lines: T.ac_clines, head: 'ما سجّلته المعلمات:' }] : [])]]]],
+    ['الأنشطة المدرسية', [['داخلية', [T.ac_int, ...(T.ac_tlines ? [{ lines: T.ac_tlines, head: 'ما سجّلته المعلمات (مرتّبات حسب عدد الأعمال):' }] : []), ...(T.ac_slines ? [{ lines: T.ac_slines, head: 'الأنشطة الصفية وتعلّم الأقران (من سبع سنابل):' }] : [])]], ['خارجية', [T.ac_ext, ...(T.ac_xlines ? [{ lines: T.ac_xlines, head: 'ما سجّلته المعلمات:' }] : [])]], ['الشراكة المجتمعية (استضافة جهات خارجية)', [T.ac_cp, ...(T.ac_clines ? [{ lines: T.ac_clines, head: 'ما سجّلته المعلمات:' }] : [])]]]],
     ['الشراكة مع أولياء الأمور', [['التواصل الفردي ومتابعة الطالبات', [T.pa_ind]], ['المجالس والفعاليات والمبادرات وشهادات الشكر', [T.pa_ev, ...(T.pa_tlines ? [{ lines: T.pa_tlines, head: 'تفصيل المعلمات والمنسقة:' }, T.pa_cnt] : [])]]]],
     ['تفعيل مركز مصادر التعلم', [[null, [T.lrc]]]],
     ['تفعيل التعليم الإلكتروني', [[null, [T.elearn]]]],
