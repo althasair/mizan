@@ -527,6 +527,9 @@ function A_visits(el) {
 
 
 /* ------------------------------------------------------------------ الاحتياط والتبديل (من منصة انضباط) */
+const SB_COL = ['#7A1C2E', '#1F4E9E', '#16806A', '#B0661A', '#5B3A8E', '#0E6E86', '#9E1B5A', '#3E6B1F', '#8A5A12', '#2F3E66', '#6B4E2E', '#22577A'];
+function sbShort(n) { const w = String(n || '').trim().split(/\s+/); return w.length > 3 ? [w[0], w[1], w[w.length - 1]].join(' ') : w.join(' '); }
+(function () { const st = document.createElement('style'); st.textContent = '.sb-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}.sb-box{border-radius:14px;overflow:hidden;background:#fff;border:1px solid #EEE6DA;box-shadow:0 2px 6px #0000000a}.sb-h{display:flex;align-items:center;gap:6px;color:#fff;padding:7px 11px}.sb-h b{flex:1;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sb-un{background:#fff;color:#C8313F;border-radius:20px;padding:0 8px;font-size:11.5px;font-weight:bold;white-space:nowrap}.sb-ok{background:#ffffff33;border-radius:20px;padding:0 7px;font-size:12px}.sb-st{display:grid;grid-template-columns:repeat(3,1fr);text-align:center;padding:8px 4px 2px}.sb-st i{display:block;font-style:normal;font-size:20px;font-weight:bold;color:#2A2A33;line-height:1.2}.sb-st small{font-size:10.5px;color:#888}.sb-cv{padding:6px 11px 10px}.sb-bar{height:7px;border-radius:6px;background:#F0ECE6;overflow:hidden}.sb-bar span{display:block;height:100%;border-radius:6px}.sb-cv small{font-size:11px;font-weight:bold}.sb-row{display:flex;align-items:center;gap:10px;padding:6px 8px;border-radius:10px;background:#FAF8F5;margin-bottom:5px}.sb-nm{flex:0 0 42%;min-width:0}.sb-nm b{display:block;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.sb-nm small{font-size:11px;color:#888;display:flex;align-items:center;gap:5px;white-space:nowrap;overflow:hidden}.sb-nm small i,.sb-lg i{width:8px;height:8px;border-radius:50%;display:inline-block;flex:0 0 8px}.sb-mb{flex:1;display:flex;height:9px;border-radius:6px;background:#EEE9E2;overflow:hidden}.sb-mb span{display:block;height:100%}.sb-nums{font-size:12px;color:#888;white-space:nowrap;display:flex;gap:4px;align-items:center}.sb-nums b{background:#7A1C2E;color:#fff;border-radius:20px;padding:0 8px;margin-inline-start:4px}.sb-dots{flex:1;display:flex;flex-wrap:wrap;gap:3px}.sb-dots span{width:11px;height:11px;border-radius:3px;background:#F0C7CD}.sb-dots span.on{background:#1D9A5B}.sb-pill{font-size:11.5px;font-weight:bold;border-radius:20px;padding:1px 9px;white-space:nowrap}.sb-pill.ok{background:#E6F5EE;color:#1D7A4C}.sb-pill.bad{background:#FDE8EC;color:#B4233A}.sb-lg{font-size:11px;color:#888;display:flex;gap:6px;align-items:center;margin-top:6px}'; document.head.appendChild(st); })();
 function A_subs(el) {
   setTitle('الاحتياط والتبديل');
   const p = P(); const inPer = r => inP(r.date, p);
@@ -541,6 +544,7 @@ function A_subs(el) {
   const tl = Object.values(tch).sort((a, b) => (b.ih + b.tb) - (a.ih + a.tb));
   const ab = {}; A.forEach(r => { const o = ab[r.d.t] = ab[r.d.t] || { t: r.d.t, d: r.dept, n: 0, cov: 0 }; o.n++; if (r.d.sub) o.cov++; });
   const al = Object.values(ab).sort((a, b) => b.n - a.n);
+  const sbCol = d => { const i = byD.findIndex(x => x.d === d); return SB_COL[(i >= 0 ? i : byD.length + depts.indexOf(d)) % SB_COL.length]; };
   el.innerHTML = `
   <div class="card"><h2>المزامنة مع منصة انضباط <span class="sub">${esc(p.name)} · من ${dmy(p.from)} إلى ${dmy(p.to)}</span></h2>
     <div class="row" style="gap:12px;flex-wrap:wrap"><span>آخر مزامنة: <b>${esc(S.indibatAt || 'لم تتم بعد')}</b></span>
@@ -552,15 +556,21 @@ function A_subs(el) {
     ${kpi('تبديل', tb, 'تعوّضها المعلمة لاحقاً', 'var(--navy)')}
     ${kpi('حصص لم تُغطَّ', unc, `من أصل ${A.length} حصة غياب`, unc ? '#A33' : 'var(--gold)')}
   </div>
-  <div class="card" style="margin-top:16px"><h2>حسب القسم</h2><div class="tbl"><table class="t">
-    <tr><th>القسم</th><th>احتياط غطّته معلماته</th><th>تبديل</th><th>حصص غياب معلماته</th><th>غُطّي منها</th><th>لم يُغطَّ</th></tr>
-    ${byD.length ? byD.map(x => `<tr><td><b>${esc(x.d)}</b></td><td>${x.ih}</td><td>${x.tb}</td><td>${x.ab}</td><td>${x.cov}</td><td>${x.ab - x.cov ? `<span class="chip bad">${x.ab - x.cov}</span>` : '0'}</td></tr>`).join('') : '<tr><td colspan="6" style="text-align:center;color:var(--muted)">لا توجد بيانات في هذه الفترة.</td></tr>'}
-  </table></div></div>
+  <div class="card" style="margin-top:16px"><h2>حسب القسم <span class="sub">الاحتياط والتبديل الذي غطّته معلمات القسم، وتغطية حصص غياب معلماته</span></h2>
+    ${byD.length ? `<div class="sb-grid">${byD.map((x, i) => { const c = SB_COL[i % SB_COL.length], un = x.ab - x.cov, pc = x.ab ? Math.round(x.cov / x.ab * 100) : null;
+      const bc = pc == null ? '#C9C9CE' : pc >= 90 ? '#1D9A5B' : pc >= 70 ? '#E0A100' : '#C8313F';
+      return `<div class="sb-box"><div class="sb-h" style="background:${c}"><b>${esc(x.d)}</b>${un ? `<span class="sb-un">لم يُغطَّ ${un}</span>` : '<span class="sb-ok">✓</span>'}</div>
+        <div class="sb-st"><div><i>${x.ih}</i><small>احتياط غطّته</small></div><div><i>${x.tb}</i><small>تبديل</small></div><div><i>${x.ab}</i><small>حصص غياب</small></div></div>
+        <div class="sb-cv"><div class="sb-bar"><span style="width:${pc || 0}%;background:${bc}"></span></div><small style="color:${bc}">${pc == null ? 'لا غياب' : 'غُطّي ' + x.cov + ' من ' + x.ab + ' (' + pc + '%)'}</small></div></div>`; }).join('')}</div>` : '<div class="empty">لا توجد بيانات في هذه الفترة.</div>'}</div>
   <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>المعلمات الأكثر تغطية</h2><div class="tbl"><table class="t"><tr><th>المعلمة</th><th>القسم</th><th>احتياط</th><th>تبديل</th><th>المجموع</th></tr>
-      ${tl.length ? tl.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td><td>${x.ih}</td><td>${x.tb}</td><td><b>${x.ih + x.tb}</b></td></tr>`).join('') : '<tr><td colspan="5" style="text-align:center;color:var(--muted)">—</td></tr>'}</table></div></div>
-    <div class="card"><h2>حصص غياب المعلمات</h2><div class="tbl"><table class="t"><tr><th>المعلمة</th><th>القسم</th><th>الحصص</th><th>غُطّيت</th></tr>
-      ${al.length ? al.map(x => `<tr><td>${esc(x.t)}</td><td>${esc(x.d)}</td><td>${x.n}</td><td>${x.cov === x.n ? x.cov : `<span class="chip bad">${x.cov}</span>`}</td></tr>`).join('') : '<tr><td colspan="4" style="text-align:center;color:var(--muted)">—</td></tr>'}</table></div></div>
+    <div class="card"><h2>المعلمات الأكثر تغطية</h2>${tl.length ? (() => { const mx = Math.max(...tl.map(x => x.ih + x.tb)); return tl.map(x => { const c = sbCol(x.d);
+      return `<div class="sb-row"><div class="sb-nm"><b>${esc(sbShort(x.t))}</b><small><i style="background:${c}"></i>${esc(x.d)}</small></div>
+        <div class="sb-mb"><span style="width:${x.ih / mx * 100}%;background:#16806A" title="احتياط ${x.ih}"></span><span style="width:${x.tb / mx * 100}%;background:#1F4E9E" title="تبديل ${x.tb}"></span></div>
+        <div class="sb-nums"><span title="احتياط">${x.ih}</span>·<span title="تبديل">${x.tb}</span><b>${x.ih + x.tb}</b></div></div>`; }).join(''); })() + '<div class="sb-lg"><i style="background:#16806A"></i>احتياط <i style="background:#1F4E9E"></i>تبديل</div>' : '<div class="empty">—</div>'}</div>
+    <div class="card"><h2>حصص غياب المعلمات</h2>${al.length ? al.map(x => { const c = sbCol(x.d), ok = x.cov === x.n;
+      return `<div class="sb-row"><div class="sb-nm"><b>${esc(sbShort(x.t))}</b><small><i style="background:${c}"></i>${esc(x.d)}</small></div>
+        <div class="sb-dots">${Array.from({ length: x.n }, (v, k) => `<span class="${k < x.cov ? 'on' : ''}"></span>`).join('')}</div>
+        <span class="sb-pill ${ok ? 'ok' : 'bad'}">${ok ? 'غُطّيت ' + x.n : 'غُطّي ' + x.cov + ' من ' + x.n}</span></div>`; }).join('') + '<div class="sb-lg"><i style="background:#1D9A5B"></i>حصة غُطّيت <i style="background:#F0C7CD"></i>لم تُغطَّ</div>' : '<div class="empty">—</div>'}</div>
   </div>`;
   $('#syncInd', el).onclick = async e => {
     const b = e.target; b.disabled = true; b.textContent = 'جارٍ المزامنة…';
