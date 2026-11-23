@@ -47,9 +47,16 @@ function trData(name, rng) {
     ex: S.records.filter(r => r.item === 'EX' && r.d && (r.d.t === name || r.d.t === REF.ALL_MEMBERS) && inM(r)),
     sfb: S.records.filter(r => ['SFB', 'SAN', 'SAC'].includes(r.item) && r.d && r.d.t === name && inM(r)),
   };
+  /* أعمال المعلمة التي سجّلتها المنسقة باسمها (منفّذة نشاط، أو مقدّمة ورشة للقسم) — تُضاف ما لم تكن المعلمة سجّلتها بنفسها */
+  const nzT = x => String(x || '').replace(/\s+/g, ' ').trim();
+  const myTA = new Set(D.ta.map(r => nzT(r.d.name))), myWS = new Set(D.ws.map(r => nzT(r.d.title)));
+  D.acC = S.records.filter(r => r.item === 'AC' && r.d && [r.d.e1, r.d.e2, r.d.e3].includes(name) && inM(r) && !myTA.has(nzT(r.d.name)));
+  D.wsC = S.records.filter(r => r.item === 'WS' && r.d && String(r.d.pres || '').includes(name) && /^تمت/.test(r.d.g || '') && inM(r) && !myWS.has(nzT(r.d.c || r.d.b)));
+  D.lr = own('TLR');
+  D.sab = D.sen.length + D.rf.length + D.sfb.length;
   D.paa = D.ta.filter(isPaAct);   // تُحسب مع الأنشطة، وتظهر أيضاً في الشراكة مع أولياء الأمور
-  D.ini = D.ta.filter(r => r.d.kind === 'مبادرة').length + D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
-  D.work = D.ta.length + D.pv.length + D.tex.length + D.ws.length + D.pa.length + D.ach.length + D.tas.length;
+  D.ini = D.ta.filter(r => r.d.kind === 'مبادرة').length + D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length + D.wsC.length;
+  D.work = D.ta.length + D.pv.length + D.tex.length + D.ws.length + D.pa.length + D.ach.length + D.tas.length + D.acC.length + D.wsC.length + D.lr.length + Math.ceil(D.sab / 3);
   D.cls = D.ini >= 1 && D.work >= 5 ? 'مبادرة' : D.work >= 3 ? 'مجتهدة' : 'ضعيف';
   return D;
 }
@@ -68,11 +75,15 @@ function trStd(D) {
 function trBody(name, rng, D) {
   const dt = r => r.date ? ` (${dm(r.date)})` : '';
   const sec = (h, lines, empty) => `<tr><td class="k">${h}</td><td class="j">${lines.length ? lines.map(x => `<div>• ${esc(x)}</div>`).join('') : `<span style="color:#888">${empty}</span>`}</td></tr>`;
-  const taL = D.ta.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}»${dt(r)}` + (trList(r.d.ps).length ? ` — يخدم: ${trList(r.d.ps).map(p => p.replace(/^الأولوية (\d): .*/, 'الأولوية $1')).join('، ')}` : ''));
+  const taL0 = D.ta.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}»${dt(r)}` + (trList(r.d.ps).length ? ` — يخدم: ${trList(r.d.ps).map(p => p.replace(/^الأولوية (\d): .*/, 'الأولوية $1')).join('، ')}` : ''));
   const pvL = D.pv.map(r => `زارت أ. ${r.d.v}${dt(r)}` + (trList(r.d.saw).length ? `، واستفادت: ${trList(r.d.saw).join('، ')}` : '') + (trList(r.d.apply).length ? `، وستطبّق: ${trList(r.d.apply).join('، ')}` : ''))
     .concat(D.host.map(r => `استضافت زيارة من أ. ${r.d.t}${dt(r)}، توظيفاً لجوانب تميّزها`))
     .concat(D.tex.map(r => `${trList(r.d.role).join(' و') || 'حاضرة'} في ${r.d.kind || 'فعالية'} «${String(r.d.name || '').trim()}»${r.d.odept ? ' لقسم ' + r.d.odept : ''}${dt(r)}` + (trList(r.d.gain).length ? `، واستفادت: ${trList(r.d.gain).join('، ')}` : '') + (r.d.idea ? `، وفكرة للتطبيق: ${r.d.idea}` : '')));
-  const wsL = D.ws.map(r => `${r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت لزميلاتها' : r.d.role === 'حضرتُ ورشة خارجية' ? (pdKind(r.d) === 'self' ? 'تنمية ذاتية' : 'حضرت ورشة خارجية رسمية') : 'حضرت ورشة داخلية'}: «${String(r.d.title || '').trim()}»${dt(r)}`);
+  const taL = taL0.concat(D.acC.map(r => `نفّذت ${r.d.ty || 'نشاطاً'} «${String(r.d.name || '').trim()}»${dt(r)} (من سجلات المنسقة)`));
+  const wsL0 = D.ws.map(r => `${r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت لزميلاتها' : r.d.role === 'حضرتُ ورشة خارجية' ? (pdKind(r.d) === 'self' ? 'تنمية ذاتية' : 'حضرت ورشة خارجية رسمية') : 'حضرت ورشة داخلية'}: «${String(r.d.title || '').trim()}»${dt(r)}`);
+  const wsL = wsL0.concat(D.wsC.map(r => `قدّمت لزميلاتها «${String(r.d.c || r.d.b || '').trim()}»${dt(r)} (من سجلات المنسقة)`));
+  const lrL = D.lr.map(r => `${r.d.k || 'مصادر التعلم'}${r.d.bk ? ': ' + r.d.bk : r.d.tool ? ': ' + trList(r.d.tool).join('، ') : ''}${r.d.use ? ' — ' + r.d.use : ''}${r.d.s ? ' (' + r.d.s + ')' : ''}${dt(r)}`);
+  const sabL = D.sab ? [`سجّلت في سبع سنابل: ${D.sen.length} حصة إثرائية، و${D.sfb.length} من التغذية الراجعة وتحليل النتائج والأنشطة، و${D.rf.length} من التعزيز والشهادات`] : [];
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const paL = (D.pa.length ? [`تواصلت مع أولياء أمور (${nPA}) من الطالبات، ومن أغراض التواصل: ${[...new Set(D.pa.map(r => r.d.topic || r.d.why).filter(Boolean))].join('، ') || 'متابعة أكاديمية'}`] : [])
     .concat(D.paa.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}» للشراكة مع أولياء الأمور${dt(r)}` + (r.d.tg ? ` — المستهدف: ${r.d.tg}` : '')));
@@ -99,7 +110,8 @@ function trBody(name, rng, D) {
     ${sec('التواصل والشراكة مع أولياء الأمور', paL, 'لم يُوثَّق خلال الفترة.')}
     ${sec('الإنجازات والمشاركات', achL, 'لم يُوثَّق خلال الفترة.')}
     ${sec('التكليفات والأعباء الوظيفية', tasL, 'لم تُسجَّل تكليفات خلال الفترة.')}
-    ${senL.length ? sec('من سبع سنابل', senL, '') : ''}
+    ${sec('مصادر التعلم والتعليم الإلكتروني', lrL, 'لم يُوثَّق خلال الفترة.')}
+    ${sabL.length ? sec('من سبع سنابل', sabL, '') : ''}
     ${supL.length ? sec('المتابعة الإشرافية', supL, '') : ''}
     ${showDs ? sec('الانضباط الوظيفي', D.ds.length ? [`غياب: ${dsAbs} · استئذان: ${dsPerm}`] : [], 'لم يُسجَّل الانضباط لهذه الفترة.') : ''}
   </table>
@@ -164,7 +176,7 @@ function trPage(el, fixed) {
   if ($('#trW')) $('#trW').onchange = e => { S.trw = e.target.value; show(); };
   if ($('#trPp')) $('#trPp').onchange = e => { S.trp = e.target.value; show(); };
   if ($('#trS')) $('#trS').onchange = e => { S.trs = e.target.value; show(); };
-  if (D && !FORMS && typeof loadForms === 'function' && !S._trFL) { S._trFL = 1; loadForms().then(() => { S._trFL = 0; if (el.isConnected) show(); }).catch(() => { S._trFL = 0; }); }
+  if (typeof FORMS !== 'undefined' && !FORMS && typeof loadForms === 'function' && !S._trFL) { S._trFL = 1; loadForms().then(() => { S._trFL = 0; if (el.isConnected) show(); }).catch(() => { S._trFL = 0; }); }
   if ($('#trF')) $('#trF').onchange = e => { S.trf = e.target.value; show(); };
   if ($('#trTo')) $('#trTo').onchange = e => { S.trto = e.target.value; show(); };
   if ($('#trT')) $('#trT').onchange = e => { S.trt = e.target.value; show(); };
@@ -181,7 +193,7 @@ function trPage(el, fixed) {
    يُبنى على متوسط تقديرات الحضور الصفي (المنسقة والنائب والمديرة) لمعايير الحصة، وعلى الأعمال التي وثّقتها المعلمة خلال الفترة.
    الدرجة مقترحة فقط، ويمكن تعديلها قبل الطباعة. */
 const TR_BAND = p => p >= 90 ? 'ممتاز' : p >= 80 ? 'جيد جداً' : p >= 70 ? 'جيد' : p >= 60 ? 'مقبول' : 'ضعيف';
-const TR_RT = [100, 88, 75, 60, 45];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
+const TR_RT = [100, 92, 84, 74, 62];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
 const TR_VD = { 1: 'التخطيط', 2: 'تنفيذ الدرس', 3: 'الإدارة الصفية وبيئة التعلم', 4: 'التقويم' };
 const TR_OV = {};
 function trEval(name, rng, D) {
@@ -189,7 +201,7 @@ function trEval(name, rng, D) {
   const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : [];
   const vw = n => n === 1 ? 'زيارة صفية واحدة' : n === 2 ? 'زيارتين صفيتين' : n <= 10 ? `${n} زيارات صفية` : `${n} زيارة صفية`;
   const vAvg = dn => { const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
-  const wk = (n, target) => 60 + 40 * Math.min(1, n / Math.max(1, target));
+  const wk = (n, target) => 72 + 28 * Math.min(1, n / Math.max(1, target));
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const presWS = D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
   const abs = D.ds.reduce((a, r) => a + (r.d.abs || []).filter(x => x.type !== 'مرضي').length, 0);
@@ -198,9 +210,9 @@ function trEval(name, rng, D) {
   const rows = TR_DOM.map(([n, t, w]) => {
     let o = null, ev = [];
     if (n === 1) { const v = vAvg(1); o = v ? { p: v.p, src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null; }
-    if (n === 2) { const c = D.ta.length + D.sen.length; ev.push(`${D.ta.length} نشاطاً وبرنامجاً`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(2), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
+    if (n === 2) { const c = D.ta.length + D.sen.length; ev.push(`${D.ta.length} نشاطاً وبرنامجاً`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(2), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(88, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
     if (n === 3) { ev.push(`${D.rf.length} شهادة تعزيز للطالبات`); o = mix(vAvg(3), wk(D.rf.length, mo), 0.85); }
-    if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(80, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
+    if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(88, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
     if (n === 5) { const c = D.pv.length + D.host.length + D.ws.length + D.ex.length + D.tex.length; ev.push(`${D.pv.length + D.host.length} زيارة تبادلية`, D.tex.length ? `${D.tex.length} فعالية تبادلية` : '', `${D.ws.length + D.ex.length} ورشة وبرنامج`, presWS ? `قدّمت ${presWS} لزميلاتها` : ''); o = { p: Math.min(100, wk(c, mo * 1.5) + (presWS ? 5 : 0)), src: 'الأعمال الموثّقة' }; }
     if (n === 6) { ev.push(nPA ? `تواصل مع أولياء أمور ${nPA} طالبة` : '', D.paa.length ? `${D.paa.length} من أنشطة الشراكة مع أولياء الأمور` : '', D.ach.length ? `${D.ach.length} إنجاز ومشاركة` : ''); o = { p: wk(D.pa.length + D.paa.length + D.ach.length, mo * 2), src: 'الأعمال الموثّقة' }; }
     if (n === 7) { ev.push(`${D.tas.length} تكليفاً`, `${D.ini} مبادرة`, D.ds.length ? `غياب غير مرضي: ${abs}` : ''); o = { p: Math.max(50, Math.min(100, 85 + 15 * Math.min(1, (D.tas.length + D.ini) / mo) - 4 * abs)), src: 'التكليفات والمبادرات والانضباط' }; }
@@ -263,7 +275,7 @@ function trVisHTML(D) {
   const tot = all.length ? all.reduce((a, b) => a + b, 0) / all.length : null;
   return head + `<div style="font-size:11.5px;margin-bottom:4px">عدد الزيارات المقدَّرة: ${SRC.map(([k, l]) => `${l} (${n[k]})`).join(' · ')} — المتوسط العام لجميع الزيارات: <b>${tot == null ? '—' : Math.round(tot) + '% (' + TR_BAND(Math.round(tot)) + ')'}</b></div>
   <table><tr><th style="width:52%">المعيار</th>${SRC.map(([, l]) => `<th>${l}</th>`).join('')}<th>المتوسط</th></tr>${rows}</table>
-  <div style="font-size:10px;color:#666;margin:3px 0 8px">مستكملة وفاعلة ومبتكرة = 100% · مستكملة وفاعلة = 88% · تتوفر معظم الأدلة = 75% · تتوفر بعض الأدلة = 60% · غير متوفرة = 45%؛ ولا يُحتسب «لم يتم قياسه».</div>`;
+  <div style="font-size:10px;color:#666;margin:3px 0 8px">مستكملة وفاعلة ومبتكرة = ${TR_RT[0]}% · مستكملة وفاعلة = ${TR_RT[1]}% · تتوفر معظم الأدلة = ${TR_RT[2]}% · تتوفر بعض الأدلة = ${TR_RT[3]}% · غير متوفرة = ${TR_RT[4]}%؛ ولا يُحتسب «لم يتم قياسه».</div>`;
 }
 
 /* تقارير أعمال المعلمات للنائب الأكاديمي: مربع لكل قسم (المنسقة ثم معلماتها، ولكل منها تقديرها وزر «عرض»)،
@@ -271,14 +283,25 @@ function trVisHTML(D) {
 function A_trep(el) { trPage(el, null); }
 function trGridHTML(RG, chip) {
   const ST = (S.staff || []).filter(s => s.name && s.dept), depts = [...new Set(ST.map(s => s.dept))];
-  const row = (s, co) => { const x = trData(s.name, RG); const on = s.name === S.trt;
-    return `<div style="display:flex;align-items:center;gap:6px;padding:5px 6px;border-radius:8px;${on ? 'background:#F6EFE3;' : ''}${co ? 'border-bottom:1px solid var(--line);margin-bottom:3px' : ''}">
-      <span style="flex:1;white-space:nowrap;font-size:13px;${co ? 'font-weight:bold;color:var(--maroon)' : ''}">${co ? '★ ' : ''}${esc(s.name)}</span>
-      ${co ? '<span style="font-size:11px;color:var(--muted)">منسقة القسم</span>' : `<span style="font-size:11px;color:var(--muted)">${x.work}</span><span style="white-space:nowrap;font-size:11px">${chip(x.cls)}</span>`}<button class="btn sm sec" data-tt="${esc(s.name)}" style="padding:2px 10px">عرض</button></div>`; };
-  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(330px,1fr));gap:12px;margin-top:12px">${depts.map(d => {
-    const c = ST.find(s => s.dept === d && s.role === 'منسقة'), T = ST.filter(s => s.dept === d && s !== c);
-    return `<div style="border:1px solid var(--line);border-radius:14px;padding:10px 12px;background:#fff">
-      <div style="font-weight:bold;font-size:15px;color:var(--maroon);margin-bottom:6px;text-align:center">${esc(d)}</div>
-      ${c ? row(c, 1) : ''}${T.map(t => row(t, 0)).join('')}</div>`; }).join('')}</div>
-  <div style="font-size:11px;color:var(--muted);margin-top:6px">★ منسقة القسم · الرقم بجانب اسم المعلمة: عدد أعمالها الموثّقة في الفترة المختارة. اضغطي «عرض» ليظهر تقرير المعلمة أسفل الصفحة.</div>`;
+  const ev = n => { const D = trData(n, RG), E = trEval(n, RG, D); return { D, p: E.wSum ? Math.round(E.pct) : null }; };
+  const tone = p => p == null ? ['#F1F1F1', '#888'] : p >= 90 ? ['#DFF2E6', '#1F6B3A'] : p >= 80 ? ['#EEF6DA', '#4C6B12'] : p >= 70 ? ['#FFF4D6', '#7A5A06'] : ['#F9DADA', '#8A2B2B'];
+  const clsT = { 'مبادرة': ['مبادِرة', '#E4F3EA', '#1F6B3A'], 'مجتهدة': ['مجتهدة', '#E3F2F4', '#1E6670'], 'ضعيف': ['تحتاج دعماً', '#FCEADB', '#8A4A08'] };
+  const pill = (t, bg, fg, extra) => `<span style="background:${bg};color:${fg};border-radius:20px;padding:1px 9px;font-size:11px;white-space:nowrap;${extra || ''}">${t}</span>`;
+  const row = (s, x, co, lead, i) => { const [bg, fg] = tone(x.p), on = s.name === S.trt && S.trPick, c = clsT[x.D.cls] || clsT['مجتهدة'];
+    return `<div style="display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:9px;background:${on ? '#F3E6D6' : co ? '#F8F2EA' : i % 2 ? '#FBFAF8' : '#fff'}">
+      <span style="width:18px;height:18px;border-radius:50%;background:${bg};color:${fg};display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none">${co ? '★' : '✓'}</span>
+      <span style="flex:1;white-space:nowrap;font-size:13px;${co ? 'font-weight:bold;color:var(--maroon)' : ''}">${esc(s.name)}${co ? ' <small style="color:#A88A55;font-weight:normal">(المنسقة)</small>' : ''}${lead ? ' <span title="المتصدّرة في القسم">🏆</span>' : ''}</span>
+      ${co ? '' : pill(c[0], c[1], c[2])}${pill(x.p == null ? '—' : x.p + '%', bg, fg, 'font-weight:bold;min-width:38px;text-align:center')}
+      <button data-tt="${esc(s.name)}" style="background:#1B2A4A;color:#fff;border:0;border-radius:20px;padding:2px 11px;font-size:11.5px;cursor:pointer;white-space:nowrap">👁 عرض</button></div>`; };
+  return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;margin-top:12px">${depts.map(d => {
+    const c = ST.find(s => s.dept === d && s.role === 'منسقة');
+    const T = ST.filter(s => s.dept === d && s !== c).map(s => ({ s, x: ev(s.name) })).sort((a, b) => (b.x.p == null ? -1 : b.x.p) - (a.x.p == null ? -1 : a.x.p) || b.x.D.work - a.x.D.work);
+    const ps = T.map(o => o.x.p).filter(v => v != null), av = ps.length ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : null, [hb, hf] = tone(av);
+    const leadName = T.length && T[0].x.p != null ? T[0].s.name : '';
+    return `<div style="border:1px solid #EADFCF;border-radius:16px;padding:10px 10px 8px;background:#fff;box-shadow:0 1px 3px rgba(122,31,51,.06)">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 4px">
+        <span style="font-weight:bold;font-size:15px;color:var(--maroon)">${esc(d)}</span>${pill(av == null ? '—' : 'متوسط القسم ' + av + '%', hb, hf, 'font-weight:bold')}</div>
+      ${leadName ? `<div style="font-size:11px;color:#7A5A06;background:#FFF8E6;border-radius:8px;padding:2px 8px;margin:0 2px 5px">🏆 المتصدّرة: أ. ${esc(leadName)} (${T[0].x.p}%)</div>` : ''}
+      <div style="display:flex;flex-direction:column;gap:2px">${c ? row(c, ev(c.name), 1, 0, 0) : ''}${T.map((o, i) => row(o.s, o.x, 0, o.s.name === leadName, i)).join('')}</div></div>`; }).join('')}</div>
+  <div style="font-size:11px;color:var(--muted);margin-top:6px">النسبة: الدرجة المقترحة للمعلمة في الفترة المختارة (من متوسط تقديرات الحضور الصفي وأعمالها الموثّقة في الميزان وسبع سنابل)، وتفاصيلها في استمارة التقييم أسفل تقريرها. اضغطي «عرض» ليظهر تقريرها أسفل الصفحة.</div>`;
 }
