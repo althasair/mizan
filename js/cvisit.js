@@ -335,7 +335,7 @@ function cvForm(el, rec) {
   const draw = () => {
     F = vForm(d);
     const s = staffBy(d.t); const secs = String(s.secs || '').split(/[،,]/).map(x => x.trim()).filter(Boolean);
-    const subs = uniqA(String(s.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\//).map(x => x.trim()));
+    const subs = sciSubj(s, uniqA(String(s.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\//).map(x => x.trim())));
     if (!d.subj && subs.length === 1) d.subj = subs[0];
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
@@ -350,7 +350,7 @@ function cvForm(el, rec) {
     <div class="card"><h2>${esc(F.title)} <span class="sub">تُعبَّأ من قِبل منسقة القسم</span></h2>
     <form class="form" onsubmit="return false">
       <div class="fld"><label>المعلّمة</label><select id="cT"><option value="">اختاري المعلمة…</option>${T.map(x => `<option ${x === d.t ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></div>
-      <div class="fld"><label>المادّة</label><input list="cdlSub" id="cSub" value="${esc(d.subj || '')}">${dl('cdlSub', [...subs, ...(REF.L.subject_all || [])])}</div>
+      <div class="fld"><label>المادّة</label><input list="cdlSub" id="cSub" value="${esc(d.subj || '')}">${dl('cdlSub', s && SCI_DEPTS.includes(s.dept) ? subs : [...subs, ...(REF.L.subject_all || [])])}</div>
       <div class="fld"><label>الصّف</label><input list="cdlSec" id="cSec" value="${esc(d.s || '')}" placeholder="${secs.length ? 'شعب المعلمة' : ''}">${dl('cdlSec', [...secs, ...REF.SECTIONS])}</div>
       <div class="fld"><label>التاريخ</label><input type="date" id="cD" value="${esc(d.date)}"></div>
       <div class="fld"><label>اليوم</label><input value="${esc(dayOf(d.date))}" disabled></div>

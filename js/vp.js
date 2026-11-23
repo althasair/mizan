@@ -7,6 +7,8 @@ const loadForms = async () => FORMS || (FORMS = await fetch('data/forms.json?v='
 /* استمارة المواد العلمية (الفيزياء والكيمياء والأحياء والعلوم): الاستمارة العامة نفسها + مجال «الجانب العملي» (7 معايير) */
 const SCI_DEPTS = ['الفيزياء', 'الكيمياء', 'الأحياء'];
 const isSciT = name => { const s = (S.staff || []).find(x => x.name === name); return !!s && (SCI_DEPTS.includes(s.dept) || /علوم|فيزياء|كيمياء|أحياء/.test(s.subj || '')); };
+/* معلمات الأحياء والكيمياء والفيزياء: مادة الحضور الصفي إما مادة القسم أو العلوم */
+function sciSubj(st, toks) { if (!st || !SCI_DEPTS.includes(st.dept)) return toks; const L = [...toks.filter(x => x === st.dept || /^العلوم/.test(x)).map(x => /^العلوم/.test(x) ? 'العلوم' : x), st.dept, 'العلوم']; return [...new Set(L)]; }
 const vForm = d => d && d.sci && FORMS.visit_sci ? Object.assign({}, FORMS.visit, { title: FORMS.visit.title + ' (المواد العلمية)', items: FORMS.visit.items.concat(FORMS.visit_sci) }) : FORMS.visit;
 const sciPick = (d, id) => `<div class="fld"><label>نوع الاستمارة</label><select id="${id}"><option value="" ${d.sci ? '' : 'selected'}>الاستمارة العادية</option><option value="1" ${d.sci ? 'selected' : ''}>استمارة المواد العلمية (مع الجانب العملي)</option></select></div>`;
 const DAYS7 = ['الأحد', 'الاثنين', 'الثلاثاء', 'الأربعاء', 'الخميس', 'الجمعة', 'السبت'];
@@ -143,7 +145,7 @@ function vpVisitForm(el, rec) {
   const prevOf = () => { const all = S.records.filter(r => ['V', 'VPV', 'PRV'].includes(r.item) && r.d && r.d.t === d.t && (!rec || r.id !== rec.id) && r.date <= d.date).sort((a, b) => (a.date || '').localeCompare(b.date || '') || String(a.id).localeCompare(String(b.id)));
     return all.filter(r => r.item === KND).slice(-1)[0] || all.slice(-1)[0]; };
   const syncFU = () => { const prev = prevOf(); d.prevId = prev ? prev.id : ''; d.prevDate = prev ? prev.date : ''; d.prevK = prev ? prev.item : ''; const want = carryOf(prev); const old = {}; d.fu.forEach(x => old[x.r] = x); d.fu = want.map(r => old[r] || { r, st: '', note: '' }); };
-  const subjToks = st => String(st.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\/| و(?=ال)/).map(x => x.trim()).filter(Boolean);
+  const subjToks = st => sciSubj(st, String(st.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\/| و(?=ال)/).map(x => x.trim()).filter(Boolean));
   const allSubj = uniqA([...S.staff.flatMap(subjToks), ...(REF.L.subject_all || [])]);
   const teaches = (st, sub) => !sub || subjToks(st).some(x => nrm(x) === nrm(sub) || nrm(x).includes(nrm(sub)) || nrm(sub).includes(nrm(x))) || nrm(st.dept || '') === nrm(sub);
   const tchAll = S.staff.filter(s => +s.load > 0 || s.role === 'معلمة');
