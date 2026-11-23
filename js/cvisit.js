@@ -430,13 +430,13 @@ function cvInner(r) {
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانية')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئية')} جزئيّة &nbsp; ${ys(d.kj, 'كلية')} كليّة</td></tr>
     <tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
   ${d.achD ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
-  ${cvWsPrint(d)}
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}${d.en && (d.en.rc || {})[i] ? `<div dir="ltr" style="text-align:left;color:#444">${esc(d.en.rc[i])}</div>` : ''}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '') + fuTxt + ((d.str || []).length ? '\n\nنقاط القوة:\n' + d.str.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '') + ((d.imp || []).length ? '\n\nالنقاط التي تحتاج إلى تحسين:\n' + d.imp.map(x => '• ' + cleanEnd(x) + '.').join('\n') : '')).trim()}</div></div>
   ${d.en && ((d.en.str || []).length || (d.en.imp || []).length) ? `<div class="gen" dir="ltr" style="text-align:left"><div class="h">General Notes and Recommendations</div><div class="b" style="text-align:left">${esc(((d.en.pre || '') + ((d.en.str || []).length ? '\n\nStrengths:\n' + d.en.str.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '') + ((d.en.imp || []).length ? '\n\nAreas for improvement:\n' + d.en.imp.map(x => '• ' + String(x).replace(/[.\s]+$/, '') + '.').join('\n') : '')).trim())}</div></div>` : ''}
   ${d.vpfb ? `<div class="gen"><div class="h">ملاحظات النائب الأكاديمي${d.vpfbAt ? ' (' + dmy(d.vpfbAt) + ')' : ''}</div><div class="b">${esc(d.vpfb)}</div></div>` : ''}
+  ${cvWsPrint(d)}
   <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>توقيع منسق المادة<br>أ. ${esc(cN)}{{SIG}}</td>${d.vpfb ? `<td>توقيع النائب الأكاديمي<br>أ. ${esc(typeof VP_NAME !== 'undefined' ? VP_NAME : '')}</td>` : ''}</tr></table>`;
 }
 let CSIG = null;

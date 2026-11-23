@@ -253,11 +253,11 @@ function visitInner(r) {
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانيّة')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئيّة')} جزئيّة &nbsp; ${ys(d.kj, 'كليّة')} كليّة</td></tr>
     ${d.achD ? `<tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>` : `<tr><td class="k">التحصيل الأكاديمي</td><td>${esc(d.ach || '')}</td><td class="k">ملاحظات</td><td>${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr>`}</table>
   ${d.achD && typeof cvAchBox === 'function' ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
-  ${typeof cvWsPrint === 'function' ? cvWsPrint(d) : ''}
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.map(x => `<th style="width:6.5%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}</td></tr>`; }).join('')}</table>
   <div class="gen"><div class="h">ملاحظات وتوصيات عامّة</div><div class="b">${esc((d.pre || '').replace(/للأستاذة\s+(\.\.\.\s*)?على/, `للأستاذة ${d.t} على`))}${esc((d.fu || []).length ? `\n\n${fuHead(d)}:\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '')}${(d.st || []).length ? '\n\nنقاط القوة:\n' + d.st.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}${(d.im || []).length ? '\n\nنقاط تحتاج إلى تحسين:\n' + d.im.map(x => '• ' + cleanEnd(x) + '.').join('\n') : ''}</div></div>
+  ${typeof cvWsPrint === 'function' ? cvWsPrint(d) : ''}
   <table class="sg"><tr><td>توقيع المعلم<br>أ. ${esc(d.t)}</td><td>${r.item === 'PRV' ? 'توقيع ' + esc(d.byT || 'مديرة المدرسة') + '<br>أ. ' + esc(d.by || PR_NAME) : 'توقيع نائب المدير للشؤون الأكاديمية<br>أ. ' + VP_NAME}</td></tr></table>`;
 }
 async function previewVisit(el, r) {
