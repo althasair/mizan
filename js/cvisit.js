@@ -172,45 +172,51 @@ function cvBiBind(el) {
 function cvNotesInit(d, strL, impL) {
   if (d.strW == null) { d.strP = ''; d.strW = (strL || []).filter(Boolean).join('\n'); }
   if (d.impW == null) { const a = (impL || []).filter(Boolean); d.impP = ''; d.impW = a[0] || ''; d.impX = a.slice(1); }
-  d.impX = d.impX || [];
+  d.impX = d.impX || []; d.strX = d.strX || [];
 }
-function cvNotesCard(d, F, intro) {
+function cvNotesCard(d, F, intro, opt) {   // opt: الكتابة بالعبارات الخاصة اختيارية (للنائب الأكاديمي)
   const strong = F.items.map((x, i) => i).filter(i => d.rt[i] === 0 || d.rt[i] === 1), weak = F.items.map((x, i) => i).filter(i => d.rt[i] === 3 || d.rt[i] === 4);
   const doms = uniqA(F.items.map(x => x.d));
   const optG = (pick, key, curV) => { const top = uniqA(pick.flatMap(i => key === 'r' ? [d.rc[i], ...F.items[i].r] : F.items[i].s)); const all = new Set(); return `<option value="">${key === 'r' ? 'اختاري توصية واحدة من القائمة…' : 'اختاري نقطة قوة واحدة من القائمة…'}</option>` + (curV && !F.items.some(x => x[key].includes(curV)) && !top.includes(curV) ? `<option selected>${esc(curV)}</option>` : '') + (top.length ? `<optgroup label="${key === 'r' ? 'من المعايير التي تحتاج إلى تحسين' : 'من المعايير التي قدّرتِها مرتفعة'}">${top.map(o => { all.add(o); return cvOpt(d, o, o === curV); }).join('')}</optgroup>` : '') + doms.map(dm0 => `<optgroup label="${esc(d.en ? (enOf(dm0) || dm0) : dm0)}">${uniqA(F.items.filter(x => x.d === dm0).flatMap(x => x[key])).filter(o => !all.has(o)).map(o => cvOpt(d, o, o === curV)).join('')}</optgroup>`).join(''); };
   return `<div class="card"><h2>ملاحظات وتوصيات عامّة</h2>
-      <div style="font-size:12.5px;color:#8A8F99;line-height:1.9;margin-bottom:8px">${intro}يسعدكِ الاستعانة بالقوائم المقترحة لاختيار عبارة شكر ونقطة قوة وتوصية واحدة، غير أن معلمتكِ لا تستغني عن عباراتكِ الثمينة؛ فأنتِ قائدتها وخير مطوّرة لها، وكلماتكِ النابعة من عمق المادة هي ما يصنع أثراً حقيقياً في أدائها. فلا تحرميها منها: اكتبي نقطة القوة والتوصية بعباراتكِ، وأضيفي من التوصيات ما ترينه.</div>
+      <div style="font-size:12.5px;color:#8A8F99;line-height:1.9;margin-bottom:8px">${intro}${opt ? 'اختاري من القوائم المقترحة عبارة الشكر ونقاط القوة والتوصيات، ويمكنكِ إضافة عباراتكِ الخاصة إن رغبتِ (اختياري)، ونقاط قوة وتوصيات إضافية.' : `يسعدكِ الاستعانة بالقوائم المقترحة لاختيار عبارة شكر ونقطة قوة وتوصية واحدة، غير أن معلمتكِ لا تستغني عن عباراتكِ الثمينة؛ فأنتِ قائدتها وخير مطوّرة لها، وكلماتكِ النابعة من عمق المادة هي ما يصنع أثراً حقيقياً في أدائها. فلا تحرميها منها: اكتبي نقطة القوة والتوصية بعباراتكِ، وأضيفي من التوصيات ما ترينه.`}</div>
       ${d.en ? `<div style="background:#F1FAF8;border:1px solid #CDE9E5;border-radius:10px;padding:6px 10px;font-size:12px;color:#26615C;margin-bottom:8px" dir="rtl"><div dir="ltr" style="text-align:left">🇬🇧 <b>English / عربي:</b> Choose or write in English, and the Arabic translation appears right under it. The Arabic text is saved for the monthly report.</div>اختاري أو اكتبي بالإنجليزية، وتظهر الترجمة العربية تحتها مباشرة، وهي التي تُحفظ في التقرير الشهري (يمكنكِ تعديلها).</div>` : ''}
       <div class="fld"><label>عبارة الشكر للمعلمة${d.en ? ' · Thanks' : ''}</label><select id="cThx" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-bottom:4px"><option value="">${d.en ? 'Choose a thank-you phrase…' : 'اختاري عبارة شكر من القائمة…'}</option>${uniqA([...(F.pre_opts || []), ...CV_THX]).map(x => `<option value="${esc(x)}">${esc((d.en ? enOf(x) || x : x).replace(/\{name\}/g, d.t || '...'))}</option>`).join('')}</select>${d.en ? cvBi(d, 'pre', d.en.pre, d.pre, ['', 'Choose from the list above or write your own thank-you phrase'], 2) : `<textarea id="cPre" rows="2" style="width:100%;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="اختاري من القائمة أعلاه أو اكتبي عبارة الشكر بأسلوبكِ">${esc(d.pre || '')}</textarea>`}</div>
       <div class="grid g2" style="margin-top:10px">
         <div><b style="color:var(--ok)">نقاط القوة</b>
           <select id="cStrP" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-top:6px;font-size:12.5px">${optG(strong, 's', d.strP)}</select>${d.en && d.strP ? `<div style="font-size:11.5px;color:var(--tiffany-d)">↳ ${esc(d.strP)}</div>` : ''}
-          ${d.en ? cvBi(d, 'strW', d.en.strW, d.strW, ['', 'In your words (required): what stood out in the teacher\'s performance, and its impact on students\' learning?']) : `<textarea id="cStrW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): ما الذي لفتكِ في أداء المعلمة، وما أثره على تعلّم الطالبات؟">${esc(d.strW || '')}</textarea>`}</div>
+          ${d.en ? cvBi(d, 'strW', d.en.strW, d.strW, ['', 'In your words (required): what stood out in the teacher\'s performance, and its impact on students\' learning?']) : `<textarea id="cStrW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (${opt ? 'اختياري' : 'إلزامي'}): ما الذي لفتكِ في أداء المعلمة، وما أثره على تعلّم الطالبات؟">${esc(d.strW || '')}</textarea>`}
+          ${d.strX.map((v, j) => `<textarea data-stx="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="نقطة قوة إضافية">${esc(v)}</textarea>`).join('')}
+          <button class="btn sm ghost" id="addStr" type="button" style="margin-top:6px">++ نقطة قوة إضافية</button></div>
         <div><b style="color:var(--maroon)">التوصيات (النقاط التي تحتاج إلى تحسين)</b>
           <select id="cImpP" ${d.en ? 'dir="ltr"' : ''} style="width:100%;margin-top:6px;font-size:12.5px">${optG(weak, 'r', d.impP)}</select>${d.en && d.impP ? `<div style="font-size:11.5px;color:var(--tiffany-d)">↳ ${esc(d.impP)}</div>` : ''}
-          ${d.en ? cvBi(d, 'impW', d.en.impW, d.impW, ['', 'In your words (required): a specific, constructive recommendation to follow up in the next visit']) + d.impX.map((v, j) => cvBi(d, 'imx' + j, (d.en.impX || [])[j], v, ['', 'Additional recommendation in your words'], 2)).join('') : `<textarea id="cImpW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (إلزامي): توصية بنّاءة محددة تُتابَع في الزيارة القادمة">${esc(d.impW || '')}</textarea>
+          ${d.en ? cvBi(d, 'impW', d.en.impW, d.impW, ['', 'In your words (required): a specific, constructive recommendation to follow up in the next visit']) + d.impX.map((v, j) => cvBi(d, 'imx' + j, (d.en.impX || [])[j], v, ['', 'Additional recommendation in your words'], 2)).join('') : `<textarea id="cImpW" rows="3" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="بعباراتكِ (${opt ? 'اختياري' : 'إلزامي'}): توصية بنّاءة محددة تُتابَع في الزيارة القادمة">${esc(d.impW || '')}</textarea>
           ${d.impX.map((v, j) => `<textarea data-imx="${j}" rows="2" style="width:100%;margin-top:6px;border:1px solid var(--line);border-radius:10px;padding:6px" placeholder="توصية إضافية بعباراتكِ">${esc(v)}</textarea>`).join('')}`}
           <button class="btn sm ghost" id="addImp" type="button" style="margin-top:6px">++ توصية إضافية بعباراتكِ${d.en ? ' · Add a recommendation' : ''}</button></div>
       </div></div>`;
 }
 function cvNotesGrab(d, el) {
   if (!$('#cStrW')) return;
-  d.pre = $('#cPre').value.trim(); d.strP = $('#cStrP').value; d.strW = $('#cStrW').value.trim(); d.impP = $('#cImpP').value; d.impW = $('#cImpW').value.trim(); d.impX = $$('[data-imx]', el).map(i => i.value.trim());
+  d.pre = $('#cPre').value.trim(); d.strP = $('#cStrP').value; d.strW = $('#cStrW').value.trim(); d.impP = $('#cImpP').value; d.impW = $('#cImpW').value.trim(); d.impX = $$('[data-imx]', el).map(i => i.value.trim()); d.strX = $$('[data-stx]', el).map(i => i.value.trim());
   if (d.en) { const g = k => (($(`[data-tre="${k}"]`, el) || {}).value || '').trim(); d.en.pre = g('pre'); d.en.strW = g('strW'); d.en.impW = g('impW'); d.en.impX = d.impX.map((_, j) => g('imx' + j)); }
 }
 function cvNotesBind(el, d, redraw) {
   $('#addImp').onclick = () => redraw(() => d.impX.push(''));
+  if ($('#addStr')) $('#addStr').onclick = () => redraw(() => (d.strX = d.strX || []).push(''));
   $('#cThx').onchange = () => { const v = $('#cThx').value; if (!v) return; const nm = d.t || '...'; $('#cPre').value = v.replace(/\{name\}/g, nm); const e = $('[data-tre="pre"]', el); if (e) { e.value = (enOf(v) || '').replace(/\{name\}/g, nm); $('#cPre').dataset.man = ''; } };
   if (d.en) { cvBiBind(el); ['cStrP', 'cImpP'].forEach(id => $('#' + id).addEventListener('change', () => redraw())); }
   $$('[data-wst]', el).forEach(sl => sl.addEventListener('change', () => redraw()));
 }
-function cvNotesCheck(d) {
+function cvNotesCheck(d, opt) {
   if (!d.pre) { toast('اكتبي عبارة الشكر للمعلمة أو اختاريها من القائمة', 1); return null; }
+  d.strX = (d.strX || []).filter(Boolean);
+  if (opt) { if (!d.strP && !d.strW && !d.strX.length) { toast('اختاري نقطة قوة من القائمة أو اكتبيها', 1); return null; } }
+  else {
   if (!d.strW) { toast('اكتبي نقطة القوة بعباراتكِ — معلمتكِ تنتظر كلماتكِ', 1); $('#cStrW') && $('#cStrW').focus(); return null; }
-  if (!d.impW) { toast('اكتبي التوصية بعباراتكِ — فهي ما يصنع الأثر', 1); $('#cImpW') && $('#cImpW').focus(); return null; }
+  if (!d.impW) { toast('اكتبي التوصية بعباراتكِ — فهي ما يصنع الأثر', 1); $('#cImpW') && $('#cImpW').focus(); return null; } }
   { const pr = (d.impX || []).map((a, j) => [a, ((d.en && d.en.impX) || [])[j] || '']).filter(x => x[0]); d.impX = pr.map(x => x[0]); if (d.en) d.en.impX = pr.map(x => x[1]); }
   if (d.en) { const ix = (d.impX || []); d.en.str = uniqA([enOf(d.strP), d.en.strW]); d.en.imp = uniqA([enOf(d.impP), d.en.impW, ...(d.en.impX || [])]); }
-  return { str: uniqA([d.strP, d.strW]), imp: uniqA([d.impP, d.impW, ...d.impX]) };
+  return { str: uniqA([d.strP, d.strW, ...d.strX].filter(Boolean)), imp: uniqA([d.impP, d.impW, ...d.impX].filter(Boolean)) };
 }
 /* حالة المعلمة في الربع */
 function cvStatus(t, mk) {

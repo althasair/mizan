@@ -186,7 +186,7 @@ function vpVisitForm(el, rec) {
         <td><textarea data-rc="${i}" rows="${d.rc[i] ? 2 : 1}" style="width:100%;min-width:220px;border:1px solid var(--line);border-radius:8px;padding:3px 6px;font-size:12px;resize:vertical" placeholder="اكتبي أو اختاري من القائمة">${esc(d.rc[i] || '')}</textarea>
           <select data-add="${i}" style="width:100%;border:1px solid var(--line);border-radius:8px;font-size:11.5px;margin-top:2px"><option value="">+ إضافة توصية (${x.r.length})…</option>${x.r.map(t => `<option>${esc(t)}</option>`).join('')}</select></td></tr>`; }).join('')}</table></div></div>
     ${cvWsCard(d, WS)}
-    ${cvNotesCard(d, F, '')}`;
+    ${cvNotesCard(d, F, '', S.vkind !== 'PRV')}`;
     const grab = () => {
       $$('[data-fs]', el).forEach(s => d.fu[s.dataset.fs].st = s.value); $$('[data-fn]', el).forEach(s => d.fu[s.dataset.fn].note = s.value.trim());
       d.t = $('#fT').value.trim(); d.date = $('#fD').value; d.subj = $('#fSub').value.trim(); d.s = $('#fSec').value.trim(); d.topic = $('#fTop').value.trim();
@@ -213,7 +213,7 @@ function vpVisitForm(el, rec) {
       grab(); if (!d.t || !d.date) { toast('اختاري المعلمة والتاريخ', 1); return null; }
       const st = staffBy(d.t); if (!st.dept) { toast('اسم المعلمة غير موجود في قائمة المعلمات', 1); return null; }
       { const miss = d.fu.filter(x => !x.st); if (miss.length) { toast(`حدّدي مدى تنفيذ توصيات الزيارة السابقة (${miss.length})`, 1); return null; } }
-      { const N = cvNotesCheck(d); if (!N) return null; d.st = N.str; d.im = N.imp; } cvWsKeep(d, st.dept); d.note = d.topic || d.note || '';
+      { const N = cvNotesCheck(d, S.vkind !== 'PRV'); if (!N) return null; d.st = N.str; d.im = N.imp; } cvWsKeep(d, st.dept); d.note = d.topic || d.note || '';
       const K = S.vkind === 'PRV' ? 'PRV' : 'VPV';
       if (K === 'PRV' && !(rec && rec.d && rec.d.by)) { const w = prWho(); d.byT = w[0]; d.by = w[1]; }
       const j = await call('save', { rec: { id: rec && rec.id, dept: st.dept, item: K, date: d.date, sum: (K === 'PRV' ? 'زيارة ' + (d.byT || 'مديرة المدرسة') + ': ' : 'زيارة النائب الأكاديمي: ') + d.t, d, key: d.t + '|' + d.date } });
