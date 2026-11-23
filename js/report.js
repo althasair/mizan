@@ -119,12 +119,19 @@ function buildReport(ctx) {
   T.pd_int = ownTx + (attended.length ? ' وفي برامج قدّمتها جهات من خارج القسم: ' + attended.map(attTx).join('؛ ') + '.' : '');
 
   /* التطوير الخارجي */
-  const EX = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
+  const EXa = Rp('EX'); const allM = [coord, ...teachers].filter(Boolean), NM = allM.length;
+  const EX = EXa.filter(r => pdKind(d(r)) === 'off'), EXs = EXa.filter(r => pdKind(d(r)) === 'self');
   const exK = EX.some(r => d(r).t === REF.ALL_MEMBERS) ? NM : uniq(EX.map(r => d(r).t)).filter(t => allM.includes(t)).length;
   const exP = uniq(EX.map(r => String(d(r).name || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim())).length;
   T.ex_n = exP; T.ex_k = exK;
-  T.pd_ext = !EX.length ? 'لم تُسجَّل مشاركات في برامج تطوير مهني خارجية خلال الفترة.'
-    : (NM ? `شاركت ${exK} من أصل ${NM} من أعضاء القسم في برامج تطوير مهني خارجية بنسبة ${pct(exK, NM)}، ` : '') + `بإجمالي (${exP}) ${exP === 1 ? 'برنامج' : 'برامج'}: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
+  T.pd_ext = !EX.length ? 'لم تُسجَّل مشاركات في برامج تطوير مهني خارجية رسمية خلال الفترة.'
+    : (NM ? `شاركت ${exK} من أصل ${NM} من أعضاء القسم في برامج التطوير المهني الخارجية الرسمية (مركز التدريب والتوجيه التربوي والتقييم) خلال وقت الدوام بنسبة ${pct(exK, NM)}، ` : '') + `بإجمالي (${exP}) ${exP === 1 ? 'برنامج' : 'برامج'}: ` + EX.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
+  /* التنمية الذاتية: ما تختار المعلمة حضوره بمحض إرادتها بعد الدوام */
+  const sfK = EXs.some(r => d(r).t === REF.ALL_MEMBERS) ? NM : uniq(EXs.map(r => d(r).t)).filter(t => allM.includes(t)).length;
+  const sfP = uniq(EXs.map(r => String(d(r).name || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim())).length;
+  T.sf_n = sfP; T.sf_k = sfK;
+  T.pd_self = !EXs.length ? 'لم تُسجَّل برامج تنمية ذاتية خلال الفترة.'
+    : (NM ? `حرصت ${sfK} من أصل ${NM} من أعضاء القسم على تنميتهن الذاتية بحضور برامج اخترنها بمبادرة شخصية خارج وقت الدوام بنسبة ${pct(sfK, NM)}، ` : '') + `بإجمالي (${sfP}) ${sfP === 1 ? 'برنامج' : 'برامج'}: ` + EXs.map(r => SEC.EX.tx(d(r))).join('؛ ') + '.';
 
   /* الاجتماعات */
   const MT = Rp('MT'); const MTi = MT.filter(r => SEC.MT.io(d(r)) === 'داخلي'), MTe = MT.filter(r => SEC.MT.io(d(r)) === 'خارجي');
@@ -331,7 +338,11 @@ function buildReport(ctx) {
     // ورش حضرتها معلمات القسم
     const inT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة داخلية'), exT = WS.filter(r => r.dept === dept && r.d.role === 'حضرتُ ورشة خارجية');
     if (inT.length) add('pd_int', 'وحضرت معلمات القسم: ' + inT.map(r => `أ. ${r.d.t} ورشة «${nz(r.d.title)}» من تقديم أ. ${r.d.by}` + dateTxt(r.date)).join('؛ ') + '.');
-    if (exT.length) add('pd_ext', 'وسجّلت معلمات القسم مشاركتهن في: ' + exT.map(r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + (r.d.byx ? ` من تقديم ${r.d.byx}` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date)).join('؛ ') + '.');
+    const exTw = r => (S.records || []).find(e => e.item === 'EX' && e.d && e.d.t === r.d.t && nz(e.d.name) === nz(r.d.title));
+    const exLine = r => `«${nz(r.d.title)}»` + (r.d.place ? ` (${r.d.place})` : '') + (r.d.byx ? ` من تقديم ${r.d.byx}` : '') + ` — أ. ${r.d.t}` + dateTxt(r.date);
+    const exO = exT.filter(r => pdKind(r.d, (exTw(r) || {}).d) === 'off'), exS = exT.filter(r => pdKind(r.d, (exTw(r) || {}).d) === 'self');
+    if (exO.length) add('pd_ext', 'وسجّلت معلمات القسم مشاركتهن في: ' + exO.map(exLine).join('؛ ') + '.');
+    if (exS.length) add('pd_self', 'وسجّلت معلمات القسم تنميتهن الذاتية بحضور: ' + exS.map(exLine).join('؛ ') + '.');
     // التواصل مع أولياء الأمور
     const PAt = mineD('TPA');
     if (PAt.length) { const by = {}; PAt.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ways: new Set(), cats: new Set() }; o.n += +r.d.n > 0 ? +r.d.n : 1; if (r.d.way) o.ways.add(r.d.way); if (r.d.cat) o.cats.add(r.d.cat); });
@@ -427,7 +438,7 @@ function buildReport(ctx) {
   const rows = [
     ['التخطيط', [['الخطة السنوية للقسم', [T.pl_annual]], ['متابعة الخطط الفصلية', [T.pl_sem]]]],
     ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
-    ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]]]],
+    ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]], ['التنمية الذاتية', [T.pd_self]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
       ['المنسق', [T.v_sum, ...(vN ? T.v_ch : []), ...(T.v_spec || []), T.v_common_p].filter(Boolean)], ['الزملاء (الزيارات التبادلية)', (T.ov_peer_lines && T.ov_peer_lines.length) ? [{ lines: T.ov_peer_lines }, ...(/^لم /.test(T.ov_peer || '') ? [] : [T.ov_peer])] : [T.ov_peer]]]],

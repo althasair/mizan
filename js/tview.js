@@ -245,12 +245,13 @@ async function T_pvPaper(el) {
 /* ================================================================== الورش وتطوير الزملاء */
 function T_ws(el) {
   T_page(el, {
-    item: 'TWS', fixP: 1, vis: 1, title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري: ورشة حضرتِها (داخلية أو خارجية)، أو ما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
+    item: 'TWS', fixP: 1, vis: 1, title: 'الورش وتطوير الزملاء', one: 'ورشة أو مساهمة', note: 'معلمتي الغالية، اضغطي «تسجيل جديد»، ثم اختاري: ورشة حضرتِها (داخلية، أو خارجية رسمية خلال الدوام، أو تنمية ذاتية اخترتِها بعد الدوام)، أو ما قدّمتِه لتطوير زميلاتكِ (ورشة، جلسة نقاش، ورقة عمل، نموذج مميز، فكرة).',
     blank: { role: TWS_ROLE[0] }, files: ['att', 'file'],
     form: d => fld('نوع التسجيل', fRadio('role', TWS_ROLE, d.role), 1) +
       `<div class="fld" style="grid-column:1/-1" data-show="${TWS_ROLE[2]}"><label>ماذا قدّمتِ؟</label>${fSel('type', TWS_TYPE, d.type)}</div>` +
       fld('العنوان', `<input data-n="title" value="${esc(d.title || '')}" required>`, 1) +
       `<div class="fld" data-show="${TWS_ROLE[0]}"><label>المقدِّمة</label>${staffSel('by', d.by)}</div>` +
+      `<div class="fld" style="grid-column:1/-1" data-show="${TWS_ROLE[1]}"><label>تصنيف الورشة الخارجية</label>${fRadio('kind', REF.L.ex_kind || [], d.kind || (d.role === TWS_ROLE[1] && d.title ? REF.L.ex_kind[pdKind(d) === 'self' ? 1 : 0] : ''))}<small style="color:var(--muted)">رسمي: من مركز التدريب أو التوجيه التربوي أو التقييم خلال وقت الدوام · تنمية ذاتية: ورشة اخترتِ حضورها بمبادرتكِ بعد الدوام</small></div>` +
       `<div class="fld" data-show="${TWS_ROLE[1]}"><label>المقدِّم</label><input data-n="byx" value="${esc(d.byx || '')}"></div>` +
       `<div class="fld" data-show="${TWS_ROLE[1]}"><label>مكان الورشة / الجهة</label><input data-n="place" value="${esc(d.place || '')}"></div>` +
       `<div class="fld" data-show="${TWS_ROLE[2]}"><label>المستفيدات (اختياري)</label><input data-n="aud" value="${esc(d.aud || '')}" placeholder="معلمات القسم، أو أسماء، أو أقسام"></div>` +
@@ -261,7 +262,7 @@ function T_ws(el) {
     check: r => !r.title ? 'اكتبي العنوان' : r.role === TWS_ROLE[0] && !r.by ? 'اختاري المقدِّمة' : r.role === TWS_ROLE[2] && !r.type ? 'اختاري ماذا قدّمتِ' : '',
     sum: r => (r.role === TWS_ROLE[2] ? 'قدّمتُ ' + (r.type || '') : r.role) + ': ' + r.title,
     head: '<tr><th>التاريخ</th><th>النوع</th><th>العنوان</th><th>المقدِّمة / الجهة</th><th>مرفقات</th><th></th></tr>',
-    row: r => `<td>${dmy(r.date)}</td><td><span class="chip ${r.d.role === TWS_ROLE[2] ? 'tf' : ''}">${esc(r.d.role === TWS_ROLE[2] ? 'قدّمتُ: ' + (r.d.type || '') : r.d.role)}</span></td><td><b>${esc(r.d.title)}</b></td><td>${esc(r.d.role === TWS_ROLE[0] ? 'أ. ' + r.d.by : r.d.role === TWS_ROLE[1] ? [r.d.byx, r.d.place].filter(Boolean).join(' — ') : r.d.aud || '')}</td><td>${fileLink(r.d.att)} ${fileLink(r.d.file)} ${r.d.link ? `<a href="${esc(r.d.link)}" target="_blank" rel="noopener">رابط</a>` : ''}</td>`,
+    row: r => `<td>${dmy(r.date)}</td><td><span class="chip ${r.d.role === TWS_ROLE[2] ? 'tf' : ''}">${esc(r.d.role === TWS_ROLE[2] ? 'قدّمتُ: ' + (r.d.type || '') : r.d.role === TWS_ROLE[1] ? (pdKind(r.d) === 'self' ? 'تنمية ذاتية' : 'ورشة خارجية رسمية') : r.d.role)}</span></td><td><b>${esc(r.d.title)}</b></td><td>${esc(r.d.role === TWS_ROLE[0] ? 'أ. ' + r.d.by : r.d.role === TWS_ROLE[1] ? [r.d.byx, r.d.place].filter(Boolean).join(' — ') : r.d.aud || '')}</td><td>${fileLink(r.d.att)} ${fileLink(r.d.file)} ${r.d.link ? `<a href="${esc(r.d.link)}" target="_blank" rel="noopener">رابط</a>` : ''}</td>`,
     bottom: () => { const H = S.records.filter(r => r.item === 'TWS' && r.d.by === S.user.name && r.d.t !== S.user.name && inPast(r));
       return H.length ? `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>حضرن ورشكِ — توظيف جوانب تميزكِ</h2><div class="tbl"><table class="t"><tr><th>التاريخ</th><th>العنوان</th><th>الحاضرة</th><th>قسمها</th></tr>${H.map(r => `<tr><td>${dmy(r.date)}</td><td>${esc(r.d.title)}</td><td>أ. ${esc(r.d.t)}</td><td>${esc(r.dept)}</td></tr>`).join('')}</table></div></div>` : ''; },
   });

@@ -69,7 +69,7 @@ function trBody(name, rng, D) {
   const pvL = D.pv.map(r => `زارت أ. ${r.d.v}${dt(r)}` + (trList(r.d.saw).length ? `، واستفادت: ${trList(r.d.saw).join('، ')}` : '') + (trList(r.d.apply).length ? `، وستطبّق: ${trList(r.d.apply).join('، ')}` : ''))
     .concat(D.host.map(r => `استضافت زيارة من أ. ${r.d.t}${dt(r)}، توظيفاً لجوانب تميّزها`))
     .concat(D.tex.map(r => `${trList(r.d.role).join(' و') || 'حاضرة'} في ${r.d.kind || 'فعالية'} «${String(r.d.name || '').trim()}»${r.d.odept ? ' لقسم ' + r.d.odept : ''}${dt(r)}` + (trList(r.d.gain).length ? `، واستفادت: ${trList(r.d.gain).join('، ')}` : '') + (r.d.idea ? `، وفكرة للتطبيق: ${r.d.idea}` : '')));
-  const wsL = D.ws.map(r => `${r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت لزميلاتها' : r.d.role === 'حضرتُ ورشة خارجية' ? 'حضرت ورشة خارجية' : 'حضرت ورشة داخلية'}: «${String(r.d.title || '').trim()}»${dt(r)}`);
+  const wsL = D.ws.map(r => `${r.d.role === 'قدّمتُ لتطوير الزملاء' ? 'قدّمت لزميلاتها' : r.d.role === 'حضرتُ ورشة خارجية' ? (pdKind(r.d) === 'self' ? 'تنمية ذاتية' : 'حضرت ورشة خارجية رسمية') : 'حضرت ورشة داخلية'}: «${String(r.d.title || '').trim()}»${dt(r)}`);
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const paL = (D.pa.length ? [`تواصلت مع أولياء أمور (${nPA}) من الطالبات، ومن أغراض التواصل: ${[...new Set(D.pa.map(r => r.d.topic || r.d.why).filter(Boolean))].join('، ') || 'متابعة أكاديمية'}`] : [])
     .concat(D.paa.map(r => `${r.d.kind || 'نشاط'} «${String(r.d.name || '').trim()}» للشراكة مع أولياء الأمور${dt(r)}` + (r.d.tg ? ` — المستهدف: ${r.d.tg}` : '')));
