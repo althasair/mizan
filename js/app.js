@@ -114,8 +114,11 @@ const ICON = {
   star: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l2.6 5.5 6 .8-4.4 4.2 1.1 6L12 16.8 6.7 19.5l1.1-6L3.4 9.3l6-.8z"/></svg>',
   cal: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>',
 };
+/* عدّاد البند في لوحة القسم: ما سجّلته المنسقة + ما سجّلته معلمات القسم في صفحاتهن (الزيارات التبادلية، الأنشطة، أولياء الأمور، مصادر التعلم، الإنجازات) */
+const SEC_T = { PV: ['TPV', 'TEX'], AC: ['TA'], PA: ['TPA'], LR: ['TLR'], ACH: ['TACH'] };
+const secCnt = (k, per) => S.records.filter(r => (r.item === k || (SEC_T[k] || []).includes(r.item)) && r.dept === S.dept && inP(r.date, per)).length;
 function navHTML() {
-  const cnt = k => S.records.filter(r => r.item === k && r.dept === S.dept && inP(r.date, P())).length;
+  const cnt = k => secCnt(k, P());
   if (isTeacher()) return T_navHTML();
   if (typeof isSec === 'function' && isSec()) return `<div class="grp">إذنٌ مُيسَّر</div><a class="it on" data-v="s_prq">${ICON.prq}<span>حصر الغياب والاستئذان</span></a>`;
   if (typeof isAct === 'function' && isAct()) { const it = (v, t, ic) => `<a class="it ${S.view === v ? 'on' : ''}" data-v="${v}">${ICON[ic]}<span>${t}</span></a>`;
@@ -208,7 +211,7 @@ function C_home(el) {
   </div>
   ${rp && rp.feedback ? `<div class="card"><h2>تغذية راجعة من النائب الأكاديمي</h2><div class="fbv">${fbFmt(rp.feedback)}</div></div>` : ''}
   <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>تقدّم التوثيق في الفترة</h2>${SECTIONS.map(s => { const n = S.records.filter(r => r.dept === S.dept && r.item === s.k && inP(r.date, p)).length; return `<div class="row" style="margin:6px 0"><a style="width:170px;cursor:pointer" data-go="sec:${s.k}">${s.t}</a><div class="bar sp"><i style="width:${Math.min(100, n * 20)}%"></i></div><span class="chip ${n ? 'ok' : ''}">${n}</span></div>`; }).join('')}</div>
+    <div class="card"><h2>تقدّم التوثيق في الفترة</h2>${SECTIONS.map(s => { const n = secCnt(s.k, p); return `<div class="row" style="margin:6px 0"><a style="width:170px;cursor:pointer" data-go="sec:${s.k}">${s.t}</a><div class="bar sp"><i style="width:${Math.min(100, n * 20)}%"></i></div><span class="chip ${n ? 'ok' : ''}">${n}</span></div>`; }).join('')}</div>
     <div>
       <div class="card"><h2>الورشة القادمة في خطة القسم</h2>${nextPD ? `<b>${esc(nextPD.title)}</b><div class="row" style="margin-top:6px"><span class="chip tf">${dmy(nextPD.date)}</span><span class="chip">${esc(nextPD.type || '')}</span><span class="chip">${esc(nextPD.by || '')}</span></div>` : '<div class="empty">لا توجد ورش قادمة</div>'}</div>
       <div class="card"><h2>توصيات مشتركة تحتاج إجراءً</h2>${R.T.common.length ? R.T.common.map(c => `<div style="margin:4px 0">• ${esc(c)}</div>`).join('') + `<button class="btn sm sec" data-go="sec:CP" style="margin-top:8px">تسجيل إجراء</button>` : '<div class="empty">لا توجد توصيات متكررة لدى معلمتين فأكثر</div>'}</div>

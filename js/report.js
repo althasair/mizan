@@ -307,6 +307,8 @@ function buildReport(ctx) {
     const dateTxt = d0 => d0 ? ` (${dm(d0)})` : '';
     // الزيارات التبادلية التي سجّلتها معلمات القسم
     const PVt = mineD('TPV');
+    if (PVt.length && !Rp('PV').length) { const nT = uniq(PVt.map(r => r.d.t)).length;
+      T.ov_peer = `نفّذت معلمات القسم (${PVt.length}) من الزيارات التبادلية خلال الفترة، بمشاركة (${nT}) ${nT === 1 ? 'معلمة' : 'معلمات'}، وفق التفصيل الآتي:`; }
     // تُعرض في جدول داخل خانة «الزملاء (الزيارات التبادلية)»
     { const by = {}; PVt.slice().sort((a, b) => String(a.date).localeCompare(String(b.date))).forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ov_peer_lines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => { const saw = uniq(L.flatMap(r => lst(r.d.saw))), ap = uniq(L.flatMap(r => lst(r.d.apply)));
