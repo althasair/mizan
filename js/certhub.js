@@ -41,6 +41,25 @@ function chTeachers(el) {
 function chVP(el) {
   const L = S.records.filter(r => r.item === 'VCR' && r.d && (S.user.dept || []).includes(r.dept)).sort((a, b) => String(b.date).localeCompare(String(a.date)));
   el.innerHTML = `<div class="tins">شهادات الشكر والتقدير التي أصدرها النائب الأكاديمي لمعلمات القسم ومنسقته.</div>
-  <div class="card">${!L.length ? '<div class="empty">لم تصدر شهادات من النائب الأكاديمي لقسمكِ بعد.</div>' : L.map(r => `<div style="display:flex;gap:8px;align-items:center;padding:5px 8px;border-radius:9px;background:#FBFAF8;margin-bottom:3px">
-    <span style="white-space:nowrap;font-weight:bold">أ. ${esc(r.d.t || '')}</span><span class="chip tf">${esc(r.d.title || 'شهادة شكر وتقدير')}</span><span style="flex:1;font-size:12px;color:#555">${esc((r.d.reasons || []).join('، '))}</span><span style="font-size:11px;color:#999">${dm(r.date)}</span></div>`).join('')}</div>`;
+  ${chIssued(L, 'data-vw', '', 'شهادات النائب الأكاديمي لقسمكِ')}`;
+  $$('[data-vw]', el).forEach(b => b.onclick = () => { const r = S.records.find(x => x.id === b.dataset.vw); if (r && typeof vcOpen === 'function') vcOpen([r]); });
+}
+
+/* الشهادات الصادرة في مربعات الأقسام: القسم ← المكرَّمات وعدد شهادات كل واحدة ← التفاصيل عند الضغط */
+const CH_COL = ['#7A1C2E', '#1F4E9E', '#16806A', '#B0661A', '#5B3A8E', '#0E6E86', '#9E1B5A', '#3E6B1F', '#8A5A12', '#2F3E66'];
+function chIssued(L, ko, kx, title) {
+  const sh = n => String(n || '').trim().split(/\s+/).filter((w, i, A) => i < 2 || i === A.length - 1).join(' ');
+  const depts = [...new Set(L.map(r => r.dept || '—'))].sort((a, b) => a.localeCompare(b, 'ar'));
+  const nT = new Set(L.map(r => r.d.t)).size;
+  return `<div class="card"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><h2 style="margin:0">${title || 'الشهادات الصادرة'}</h2><span class="sp"></span>
+    <span class="chip ok">${L.length} شهادة</span><span class="chip tf">${nT} مكرَّمة</span><span class="chip">${depts.length} ${depts.length > 2 ? 'أقسام' : 'قسم'}</span></div>
+  ${!L.length ? '<div class="empty">لم تصدر شهادات بعد</div>' : `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-top:10px">${depts.map((d, di) => {
+    const c = CH_COL[di % CH_COL.length], D = L.filter(r => (r.dept || '—') === d), by = {};
+    D.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+    return `<div style="border-radius:16px;overflow:hidden;border:1px solid ${c}33;background:#fff;box-shadow:0 2px 8px #0000000d">
+      <div style="background:${c};color:#fff;padding:8px 12px;display:flex;align-items:center;gap:8px"><b style="flex:1;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(d)}</b><span style="background:#fff;color:${c};border-radius:20px;padding:1px 10px;font-weight:bold;font-size:13px">${D.length}</span></div>
+      <div style="padding:6px 8px">${Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([tn, R]) => `<details style="border-radius:9px;background:${c}0D;margin-bottom:4px;padding:4px 8px"><summary style="cursor:pointer;display:flex;gap:6px;align-items:center;list-style:none"><span style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:bold">أ. ${esc(sh(tn))}</span>${R.some(r => r.d.odept) ? '<span style="font-size:10.5px;color:#888">زميلة من قسم آخر</span>' : ''}<span style="background:${c};color:#fff;border-radius:20px;min-width:22px;text-align:center;padding:0 7px;font-size:12px;font-weight:bold">${R.length}</span></summary>
+        ${R.sort((a, b) => String(b.date).localeCompare(String(a.date))).map(r => `<div style="font-size:11.5px;padding:5px 0;border-top:1px dashed #E5E5E5"><div style="display:flex;gap:6px;align-items:center"><b style="flex:1">${esc(r.d.title || 'شهادة شكر وتقدير')}</b><span style="color:#999;font-size:10.5px">${dmy(r.date)}</span></div>
+          <div style="color:#555">${(r.d.reasons || []).map(esc).join('، ')}</div>
+          <div style="margin-top:3px"><button class="btn sm sec" ${ko}="${r.id}" style="padding:2px 10px;font-size:11px">فتح الشهادة</button>${kx ? ` <button class="btn sm ghost" ${kx}="${r.id}" style="color:#A33;padding:2px 8px;font-size:11px">🗑 حذف</button>` : ''}</div></div>`).join('')}</details>`).join('')}</div></div>`; }).join('')}</div>`}</div>`;
 }

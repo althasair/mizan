@@ -95,10 +95,7 @@ function A_vcert(el) {
     <div class="note" style="margin:8px 0">${st.t.length ? `ستصدر ${st.t.length} ${st.t.length > 2 ? 'شهادات' : st.t.length === 2 ? 'شهادتان' : 'شهادة'}${st.t.length <= 6 ? ': ' + st.t.map(esc).join('، ') : ''}` : 'اختاري المكرَّمة لتظهر في الشهادة.'}</div>
     <div class="actions" style="margin:0;flex-wrap:wrap"><button class="btn" id="vcGo">${ICON.cert} حفظ وإصدار</button><button class="btn sec" id="vcPv" type="button">فتح بالحجم الكامل</button></div></div></div>
   </div>
-  <div class="card"><h2 style="margin:0">الشهادات الصادرة (${L.length})</h2>
-    <div class="tbl" style="margin-top:8px"><table class="t"><tr><th>التاريخ</th><th>المكرَّمة</th><th>المسمى</th><th>الشهادة</th><th>سبب التكريم</th><th></th></tr>
-    ${L.map(r => `<tr><td>${dmy(r.date)}</td><td style="white-space:nowrap"><b>${esc(r.d.t)}</b></td><td style="font-size:12.5px">${esc(r.d.job || '')}</td><td>${esc(r.d.title)}</td><td style="font-size:12.5px">${(r.d.reasons || []).map(esc).join('، ')}</td>
-      <td style="white-space:nowrap"><button class="btn sm sec" data-vw="${r.id}">فتح الشهادة</button> <button class="btn sm ghost" data-vx="${r.id}" style="color:#A33">🗑 حذف</button></td></tr>`).join('') || `<tr><td colspan="6"><div class="empty">لم تصدر شهادات بعد</div></td></tr>`}</table></div></div>`;
+  ${chIssued(L, 'data-vw', 'data-vx')}`;
 
   const reasons = () => st.rs.map(k => { const [g, i] = k.split('.').map(Number); return VC_G[g][1][i]; }).concat(st.oth ? [st.oth] : []).concat(st.det ? [st.det] : []);
   const grab = () => { st.oth = $('#vcO').value.trim(); st.det = $('#vcDt').value.trim(); st.vs = +$('#vcV').value; st.ph = +$('#vcP').value; };

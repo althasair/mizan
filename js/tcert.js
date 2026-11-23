@@ -129,13 +129,8 @@ function C_tcert(el) {
      <div class="note" style="margin:8px 0">${st.t.length ? `ستصدر ${st.t.length} ${st.t.length > 2 ? 'شهادات' : st.t.length === 2 ? 'شهادتان' : 'شهادة'}: ${st.t.map(esc).join('، ')}` : 'اختاري المكرَّمة لتظهر في الشهادة.'}</div>
      <div class="actions" style="margin:0;flex-wrap:wrap"><button class="btn" id="tcGo">${ICON.cert} حفظ وإصدار</button><button class="btn sec" id="tcPv" type="button">فتح بالحجم الكامل</button></div></div></div>
   </div>` : ''}
-  <div class="card"><div class="row"><h2 style="margin:0">الشهادات الصادرة (${L.length})</h2><span class="sp"></span>
-    ${L.length ? `<select id="tcF" style="max-width:240px"><option value="">كل المكرَّمات</option>${Object.keys(cnt).sort((a, b) => a.localeCompare(b, 'ar')).map(n => `<option ${fq === n ? 'selected' : ''} value="${esc(n)}">${esc(n)} (${cnt[n]})</option>`).join('')}</select>` : ''}</div>
-    <div class="tbl" style="margin-top:8px"><table class="t"><tr><th>التاريخ</th><th>المكرَّمة</th>${dept ? '' : '<th>القسم</th>'}<th>الشهادة</th><th>سبب التكريم</th><th></th></tr>
-    ${LF.map(r => `<tr><td>${dmy(r.date)}</td><td><b>${esc(r.d.t)}</b></td>${dept ? '' : `<td>${esc(r.dept)}</td>`}<td>${esc(r.d.title)}</td><td style="font-size:12.5px">${(r.d.reasons || []).map(esc).join('، ')}</td>
-      <td style="white-space:nowrap"><button class="btn sm sec" data-to="${r.id}">فتح الشهادة</button> <button class="btn sm ghost" data-tx="${r.id}" style="color:#A33">🗑 حذف</button></td></tr>`).join('') || `<tr><td colspan="6"><div class="empty">لم تصدر شهادات بعد</div></td></tr>`}</table></div></div>`;
+  ${chIssued(L, 'data-to', 'data-tx')}`;
   if ($('#tcD')) $('#tcD').onchange = e => { S.tcDept = e.target.value; S.tcSt = null; show(); };
-  if ($('#tcF')) $('#tcF').onchange = e => { S.tcF = e.target.value; show(); };
   $$('[data-to]', el).forEach(b => b.onclick = () => tcOpen([S.records.find(x => x.id === b.dataset.to)]));
   $$('[data-tx]', el).forEach(b => b.onclick = async () => { if (!confirm('حذف هذه الشهادة من السجل؟')) return; await call('delete', { id: b.dataset.tx }); S.records = S.records.filter(x => x.id !== b.dataset.tx); toast('تم الحذف'); refresh(); });
   if (!dept) return;
