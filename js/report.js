@@ -413,6 +413,12 @@ function buildReport(ctx) {
       T.ac_clines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + (r.d.ptn ? ` باستضافة ${r.d.ptn}` : '') + (r.d.tg ? ` (الفئة المستهدفة: ${r.d.tg})` : '') + dateTxt(r.date)).join('، ') + '.' })); }
     if (TAt.length) { const by = {}; TAt.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.ac_tlines = Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `${r.d.kind} «${nz(r.d.name)}»` + dateTxt(r.date)).join('، ') + '.' })); }
+    /* المسابقات والمشاركات الخارجية التي سجّلتها المعلمات لطالباتهن (تبقى أيضاً في «الإنجازات والمشاركات») */
+    { const AHx = AH.filter(r => r.d && !/مستوى المدرسة/.test(r.d.lvl || '') && !/^قسم\s|^المدرسة$/.test(String(r.d.ent || '').trim()) && !TAx.some(x => x.d.t === r.d.t && String(x.date).slice(0, 10) === String(r.date).slice(0, 10)));
+      if (AHx.length) { const by = {}; AHx.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+        const stuTx = v => { const x = String(v || '').trim(); if (!x || x === '0') return ''; const m = x.match(/^(\d+)/); return m ? ` بمشاركة (${+m[1]}) طالبات` : ` بمشاركة الطالبات: ${x}`; };
+        const resTx = v => { const x = String(v || '').trim(); return x && x !== '0' ? `، النتيجة: ${x}` : ''; };
+        T.ac_xlines = (T.ac_xlines || []).concat(Object.entries(by).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0], 'ar')).map(([t, L]) => ({ st: Math.min(L.length, 3), tx: `أ. ${t} (${L.length}): ` + L.map(r => `«${nz(r.d.name)}»` + ([r.d.ent, r.d.lvl].filter(Boolean).length ? ` (${[r.d.ent, r.d.lvl].filter(Boolean).join('، ')})` : '') + stuTx(r.d.stu) + resTx(r.d.res) + dateTxt(r.date)).join('؛ ') + '.' }))); } }
     const hdr = (k, L, tx) => { if (L && L.length && /^لم /.test(T[k] || '')) T[k] = tx(L.reduce((a, x) => a + (+(String(x.tx).match(/\((\d+)\)/) || [0, 1])[1]), 0)); };
     hdr('ac_int', T.ac_tlines, n => `نفّذت معلمات القسم (${n}) من الأنشطة والمبادرات الداخلية، وفق التفصيل الآتي:`);
     hdr('ac_ext', T.ac_xlines, n => `شاركت معلمات القسم وطالباتهن في (${n}) من الأنشطة خارج المدرسة، وفق التفصيل الآتي:`);
