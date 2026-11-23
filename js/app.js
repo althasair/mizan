@@ -60,7 +60,7 @@ async function anaLoad(force) {
 
 /* ------------------------------------------------------------------ الدخول */
 /* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
-const SV_NEED = 9;
+const SV_NEED = 10;
 function sabHealthHTML() {
   if (!isAdmin()) return '';
   if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>
@@ -117,6 +117,8 @@ const ICON = {
 /* عدّاد البند في لوحة القسم: ما سجّلته المنسقة + ما سجّلته معلمات القسم في صفحاتهن (الزيارات التبادلية، الأنشطة، أولياء الأمور، مصادر التعلم، الإنجازات) */
 const SEC_T = { PV: ['TPV', 'TEX'], AC: ['TA'], PA: ['TPA'], LR: ['TLR'], ACH: ['TACH'] };
 const secCnt = (k, per) => S.records.filter(r => (r.item === k || (SEC_T[k] || []).includes(r.item)) && r.dept === S.dept && inP(r.date, per)).length;
+/* التقرير الموقّع يبقى مفتوحاً للتعديل وإعادة التوقيع حتى نهاية فترته، ويُقفل بعدها (أو باعتماد النائب) */
+const repLocked = (rp, p) => !!rp && (rp.status === 'معتمد' || (rp.status === 'موقّع من المنسقة' && today() > String((p || {}).to || '9999')));
 function navHTML() {
   const cnt = k => secCnt(k, P());
   if (isTeacher()) return T_navHTML();
@@ -274,10 +276,10 @@ function C_section(sec, el) {
   const editing = S.edit ? list.find(r => r.id === S.edit) : null;
   const base = editing ? { ...editing.d, date: editing.d.date || editing.date } : { date: today() };
   if (sec.k === 'WS' && !editing && S.prefill) Object.assign(base, S.prefill);
-  const rp = repFor(S.dept, p.name), locked = rp && ['موقّع من المنسقة', 'معتمد'].includes(rp.status);
+  const rp = repFor(S.dept, p.name), locked = repLocked(rp, p);
   el.innerHTML = `
     <div class="note">${esc(sec.note)}</div>
-    ${locked ? '<div class="note warn">تقرير هذه الفترة موقّع ومقفل؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
+    ${locked ? '<div class="note warn">تقرير هذه الفترة مقفل بعد انتهاء الفترة؛ لا يمكن إضافة أو تعديل سجلات بتاريخ داخل الفترة إلا إذا أعادته النائب للتعديل.</div>' : ''}
     ${sec.k === 'PL' ? '<div class="card pl-up" id="plUp"><div class="empty">جارٍ تحميل الخطة السنوية…</div></div><div class="card apl" id="aplC"></div>' : ''}${sec.k === 'WS' ? wsPlanHTML() : ''}${sec.k === 'RA' ? raSabHTML(p) : ''}${sec.k === 'OV' ? ovLeadHTML(p) : ''}
     <div class="card" id="fc"><h2>${editing ? 'تعديل سجل' : 'إضافة سجل جديد'} <span class="sub">الحقول المعلَّمة بـ * مطلوبة</span></h2>
       <form class="form" id="frm" autocomplete="off">${sec.f.map(f => fieldHTML(f, base)).join('')}
@@ -409,7 +411,7 @@ async function C_report(el, deptArg) {
   const dept = deptArg || S.dept, p = P();
   setTitle('تقرير أعمال القسم');
   const rp = repFor(dept, p.name);
-  const frozen = rp && rp.snap && ['موقّع من المنسقة', 'معتمد'].includes(rp.status);
+  const frozen = rp && rp.snap && repLocked(rp, p);
   /* مزامنة فورية: عند فتح التقرير (غير الموقّع) يُجلب آخر ما سجّلته المعلمات والمنسقة بصمت، ثم يُعاد بناء التقرير */
   if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 300000) {
     S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: j.records, reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
@@ -419,7 +421,7 @@ async function C_report(el, deptArg) {
   if (rp && (rp.status === 'معتمد' || rp.feedback)) { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
   let csig = '';
   { const cid = isAdmin() ? (S.coords.find(c => c.dept.includes(dept)) || {}).id : S.user.id; if (cid) { try { csig = (await API.call('signature', { who: cid })).data; } catch (e) {} } }
-  const canSign = !isAdmin() && !isViewer() && (!rp || !['موقّع من المنسقة', 'معتمد'].includes(rp.status));
+  const canSign = !isAdmin() && !isViewer() && !repLocked(rp, p);
   el.innerHTML = `
     <div class="row noprint" style="margin-bottom:14px">
       <span class="chip ${rp && rp.status === 'معتمد' ? 'ok' : rp && rp.status === 'موقّع من المنسقة' ? 'tf' : rp && rp.status === 'معاد للتعديل' ? 'bad' : ''}">${esc(rp ? rp.status : 'مسودة — يتحدّث تلقائياً من السجلات')}</span>

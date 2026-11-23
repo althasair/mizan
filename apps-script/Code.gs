@@ -276,8 +276,10 @@ function archive_(u, row) {
 // بعد توقيع المنسقة على تقرير فترة ما، تُقفل سجلات تلك الفترة لقسمها (ما لم تُعِده النائب للتعديل)
 function assertNotLocked_(dept, date) {
   if (!date) return;
-  const reps = rows_(SH.rep).rows.filter(r => r[1] === dept && (r[5] === 'موقّع من المنسقة' || r[5] === 'معتمد'));
-  for (const r of reps) { if (date >= iso_(r[3]) && date <= iso_(r[4])) fail_('تقرير هذه الفترة موقّع ومقفل. اطلبي من النائب الأكاديمي إعادته للتعديل.'); }
+  // يبقى التقرير مفتوحاً للتعديل حتى نهاية الفترة ولو وقّعته المنسقة؛ ويُقفل بعد انتهائها، أو عند اعتماد النائب
+  const today = Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd');
+  const reps = rows_(SH.rep).rows.filter(r => r[1] === dept && (r[5] === 'معتمد' || (r[5] === 'موقّع من المنسقة' && today > iso_(r[4]))));
+  for (const r of reps) { if (date >= iso_(r[3]) && date <= iso_(r[4])) fail_('تقرير هذه الفترة مقفل بعد انتهاء الفترة. اطلبي من النائب الأكاديمي إعادته للتعديل.'); }
 }
 
 /* ------------------------------------------------------------------ التقارير والتوقيع */
@@ -292,7 +294,7 @@ function signReport_(u, p) {
   const lock = LockService.getScriptLock(); lock.waitLock(20000);
   try {
     const t = rows_(SH.rep); const i = findRep_(t, p.dept, p.period);
-    if (i >= 0 && (t.rows[i][5] === 'موقّع من المنسقة' || t.rows[i][5] === 'معتمد')) fail_('التقرير موقّع مسبقاً');
+    if (i >= 0 && (t.rows[i][5] === 'معتمد' || (t.rows[i][5] === 'موقّع من المنسقة' && Utilities.formatDate(new Date(), 'Asia/Qatar', 'yyyy-MM-dd') > iso_(t.rows[i][4])))) fail_('التقرير موقّع مسبقاً وانتهت فترته');   // قبل نهاية الفترة: يُعاد التوقيع بآخر نسخة
     const row = [i >= 0 ? t.rows[i][0] : 'p' + new Date().getTime().toString(36), p.dept, p.period, p.from, p.to, 'موقّع من المنسقة', u.name, now_(), '', '', i >= 0 ? t.rows[i][10] : '', JSON.stringify(p.snap || {})];
     if (i >= 0) t.sh.getRange(i + 2, 1, 1, 12).setValues([row]); else t.sh.appendRow(row);
     log_(u, 'توقيع تقرير', p.dept, p.period);
@@ -568,7 +570,7 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
-const SERVER_V = 9;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+const SERVER_V = 10;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
 function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
 /* إجراءات المعلمات في سبع سنابل ← الميزان.
    لتخفيف القراءات (حد Firebase المجاني 50 ألف قراءة يوميًا): تُحفظ نسخة مما جُلب في ورقة «مخزن سبع سنابل»،
