@@ -2,6 +2,14 @@
 'use strict';
 /* معلمات خارج الهيئة طوال العام (إجازة): لا تظهر أعمالهن ولا أسماؤهن في الغياب — عرضاً فقط، دون حذف أي سجل من الجدول */
 const STAFF_GONE = ['وضحى الهاجري', 'لينا شقير'];
+/* التقارير الموقّعة المحفوظة: إخفاء اسمي المعلمتين من سطور الغياب عند العرض فقط (النسخة المحفوظة لا تُمس) */
+function goneSnap(o) {
+  const fx = t => { let x = String(t); STAFF_GONE.forEach(n => { const e = n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    x = x.replace(new RegExp('\\s*ولم تتم زيارة:\\s*' + e + '\\.', 'g'), '').replace(new RegExp('،\\s*وغياب:\\s*أ\\.\\s*' + e + '(?=[؛.]|$)', 'g'), '').replace(new RegExp('(وغياب:\\s*)أ\\.\\s*' + e + '،\\s*', 'g'), '$1').replace(new RegExp('،\\s*أ\\.\\s*' + e + '(?=[؛.،]|$)', 'g'), '')
+      .replace(new RegExp('(ولم تتم زيارة:[^.]*?)،\\s*' + e, 'g'), '$1').replace(new RegExp('(ولم تتم زيارة:\\s*)' + e + '،\\s*', 'g'), '$1'); }); return x; };
+  const walk = v => typeof v === 'string' ? fx(v) : Array.isArray(v) ? v.map(walk) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, w]) => [k, walk(w)])) : v;
+  try { return walk(o); } catch (e) { return o; }
+}
 function staffGone(L) {
   const gone = n => STAFF_GONE.includes(String(n || '').trim());
   return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(r => {
@@ -426,7 +434,7 @@ async function C_report(el, deptArg) {
   if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 300000) {
     S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: staffGone(j.records), reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
       if (el.isConnected) refresh(); }).catch(() => { S._repSync = 0; }); }
-  const R = frozen ? rp.snap : buildReport(ctxFor(dept, p));
+  const R = frozen ? goneSnap(rp.snap) : buildReport(ctxFor(dept, p));
   let sig = '';
   if (rp && (rp.status === 'معتمد' || rp.feedback)) { try { sig = (await API.call('signature', { dept, period: p.name })).data; } catch (e) {} }
   let csig = '';
