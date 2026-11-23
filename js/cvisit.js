@@ -25,7 +25,10 @@ function specFollow(t, per, recs) {   // recs: سجلات القسم (V و IS)
     const vk = v.filter(r => r.d.kj === 'كلية').length, vj = v.length - vk; const done = m < cur;
     return { m, v: v.length, vk, vj, needV: P.n, s: ss.length, needS: P.sess || 0, done, shortV: v.length < P.n || vk < 1, shortS: ss.length < (P.sess || 0) }; });
 }
-const FU_ST = ['تم التنفيذ', 'تم التنفيذ جزئياً', 'لم تُنفذ بعد'];
+const FU_ST = ['تم التنفيذ', 'تم التنفيذ جزئياً', 'لم تُنفذ بعد', 'لم يتم قياسه'];
+/* عنوان متابعة التوصيات: يوضح أنها متابعة لتوصيات حضور صفي سابق ولمن (المنسقة / النائب / المديرة) */
+const fuWho = k => ({ V: 'حضور منسقة المادة', VPV: 'حضور النائب الأكاديمي', PRV: 'حضور مديرة المدرسة' })[k] || 'الحضور الصفي';
+const fuHead = d => `متابعة توصيات ${fuWho(d.prevK)} السابق` + (d.prevDate ? ` بتاريخ ${dmy(d.prevDate)}` : '');
 const ORD = ['الأولى', 'الثانية', 'الثالثة', 'الرابعة', 'الخامسة', 'السادسة', 'السابعة', 'الثامنة', 'التاسعة', 'العاشرة', 'الحادية عشرة', 'الثانية عشرة', 'الثالثة عشرة', 'الرابعة عشرة', 'الخامسة عشرة', 'السادسة عشرة', 'السابعة عشرة', 'الثامنة عشرة', 'التاسعة عشرة', 'العشرون'];
 const daysBtw = (a, b) => Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5);
 const monthKey = d => String(d || '').slice(0, 7);
@@ -43,10 +46,10 @@ function carryOf(prev) {
 /* متابعة توصيات الزيارة السابقة — مشتركة بين استمارة المنسقة والنائب الأكاديمي ومديرة المدرسة */
 const VK_NAME = { V: 'منسقة المادة', VPV: 'النائب الأكاديمي', PRV: 'مديرة المدرسة' };
 function cvFuCard(d, prev) {
-  return `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>متابعة توصيات الزيارة السابقة <span class="sub">بند ثابت في كل زيارة — كلية أو جزئية</span></h2>
+  return `<div class="card" style="border-inline-start:4px solid var(--tiffany-d)"><h2>${prev ? 'متابعة توصيات ' + fuWho(prev.item) + ' السابق' : 'متابعة توصيات الحضور الصفي السابق'} <span class="sub">بند ثابت في كل زيارة — كلية أو جزئية · اختاري «لم يتم قياسه» إن لم يسمح الدرس بقياس التوصية، وتُرحَّل للزيارة القادمة</span></h2>
     ${!d.t ? '<div class="empty">اختاري المعلمة أولاً</div>' : !prev ? '<div class="empty">هذه أول زيارة للمعلمة؛ تظهر توصياتها هنا للمتابعة في الزيارة القادمة.</div>'
       : !d.fu.length ? `<div class="empty">لم تُدوَّن توصيات في زيارة ${dmy(prev.date)}.</div>`
-      : `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">الزيارة السابقة بتاريخ <b>${dmy(prev.date)}</b> (${esc(prev.d.kj || '')}${VK_NAME[prev.item] ? ' — زيارة ' + VK_NAME[prev.item] : ''}) — كان من أبرز توصياتها:</div>
+      : `<div style="font-size:13px;color:var(--muted);margin-bottom:6px">هذه متابعة لتوصيات ${VK_NAME[prev.item] ? 'حضور ' + VK_NAME[prev.item] : 'الحضور الصفي'} للمعلمة بتاريخ <b>${dmy(prev.date)}</b> (${esc(prev.d.kj || '')})، وكان من أبرز توصياتها:</div>
       <div class="tbl"><table class="t"><tr><th>التوصية</th><th style="width:170px">مدى التنفيذ</th><th>ملاحظة</th></tr>
       ${d.fu.map((x, i) => `<tr><td style="font-size:13px">${esc(x.r)}</td><td><select data-fs="${i}" style="width:100%">${['', ...FU_ST].map(o => `<option ${x.st === o ? 'selected' : ''} value="${o}">${o || 'اختاري…'}</option>`).join('')}</select></td><td><input data-fn="${i}" value="${esc(x.note || '')}" style="width:100%" placeholder="اختياري"></td></tr>`).join('')}</table></div>`}
     </div>`;
@@ -310,7 +313,7 @@ function cvForm(el, rec) {
   const T = cvTeachers();
   const prevOf = () => cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && (r.date < d.date || (r.date === d.date && rec && String(r.id) < String(rec.id)))).slice(-1)[0];
   const syncFU = () => {   // متابعة توصيات الزيارة السابقة — ثابتة في كل زيارة
-    const prev = prevOf(); d.prevId = prev ? prev.id : ''; d.prevDate = prev ? prev.date : '';
+    const prev = prevOf(); d.prevId = prev ? prev.id : ''; d.prevDate = prev ? prev.date : ''; d.prevK = prev ? prev.item : '';
     const want = carryOf(prev); const old = {}; d.fu.forEach(x => old[x.r] = x);
     d.fu = want.map(r => old[r] || { r, st: '', note: '' });
   };
@@ -401,7 +404,7 @@ function cvForm(el, rec) {
     const before = cvVisits(d.t).filter(r => (!rec || r.id !== rec.id) && r.date <= d.date && r.d.kj === 'كلية').length;
     d.ty = d.kj === 'كلية' ? 'الزيارة ' + (ORD[before] || before + 1) : 'متابعة الزيارة ' + (ORD[Math.max(0, before - 1)] || before);
     d.f1 = d.str[0] || ''; d.f2 = d.str[1] || ''; d.r1 = d.imp[0] || ''; d.r2 = d.imp[1] || ''; d.r3 = d.imp[2] || '';
-    const n = d.fu.length, ok = d.fu.filter(x => x.st === 'تم التنفيذ').length, no = d.fu.filter(x => x.st === 'لم تُنفذ بعد').length;
+    const fM = d.fu.filter(x => x.st !== 'لم يتم قياسه'), n = fM.length, ok = fM.filter(x => x.st === 'تم التنفيذ').length, no = fM.filter(x => x.st === 'لم تُنفذ بعد').length;
     d.st = !n ? '' : ok === n ? 'تم تنفيذ التوصيات' : no === n ? 'لم تُنفذ بعد' : 'تم التنفيذ جزئياً';
     Object.keys(d).forEach(k => { if (d[k] === '') delete d[k]; });
     const j = await call('save', { rec: { id: rec && rec.id, dept: S.dept, item: 'V', date: d.date, sum: `أ. ${d.t} — ${d.ty}`, d } });
@@ -417,7 +420,7 @@ function cvInner(r) {
   const cN = r.by || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
   const achT = d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
   const ys = (v, x) => v === x ? '☑' : '☐';
-  const fuTxt = (d.fu || []).length ? `\n\nمتابعة توصيات الزيارة السابقة (${dmy(d.prevDate)}):\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '';
+  const fuTxt = (d.fu || []).length ? `\n\n${fuHead(d)}:\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '';
   return `<h1>${esc(F.title)}</h1><div class="sub">${esc(SCHOOL())} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
   <table><tr><th colspan="4">المعلومات الأساسيّة</th></tr>
     ${!d.achD && achT ? `<tr><td class="k">تحصيل الشعبة في المادة</td><td colspan="3"><b>${esc(achT)}</b></td></tr>` : ''}

@@ -182,8 +182,8 @@ function buildReport(ctx) {
       return '';
     }).filter(Boolean).join('، و');
     const XF = vs.filter(v => (v.fu || []).length).map(v => { const g = k => v.fu.filter(x => x.st === k).map(x => '«' + String(x.r).trim().replace(/[.،؛\s]+$/, '') + '»');
-      const p = [g('تم التنفيذ').length ? 'تم تنفيذ ' + g('تم التنفيذ').join('، و') : '', g('تم التنفيذ جزئياً').length ? 'تحسّن جزئي في ' + g('تم التنفيذ جزئياً').join('، و') : '', g('لم تُنفذ بعد').length ? 'ما زالت بحاجة إلى ' + g('لم تُنفذ بعد').join('، و') : ''].filter(Boolean);
-      return p.length ? `وفي متابعة توصيات زيارة ${dm(v.prevDate)} (في زيارة ${dm(v.date)}): ${p.join('؛ و')}.` : ''; }).filter(Boolean).join(' ');
+      const p = [g('تم التنفيذ').length ? 'تم تنفيذ ' + g('تم التنفيذ').join('، و') : '', g('تم التنفيذ جزئياً').length ? 'تحسّن جزئي في ' + g('تم التنفيذ جزئياً').join('، و') : '', g('لم تُنفذ بعد').length ? 'ما زالت بحاجة إلى ' + g('لم تُنفذ بعد').join('، و') : '', g('لم يتم قياسه').length ? 'ولم يتم قياس ' + g('لم يتم قياسه').join('، و') + ' (تُرحَّل للزيارة القادمة)' : ''].filter(Boolean);
+      return p.length ? `وفي متابعة توصيات ${v.prevK === 'VPV' ? 'حضور النائب الأكاديمي' : v.prevK === 'PRV' ? 'حضور مديرة المدرسة' : 'حضور المنسقة'} بتاريخ ${dm(v.prevDate)} (في زيارة ${dm(v.date)}): ${p.join('؛ و')}.` : ''; }).filter(Boolean).join(' ');
     const Y = (x => x.length ? x.join('؛ ') + '.' : '')(uniq(vs.map(v => String(v.note || '').replace(/\s*\n\s*/g, ' ').trim().replace(/[.。]+$/, '')).filter(Boolean)));
     const z = `• تم الحضور للأستاذة ${t} ${Tt}` + (U ? (U.includes('،') ? ' في الصفوف (' : ' في الصف (') + U + ')' : '') + (AG ? (AGl.length > 1 ? ' في مادتي ' : ' في مادة ') + AG : '') + '.'
       + (Vs ? ' وتميّزت في: ' + Vs + '.' : '') + (W ? ' وأبرز التوصيات: ' + W + '.' : '') + (X ? ' وفي زيارات المتابعة: ' + X + '.' : '') + (XF ? ' ' + XF : '') + (Y ? ' ' + Y : '');
