@@ -105,8 +105,14 @@ function cvWorkshops(t, upTo, dept) {
     if (r.item === 'EX' && r.dept === dept && (d.t === t || /جميع/.test(d.t || '')) && inY(d.date || r.date)) add({ title: d.name, date: d.date || r.date, src: 'خارجية', by: d.ent || '' });
   });
   const WSD = SECTIONS.find(x => x.k === 'WS');
+  /* من حضر ورشة القسم: إن ذُكرت أسماء الحاضرات في عنوانها «(حضور …)» فلهن فقط، وورش القيادة (النائب الأكاديمي) حضرتها المنسقة وحدها، وغيرها لمعلمات القسم */
+  const isCo = staffBy(t).role === 'منسقة', tk = nrm(t).split(' '), hasT = x => { const X = nrm(x).replace(/\./g, ' '); return X.includes(tk[0]) && X.includes(tk[tk.length - 1]); };
+  const attends = (d, by) => { const ttl = String(d.c || d.b || ''), m = ttl.match(/\(\s*حضور([^)]*)\)/);
+    if (m) return /جميع|كامل|كل المعلمات/.test(m[1]) || hasT(m[1]) || (isCo && /المنسقة/.test(m[1]));
+    if (/[اأ]سيا|الذبياني|الذيباني/.test(nrm(d.pres || ''))) return isCo || by === t;
+    return true; };
   S.records.filter(r => r.item === 'WS' && r.dept === dept && r.d && (r.d.g || '').startsWith('تمت')).forEach(r => { const d = r.d, dt = WSD.when(d);
-    if (!inY(dt) || String(d.pres || '').includes(t)) return; add({ title: WSD.title_(d), date: dt, src: 'ورشة القسم', by: d.pres || '', mon: d.o || '' }); });
+    if (!inY(dt) || String(d.pres || '').includes(t) || !attends(d, r.by)) return; add({ title: WSD.title_(d), date: dt, src: 'ورشة القسم', by: d.pres || '', mon: d.o || '' }); });
   return L.sort((a, b) => a.date.localeCompare(b.date));
 }
 /* عبارات الشكر — قائمة مستقلة عن نقاط القوة */
@@ -137,7 +143,8 @@ function cvWsGrab(d, el, WS) {
 }
 function cvWsKeep(d, dept) { const keys = new Set(cvWorkshops(d.t, d.date, dept).map(w => w.k)); Object.keys(d.wsi || {}).forEach(k => { if (!keys.has(k)) delete d.wsi[k]; }); }
 function cvWsPrint(d) {
-  const L = Object.values(d.wsi || {}).filter(v => v && v.title).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+  let ok = null; try { ok = new Set(cvWorkshops(d.t, d.date, staffBy(d.t).dept).map(w => w.k)); } catch (e) {}
+  const L = Object.entries(d.wsi || {}).filter(([k, v]) => v && v.title && (!ok || ok.has(k))).map(([k, v]) => v).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
   return L.length ? `<table style="margin-top:3px"><tr><th colspan="4">أثر الورش التدريبية التي حضرتها المعلمة (منذ بداية العام حتى تاريخ الزيارة)</th></tr><tr><td colspan="4" style="font-size:9px;color:#555;text-align:justify">يمثّل قياس الأثر ما رصده المعنيون بالمتابعة من خلال الحضورات الصفية السابقة ومتابعاتهم، ولا يُشترط أن يكون قد قيس في هذه الحصة.</td></tr><tr><th>الورشة</th><th style="width:13%">التاريخ</th><th style="width:24%">قياس الأثر</th><th style="width:30%">لوحظ من خلال</th></tr>
     ${L.map(v => `<tr><td style="font-size:9.5px">${esc(v.title)}${v.src ? ` <span style="color:#777">(${esc(v.src)})</span>` : ''}</td><td class="c" style="font-size:9.5px">${dmy(v.date)}</td><td style="font-size:9.5px">${esc(v.st || WSI_ST[0])}</td><td style="font-size:9.5px">${esc((v.via || []).join('، '))}${v.note ? ((v.via || []).length ? ' — ' : '') + esc(v.note) : ''}</td></tr>`).join('')}</table>` : '';
 }
