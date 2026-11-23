@@ -91,7 +91,7 @@ function A_vcert(el) {
       <div class="form"><div class="fld"><label>الآية الكريمة</label><select id="vcV">${TC_V.map((v, i) => `<option value="${i}" ${st.vs === i ? 'selected' : ''}>﴿${v[0]}﴾ — ${v[1]}</option>`).join('')}</select></div>
       <div class="fld"><label>العبارة التحفيزية</label><select id="vcP">${VC_P.map((p, i) => `<option value="${i}" ${st.ph === i ? 'selected' : ''}>${p}</option>`).join('')}</select></div></div></div>
   </div>
-  <div class="tc-side"><div class="card tc-live"><h2 style="margin:0 0 8px">المعاينة الحية</h2><div class="tc-pv" id="vcLive"></div>
+  <div class="tc-side"><div class="card tc-live"><h2 style="margin:0 0 8px">المعاينة الحية</h2><div class="tc-pv" id="vcLive"></div>${chPick(nTpl, st.tpl, st.or, 'data-vp', 'data-vh', 'data-vo', nNew)}
     <div class="note" style="margin:8px 0">${st.t.length ? `ستصدر ${st.t.length} ${st.t.length > 2 ? 'شهادات' : st.t.length === 2 ? 'شهادتان' : 'شهادة'}${st.t.length <= 6 ? ': ' + st.t.map(esc).join('، ') : ''}` : 'اختاري المكرَّمة لتظهر في الشهادة.'}</div>
     <div class="actions" style="margin:0;flex-wrap:wrap"><button class="btn" id="vcGo">${ICON.cert} حفظ وإصدار</button><button class="btn sec" id="vcPv" type="button">فتح بالحجم الكامل</button></div></div></div>
   </div>

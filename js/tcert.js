@@ -126,6 +126,7 @@ function C_tcert(el) {
    </div>
    <div class="tc-side"><div class="card tc-live"><h2 style="margin:0 0 8px">المعاينة الحية</h2>
      <div class="tc-pv" id="tcLive"></div>
+     ${chPick(nTpl, st.tpl, st.or, 'data-tp', 'data-th', 'data-or', 6)}
      <div class="note" style="margin:8px 0">${st.t.length ? `ستصدر ${st.t.length} ${st.t.length > 2 ? 'شهادات' : st.t.length === 2 ? 'شهادتان' : 'شهادة'}: ${st.t.map(esc).join('، ')}` : 'اختاري المكرَّمة لتظهر في الشهادة.'}</div>
      <div class="actions" style="margin:0;flex-wrap:wrap"><button class="btn" id="tcGo">${ICON.cert} حفظ وإصدار</button><button class="btn sec" id="tcPv" type="button">فتح بالحجم الكامل</button></div></div></div>
   </div>` : ''}
