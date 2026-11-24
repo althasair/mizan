@@ -61,6 +61,8 @@ function cvFuCard(d, prev) {
 const BANDS = [['ممتاز', '90% فأعلى', '#17734A', '#E4F3EA'], ['جيد جداً', '80 – 89%', '#1F5F99', '#E6EEF8'], ['جيد', '70 – 79%', '#946410', '#FBF1DB'], ['مقبول', '50 – 69%', '#B8521A', '#FCEADB'], ['ضعيف', 'دون 50%', '#A3202F', '#F9E3E6']];
 const bandI = m => m >= 90 ? 0 : m >= 80 ? 1 : m >= 70 ? 2 : m >= 50 ? 3 : 4;
 const secK = s => { const m = String(s || '').match(/(1[0-2])\s*[\/\-]\s*(\d+)/); return m ? m[1] + '-' + m[2] : String(s || '').trim(); };
+/* بداية اختبار منتصف الفصل الأول: الزيارات قبلها بلا تحصيل أكاديمي، وبعدها يُضاف تحصيل الشعبة */
+const CV_ACH_FROM = '2026-10-13';
 function cvAchData(t, subj, sec) {
   if (!t || !subj || typeof sanabilClass !== 'function') return null;
   const secs = uniqA([...String(staffBy(t).secs || '').split(/[،,]/).map(x => x.trim()), sec || ''].map(secK)).sort((a, b) => a.localeCompare(b, 'en', { numeric: true }));
@@ -338,8 +340,9 @@ function cvForm(el, rec) {
     const subs = sciSubj(s, uniqA(String(s.subj || '').replace(/\(.*?\)/g, '').split(/\+|،|\//).map(x => x.trim())));
     if (!d.subj && subs.length === 1) d.subj = subs[0];
     const cls = (d.s && d.subj && typeof sanabilClass === 'function') ? sanabilClass(d.s, d.subj) : null;
+    if (String(d.date || today()) >= CV_ACH_FROM) {
     if (cls && (!d.ach || d.achAuto)) { d.ach = cls.txt; d.achAuto = 1; }
-    { const AD = cvAchData(d.t, d.subj, d.s); if (AD) d.achD = AD; }
+    { const AD = cvAchData(d.t, d.subj, d.s); if (AD) d.achD = AD; } }
     const WS = cvWsPrep(d, d.t, d.date, S.dept, rec && rec.id);
     const P = planOf(d.t, perOfDate(d.date)); const prev = prevOf(); const gap = prev ? daysBtw(prev.date, d.date) : null;
     const inM = cvVisits(d.t).filter(r => perKey(r.date) === perKey(d.date) && (!rec || r.id !== rec.id) && r.date <= d.date);
@@ -363,7 +366,7 @@ function cvForm(el, rec) {
     ${d.t ? `<div class="row" style="gap:6px;margin-top:8px;flex-wrap:wrap"><span class="chip">خطة أ. ${esc(d.t)}: ${P.n} زيارات في الربع (${esc(P.lbl)})</span><span class="chip">زيارات الربع قبل هذه: ${inM.length}</span>
       ${prev ? `<span class="chip ${gap < P.min ? 'bad' : gap > P.max ? 'warn' : 'ok'}">الفاصل عن الزيارة السابقة (${dm(prev.date)}): ${gap} يوماً${gap < P.min ? ' — أقل من المقترح (تنبيه لكِ فقط)' : ''}</span>` : '<span class="chip">أول زيارة للمعلمة</span>'}
       ${d.kj !== expK ? `<span class="chip warn">المتوقع وفق الخطة: ${esc(expK)}</span>` : ''}</div>` : ''}
-    ${d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لم تصل نتائج التحصيل من سبع سنابل بعد — حدّثي الصفحة بعد لحظات.</div>` : ''}</div>
+    ${String(d.date || today()) < CV_ACH_FROM ? '' : d.achD ? cvAchBox(d.achD, d.s, d.t) : d.t && d.subj ? `<div style="margin-top:10px;font-size:12px;color:var(--muted)">لم تصل نتائج التحصيل من سبع سنابل بعد — حدّثي الصفحة بعد لحظات.</div>` : ''}</div>
 
     ${cvFuCard(d, prev)}
 
@@ -430,8 +433,9 @@ function cvForm(el, rec) {
 /* ================================================================== الطباعة والإرسال */
 function cvInner(r) {
   const F = vForm(r.d), d = r.d; let lastD = ''; const cvSL = cvAware(r.dept) ? 0 : 1;
-  const cN = r.by || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
-  const achT = d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
+  const cN = (r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(r.dept)) || {}).name || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
+  const achOK = String(d.date || '') >= CV_ACH_FROM;   // التحصيل الأكاديمي يظهر في زيارات ما بعد اختبار منتصف الفصل فقط
+  const achT = !achOK ? '' : d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
   const ys = (v, x) => v === x ? '☑' : '☐';
   const fuTxt = (d.fu || []).length ? `\n\n${fuHead(d)}:\n` + d.fu.map(x => `• ${cleanEnd(x.r)}: ${x.st}${x.note ? ' — ' + cleanEnd(x.note) : ''}.`).join('\n') : '';
   return `<h1>${esc(F.title)}</h1><div class="sub">${esc(SCHOOL())} · <bdi dir="ltr">${REF.YEAR || ''}</bdi></div>
@@ -442,7 +446,7 @@ function cvInner(r) {
     <tr><td class="k">الموضوع</td><td>${esc(d.topic || '')}</td><td class="k">منسق المادة</td><td>أ. ${esc(cN)}</td></tr>
     <tr><td class="k">المعلّم</td><td>أ. ${esc(d.t)}</td><td class="k">نوع المتابعة</td><td>${ys(d.mode, 'ميدانية')} ميدانيّة &nbsp; ${ys(d.mode, 'عن بُعد')} عن بُعد &nbsp;&nbsp; ${ys(d.kj, 'جزئية')} جزئيّة &nbsp; ${ys(d.kj, 'كلية')} كليّة</td></tr>
     <tr><td class="k">ملاحظات</td><td colspan="3">${ys(d.live, 'بث مباشر مدمج')} بث مباشر مدمج &nbsp; ${ys(d.live, 'بث مباشر غير مدمج')} بث مباشر غير مدمج</td></tr></table>
-  ${d.achD ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
+  ${achOK && d.achD ? cvAchBox(d.achD, d.s, d.t, 1) : ''}
   <table><tr><th>المجال</th><th>معايير الأداء</th>${F.scale.slice(cvSL).map(x => `<th style="width:6.8%;font-size:8.5px">${esc(x)}</th>`).join('')}<th style="width:24%">التوصيات<br><span style="font-weight:normal;font-size:8.5px">(تتضمن توجيهات لزيادة أثر الممارسات في تعلم الطلاب)</span></th></tr>
   ${F.items.map((x, i) => { const first = x.d !== lastD; lastD = x.d; const n = F.items.filter(y => y.d === x.d).length;
     return `<tr>${first ? `<td class="dm" rowspan="${n}">${esc(x.d)}</td>` : ''}<td style="font-size:10px">${esc(x.c)}</td>${F.scale.map((_, k) => k).slice(cvSL).map(k => `<td class="c">${ratingCell(d.rt && d.rt[i] === k)}</td>`).join('')}<td class="j" style="font-size:9.5px">${esc((d.rc || {})[i] || '')}${d.en && (d.en.rc || {})[i] ? `<div dir="ltr" style="text-align:left;color:#444">${esc(d.en.rc[i])}</div>` : ''}</td></tr>`; }).join('')}</table>
@@ -534,6 +538,7 @@ async function A_cvisits(el) {
       <td class="tlc ${r.done + r.part ? tl(r.done / (r.done + r.part) * 100, 75, 50, 25) : 'tl0'}">${r.done + r.part ? `${r.done}<small style="font-weight:500"> كلياً · ${r.part} جزئياً</small>` : '—'}</td>
       <td class="tlc ${r.ld == null ? 'tl0' : r.ld <= 7 ? 'tl4' : r.ld <= 14 ? 'tl3' : r.ld <= 21 ? 'tl2' : 'tl1'}">${r.last ? dmy(r.last) + `<br><small style="font-weight:500">${r.ld === 0 ? 'اليوم' : r.ld === 1 ? 'أمس' : r.ld === 2 ? 'قبل يومين' : r.ld <= 10 ? 'قبل ' + r.ld + ' أيام' : 'قبل ' + r.ld + ' يوماً'}</small>` : '—'}</td>
       <td style="text-align:center">${r.wait ? `<span class="chip warn">${r.wait}</span>` : r.n ? '<span class="chip ok">✓</span>' : ''}</td></tr>`).join('')}</table></div></div>
+  ${acvBoard(depts, VA.filter(inPer), coordName, tOf, f)}
   ${sel && sel.miss.length ? `<div class="card"><h2>معلمات لم تُزر بعد — ${esc(sel.d)} <span class="sub">${sel.miss.length} من ${sel.nT}</span></h2><div style="display:flex;flex-wrap:wrap;gap:6px">${sel.miss.map(t => `<span class="tlc tl0" style="border-radius:20px;padding:3px 12px;font-size:12.5px">${esc(t)}</span>`).join('')}</div></div>` : ''}
   <div class="card"><div class="row" style="gap:8px;flex-wrap:wrap"><h2 style="margin:0">${f.dept ? 'زيارات ' + esc(f.dept) : 'جميع الزيارات'} <span class="sub">${L.length}</span></h2><span class="sp"></span>
     ${f.dept ? '<button class="btn sm ghost" id="acAll">عرض كل الأقسام</button>' : ''}
@@ -549,6 +554,20 @@ async function A_cvisits(el) {
   $$('[data-dp]', el).forEach(b => b.onclick = () => set({ dept: f.dept === b.dataset.dp ? '' : b.dataset.dp }));
   if ($('#acAll')) $('#acAll').onclick = () => set({ dept: '' });
   $$('[data-ao]', el).forEach(b => b.onclick = () => { S.acv = b.dataset.ao; show(); window.scrollTo(0, 0); });
+}
+/* لوحة الحضور الصفي لكل منسقة: معلمات القسم وتواريخ حضورها، وكل تاريخ يفتح استمارته
+   (زيارات ما قبل اختبار منتصف الفصل بلا تحصيل أكاديمي، وما بعده يُضاف إليها التحصيل) */
+function acvBoard(depts, V, coordName, tOf, f) {
+  const box = d => { const L = V.filter(r => r.dept === d).sort((a, b) => (a.date || '').localeCompare(b.date || ''));
+    const T = [...new Set([...tOf(d), ...L.map(r => r.d.t)])];
+    const rated = r => r.d.rt && Object.keys(r.d.rt).length;
+    return `<div class="card" style="margin:0;padding:12px 14px"><div style="display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap"><b style="color:var(--navy)">${esc(d)}</b><small style="color:var(--muted)">المنسقة: ${esc(coordName(d, L[L.length - 1]))} · ${L.length} زيارة</small></div>
+      <table class="t" style="margin-top:8px;font-size:12.5px"><tr><th style="width:34%">المعلمة</th><th>تواريخ الحضور والاستمارات</th></tr>
+      ${T.map(t => { const R = L.filter(r => r.d.t === t);
+        return `<tr><td style="white-space:nowrap"><b>${esc(t)}</b></td><td>${R.length ? `<div style="display:flex;flex-wrap:wrap;gap:5px">${R.map(r => `<button class="btn sm ${rated(r) ? 'sec' : 'ghost'}" data-ao="${r.id}" title="${esc((r.d.ty || '') + (r.d.topic ? ' · ' + r.d.topic : '') + (rated(r) ? '' : ' · بلا بنود مسجلة'))}" style="font-size:11.5px;padding:2px 9px">${dmy(r.date)}${String(r.date) >= CV_ACH_FROM ? ' · بالتحصيل' : ''}</button>`).join('')}</div>` : '<span style="color:var(--muted)">لم تُزر</span>'}</td></tr>`; }).join('')}</table></div>`; };
+  const D = f.dept ? depts.filter(d => d === f.dept) : depts;
+  return `<div class="card"><h2>لوحة الحضور الصفي لكل منسقة <span class="sub">اضغطي التاريخ لفتح الاستمارة · زيارات ما قبل ${dmy(CV_ACH_FROM)} بلا تحصيل أكاديمي، وما بعدها يُضاف إليها التحصيل</span></h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(340px,100%),1fr));gap:12px">${D.map(box).join('')}</div></div>`;
 }
 const ACV_PH = ['زيارة متكاملة ومتابعة دقيقة، وتوصيات واضحة قابلة للتطبيق', 'أثمّن دقة رصد نقاط القوة وربطها بالأدلة من الحصة', 'التوصيات مناسبة، وأوصي بتحديد موعد لزيارة المتابعة', 'أوصي بربط التوصيات بمعايير تقييم المعلم بصورة أوضح', 'أوصي بالتركيز على أثر التوصيات في تعلم الطالبات في زيارة المتابعة', 'أوصي بتوثيق التغذية الراجعة المقدمة للمعلمة بعد الزيارة'];
 async function acvOpen(el, r) {
