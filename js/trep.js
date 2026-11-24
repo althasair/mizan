@@ -193,7 +193,8 @@ function trPage(el, fixed) {
    يُبنى على متوسط تقديرات الحضور الصفي (المنسقة والنائب والمديرة) لمعايير الحصة، وعلى الأعمال التي وثّقتها المعلمة خلال الفترة.
    الدرجة مقترحة فقط، ويمكن تعديلها قبل الطباعة. */
 const TR_BAND = p => p >= 90 ? 'ممتاز' : p >= 80 ? 'جيد جداً' : p >= 70 ? 'جيد' : p >= 60 ? 'مقبول' : 'ضعيف';
-const TR_RT = [100, 92, 84, 74, 62];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
+const TR_RT = [100, 97, 84, 74, 62];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
+const TR_COORD_RT = 98;   // الحضور الصفي للمنسقة في تقييم الأداء (أعلى من «مستكملة وفاعلة» للمعلمات)
 const TR_VD = { 1: 'التخطيط', 2: 'تنفيذ الدرس', 3: 'الإدارة الصفية وبيئة التعلم', 4: 'التقويم' };
 const TR_OV = {};
 /* مشاركات الطالبات الخارجية (3 درجات من مجال إشراك الطلبة): جائزة/مركز على مستوى الدولة أو دولي = 3 · مشاركة دولية = 2.5 · مشاركة على مستوى الدولة = 2 · مدرسية = 1 · لا شيء = 0.5
@@ -252,7 +253,7 @@ function trEval(name, rng, D) {
   const mo = Math.max(1, Math.round((new Date(rng.to) - new Date(rng.from)) / 864e5 / 30));
   const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : [];
   const vw = n => n === 1 ? 'زيارة صفية واحدة' : n === 2 ? 'زيارتين صفيتين' : n <= 10 ? `${n} زيارات صفية` : `${n} زيارة صفية`;
-  const vAvg = dn => { if (D.coordVis) { const n = F.filter(it => it.d === TR_VD[dn]).length; return n ? { p: TR_RT[1], n } : null; } const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
+  const vAvg = dn => { if (D.coordVis) { const n = F.filter(it => it.d === TR_VD[dn]).length; return n ? { p: TR_COORD_RT, n } : null; } const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
   const wk = (n, target) => 72 + 28 * Math.min(1, n / Math.max(1, target));
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const presWS = D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
