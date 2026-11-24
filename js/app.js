@@ -10,9 +10,14 @@ function goneSnap(o) {
   const walk = v => typeof v === 'string' ? fx(v) : Array.isArray(v) ? v.map(walk) : v && typeof v === 'object' ? Object.fromEntries(Object.entries(v).map(([k, w]) => [k, walk(w)])) : v;
   try { return walk(o); } catch (e) { return o; }
 }
+/* استمارة المنسقة على النموذج الأصلي في الدليل الإرشادي: سلّمها يبدأ من «مستكملة وفاعلة» (لا عمود «مبتكرة»)،
+   فأي تقدير «مبتكرة» قديم في زيارات المنسقات يُقرأ «مستكملة وفاعلة» */
+function coordRt(r) { if (!r || !r.d || !r.d.rt || !(r.item === 'V' || (r.item === 'TVR' && r.d.src === 'V'))) return r;
+  if (!Object.values(r.d.rt).some(v => +v === 0)) return r; const rt = {}; Object.entries(r.d.rt).forEach(([k, v]) => rt[k] = +v === 0 ? 1 : v);
+  return Object.assign({}, r, { d: Object.assign({}, r.d, { rt }) }); }
 function staffGone(L) {
   const gone = n => STAFF_GONE.includes(String(n || '').trim());
-  return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(r => {
+  return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(coordRt).map(r => {
     if (!r || !r.d || !['a1', 'a2', 'a3'].some(k => gone(r.d[k]))) return r;
     const d = Object.assign({}, r.d); const A = ['a1', 'a2', 'a3'].map(k => d[k]).filter(x => x && !gone(x));
     ['a1', 'a2', 'a3'].forEach((k, i) => d[k] = A[i] || ''); return Object.assign({}, r, { d });
