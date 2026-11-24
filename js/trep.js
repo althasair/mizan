@@ -196,6 +196,18 @@ const TR_BAND = p => p >= 90 ? 'ممتاز' : p >= 80 ? 'جيد جداً' : p >=
 const TR_RT = [100, 92, 84, 74, 62];   // سلّم الحضور الصفي: مستكملة ومبتكرة … غير متوفرة (5 = لم يُقس)
 const TR_VD = { 1: 'التخطيط', 2: 'تنفيذ الدرس', 3: 'الإدارة الصفية وبيئة التعلم', 4: 'التقويم' };
 const TR_OV = {};
+/* مشاركات الطالبات الخارجية (3 درجات من مجال إشراك الطلبة): جائزة/مركز على مستوى الدولة أو دولي = 3 · مشاركة دولية = 2.5 · مشاركة على مستوى الدولة = 2 · مدرسية = 1 · لا شيء = 0.5
+   أنشطة مدرسية سُجّلت خطأً على مستوى الدولة تُحسب مدرسية */
+const TR_SCHOOL_ONLY = /يوم فيزيائي|من الشيماء (ال[ىي]|إلى) قطر/;
+function trExt(name, D, inM) {
+  const L = D.ach.map(r => ({ k: r.d.kind || '', l: r.d.lvl || '', n: r.d.name || '', res: r.d.res || '' }))
+    .concat(S.records.filter(r => r.item === 'ACH' && r.d && r.d.sup === name && inM(r) && !/معلم|تدريب/.test((r.d.field || '') + ' ' + (r.d.name || '')) && (!r.d.who || /طالب/.test(r.d.who))).map(r => ({ k: r.d.c || '', l: r.d.lvl || '', n: r.d.name || '', res: r.d.res || '' })));
+  let best = { v: 0.5, why: 'لا توجد مشاركات للطالبات في مسابقات خارجية' };
+  L.forEach(x => { const win = /إنجاز/.test(x.k), sch = TR_SCHOOL_ONLY.test(x.n) || /المدرسة/.test(x.l), intl = /دولي|الدولية/.test(x.l + ' ' + x.n), st = /الدولة|المدارس/.test(x.l);
+    const v = sch ? 1 : win && (intl || st) ? 3 : intl ? 2.5 : st ? 2 : 1;
+    if (v > best.v) best = { v, why: (win ? 'إنجاز: ' : 'مشاركة: ') + x.n + (x.res && x.res !== '-' && x.res !== '0' ? ' (' + x.res + ')' : '') }; });
+  return best;
+}
 function trEval(name, rng, D) {
   const mo = Math.max(1, Math.round((new Date(rng.to) - new Date(rng.from)) / 864e5 / 30));
   const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : [];
@@ -205,6 +217,9 @@ function trEval(name, rng, D) {
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const presWS = D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
   const abs = D.ds.reduce((a, r) => a + (r.d.abs || []).filter(x => x.type !== 'مرضي').length, 0);
+  const absAll = D.ds.reduce((a, r) => a + (r.d.abs || []).length, 0);
+  const inM = r => { const d = String(r.date || '').slice(0, 10); return d >= rng.from && d <= rng.to; };
+  const prq = S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && !/rej|ref/.test(r.d.st || '') && inM(r)), prqH = Math.round(prq.reduce((a, r) => a + (+r.d.h || 0), 0) * 100) / 100;
   const nVis = D.vis.length;
   const mix = (v, w, wv) => v ? { p: v.p * wv + w * (1 - wv), src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null;
   const rows = TR_DOM.map(([n, t, w]) => {
@@ -215,9 +230,16 @@ function trEval(name, rng, D) {
     if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(88, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
     if (n === 5) { const c = D.pv.length + D.host.length + D.ws.length + D.ex.length + D.tex.length; ev.push(`${D.pv.length + D.host.length} زيارة تبادلية`, D.tex.length ? `${D.tex.length} فعالية تبادلية` : '', `${D.ws.length + D.ex.length} ورشة وبرنامج`, presWS ? `قدّمت ${presWS} لزميلاتها` : ''); o = { p: Math.min(100, wk(c, mo * 1.5) + (presWS ? 5 : 0)), src: 'الأعمال الموثّقة' }; }
     if (n === 6) { ev.push(nPA ? `تواصل مع أولياء أمور ${nPA} طالبة` : '', D.paa.length ? `${D.paa.length} من أنشطة الشراكة مع أولياء الأمور` : '', D.ach.length ? `${D.ach.length} إنجاز ومشاركة` : ''); o = { p: wk(D.pa.length + D.paa.length + D.ach.length, mo * 2), src: 'الأعمال الموثّقة' }; }
-    if (n === 7) { ev.push(`${D.tas.length} تكليفاً`, `${D.ini} مبادرة`, D.ds.length ? `غياب غير مرضي: ${abs}` : ''); o = { p: Math.max(50, Math.min(100, 85 + 15 * Math.min(1, (D.tas.length + D.ini) / mo) - 4 * abs)), src: 'التكليفات والمبادرات والانضباط' }; }
+    if (n === 7) { ev.push(`${D.tas.length} تكليفاً`, `${D.ini} مبادرة`); o = { p: Math.max(50, Math.min(100, 85 + 15 * Math.min(1, (D.tas.length + D.ini) / mo) - 4 * abs)), src: 'التكليفات والمبادرات والانضباط' }; }
     const key = name + '|' + rng.from + '|' + rng.to + '|' + n;
-    const sug = o ? Math.round(o.p / 100 * w * 2) / 2 : null;
+    let sug = o ? Math.round(o.p / 100 * w * 2) / 2 : null;
+    if (n === 2 && o) { const X = trExt(name, D, inM); sug = Math.round((o.p / 100 * (w - 3) + X.v - 0.5) * 2) / 2; ev.push(`المسابقات الخارجية: ${X.v} من 3 — ${X.why}`, 'خصم نصف درجة: مهارات التفكير العليا (بحاجة دائمة إلى صقل)'); }
+    if (n === 5 && sug != null) { const myDept = ((S.staff || []).find(x => x.name === name) || {}).dept;
+      const fx = r => r.item === 'TWS' && r.d && r.d.role === 'قدّمتُ لتطوير الزملاء' && /المدارس الأخرى/.test(r.d.aud || '') && inM(r);
+      const own5 = D.ws.some(r => fx(Object.assign({ item: 'TWS' }, r))), dep5 = S.records.find(r => fx(r) && r.dept === myDept && r.d.t !== name);
+      if (own5) ev.push('قدّمت ملتقى لمعلمات المدارس الأخرى'); else if (dep5) ev.push(`شاركت في ملتقى القسم «${dep5.d.title}» لمعلمات المدارس الأخرى`);
+      else if (!presWS && !D.wsC.length) sug = Math.min(sug, w - 0.5); }
+    if (n === 7 && sug != null) { const ex = Math.max(0, prq.length - mo); if (ex) sug = Math.max(w * 0.5, sug - 0.5 * ex); ev.push(prq.length ? `الاستئذان: ${prq.length} مرة (${prqH} ساعة)${ex ? ' — خصم ' + ex * 0.5 + ' لما زاد على استئذان شهرياً' : ''}` : 'الاستئذان: لا يوجد', absAll ? `أيام الغياب: ${absAll}${abs ? ' (غير مرضي: ' + abs + ')' : ' (مرضي)'}` : 'أيام الغياب المسجّلة: لا يوجد'); }
     const val = TR_OV[key] != null ? TR_OV[key] : sug;
     return { n, t, w, sug, val, key, src: o ? o.src : 'لا تتوفر بيانات كافية — يُستكمل بالحضور الصفي', ev: ev.filter(x => x && !/(^|\s)0\s/.test(x)) };
   });
