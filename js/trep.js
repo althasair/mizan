@@ -19,7 +19,7 @@ const isPaAct = r => { const d = r.d || {}; return trList(d.ps).concat(trList(d.
 
 /* الفترة: أسبوع · شهر · فترة تقويم (فصلية) · من تاريخ إلى تاريخ */
 function trRange() {
-  const k = S.trk || 'm', t = today();
+  const k = S.trk || 's', t = today();
   if (k === 'w') { const d = new Date((S.trw || t) + 'T12:00:00'); const st = new Date(d); st.setDate(d.getDate() - d.getDay()); const en = new Date(st); en.setDate(st.getDate() + 6);
     const f = st.toISOString().slice(0, 10), to = en.toISOString().slice(0, 10); return { from: f, to, label: `الأسبوع ${dm(f)} – ${dm(to)}`, kind: 'الأسبوعي' }; }
   if (k === 's') { const ps = (S.periods || []).filter(x => x.sem); const sems = [...new Set(ps.map(x => x.sem))]; const cur = (ps.find(x => x.from <= t && x.to >= t) || ps[0] || {}).sem;
@@ -153,8 +153,8 @@ function trPage(el, fixed) {
   const chip = c => c === 'مبادرة' ? '<span class="chip ok">مبادِرة</span>' : c === 'مجتهدة' ? '<span class="chip tf">مجتهدة</span>' : '<span class="chip warn">بحاجة إلى مضاعفة الجهد</span>';
   el.innerHTML = `<div class="tins">${fixed ? 'معلمتي الغالية، هذا تقرير (أسبوعي أو شهري أو فصلي أو لأي فترة تختارينها) يجمع تلقائياً كل ما وثّقتِه في الميزان وما يصل من سبع سنابل. اختاري نوع التقرير والفترة، ثم اطبعيه أو احفظيه PDF لملفكِ.' : 'اختاري الشهر لتظهر أعمال كل معلمة وتقديرها العام، ثم افتحي تقرير أي معلمة لطباعته. يُبنى التقرير تلقائياً مما وثّقته المعلمة في الميزان وما يصل من سبع سنابل.'}</div>
   <div class="card"><div class="row" style="gap:10px;flex-wrap:wrap">
-    <select id="trK">${[['m', 'شهر واحد'], ['mm', 'من شهر إلى شهر'], ['s', 'الفصل الدراسي كاملاً'], ['p', 'فترة تقويم (ربع)'], ['w', 'أسبوعي'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 'm') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-    ${(S.trk || 'm') === 'm' ? `<select id="trM">${months.map(m => `<option value="${m}" ${m === S.trm ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select>` : ''}
+    <select id="trK">${[['m', 'شهر واحد'], ['mm', 'من شهر إلى شهر'], ['s', 'الفصل الدراسي كاملاً'], ['p', 'فترة تقويم (ربع)'], ['w', 'أسبوعي'], ['c', 'من تاريخ إلى تاريخ']].map(([k, l]) => `<option value="${k}" ${(S.trk || 's') === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    ${(S.trk || 's') === 'm' ? `<select id="trM">${months.map(m => `<option value="${m}" ${m === S.trm ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select>` : ''}
     ${S.trk === 'mm' ? (() => { const ms = months.slice().reverse(); return `<label style="font-size:12px">من شهر <select id="trM1">${ms.map(m => `<option value="${m}" ${m === S.trm1 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label><label style="font-size:12px">إلى شهر <select id="trM2">${ms.map(m => `<option value="${m}" ${m === S.trm2 ? 'selected' : ''}>${trM(m)}</option>`).join('')}</select></label>`; })() : ''}
     ${S.trk === 'w' ? `<label style="font-size:12px">أسبوع يوم <input type="date" id="trW" value="${S.trw || today()}"></label>` : ''}
     ${S.trk === 's' ? `<select id="trS">${[...new Set((S.periods || []).map(p => p.sem).filter(Boolean))].map(x => `<option ${x === S.trs ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select>` : ''}
