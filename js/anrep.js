@@ -162,6 +162,13 @@ async function arPrint(type, from, to, dept, withTable) {
   w.onload = () => setTimeout(() => w.print(), 400);
 }
 
+/* الفترات الجاهزة: الأرباع + الفصلان + العام كاملًا (والتواريخ «من/إلى» تبقى حرّة لأي فترة) */
+function arRanges() {
+  const P = S.periods || [], out = P.slice(), sem = (x, i) => x.sem || (i < 2 ? 'الفصل الأول' : 'الفصل الثاني'), sems = [...new Set(P.map(sem))];
+  sems.forEach(sm => { const Q = P.filter((x, i) => sem(x, i) === sm); out.push({ name: sm + ' كاملًا', from: Q[0].from, to: Q[Q.length - 1].to }); });
+  if (P.length) out.push({ name: 'العام الدراسي كاملًا', from: P[0].from, to: P[P.length - 1].to });
+  return out;
+}
 function A_anrep(el) {
   setTitle('التقارير التحليلية');
   const p = (S.periods.find(x => today() >= x.from && today() <= x.to) || S.periods[0] || { from: today(), to: today() });
@@ -176,13 +183,13 @@ function A_anrep(el) {
         <div class="fld"><label>النطاق</label><select id="arD">${[AR_ALL, ...arDepts()].map(d => `<option ${d === st.dept ? 'selected' : ''}>${esc(d)}</option>`).join('')}</select></div>
       </div>
       <div class="row" style="gap:10px;margin-top:8px;flex-wrap:wrap"><label style="font-size:13px"><input type="checkbox" id="arTb" ${st.tbl ? 'checked' : ''}> إرفاق السجل التفصيلي</label>
-        <div class="row" style="gap:6px">${S.periods.map(x => `<button class="btn sm ghost" data-ap="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div><span class="sp"></span><button class="btn" id="arP">🖨 طباعة التقرير</button></div></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap">${arRanges().map(x => `<button class="btn sm ${x.from === st.from && x.to === st.to ? '' : 'ghost'}" data-ap="${esc(x.name)}">${esc(x.name)}</button>`).join('')}</div><span class="sp"></span><button class="btn" id="arP">🖨 طباعة التقرير</button></div></div>
       <div class="card"><h2>معاينة الأرقام</h2>
       <div class="grid g4">${kpi('الإجمالي', c.L.length, c.T.t, 'var(--maroon)')}${kpi('المعلمات المشاركات', c.tN + ' / ' + c.staffN, arPct(c.tN, c.staffN) + '%', 'var(--navy)')}${c.T.stuLine ? kpi('الطالبات المستفيدات', c.stuN, S.stuN && st.dept === AR_ALL ? arPct(c.stuN, S.stuN) + '% من ' + S.stuN : '', 'var(--ok)') : kpi('عدد الأقسام', c.byDept.length, '', 'var(--ok)')}${kpi('الفترة السابقة المماثلة', c.P.length, arDmy(c.pFrom) + ' – ' + arDmy(c.pTo), 'var(--gold)')}</div>
       <div class="note" style="margin-top:8px;text-align:justify">${arAnalysis(c, st.type).map(esc).join('<br>')}</div></div>`;
     const up = () => { st.type = $('#arT').value; st.from = $('#arF').value; st.to = $('#arTo').value; st.dept = $('#arD').value; st.tbl = $('#arTb').checked; if (st.to < st.from) { toast('تاريخ النهاية قبل البداية', 1); return; } draw(); };
     ['#arT', '#arF', '#arTo', '#arD', '#arTb'].forEach(s => $(s).onchange = up);
-    $$('[data-ap]', el).forEach(b => b.onclick = () => { const q = S.periods.find(x => x.name === b.dataset.ap); st.from = q.from; st.to = q.to; draw(); });
+    $$('[data-ap]', el).forEach(b => b.onclick = () => { const q = arRanges().find(x => x.name === b.dataset.ap); st.from = q.from; st.to = q.to; draw(); });
     $('#arP').onclick = () => arPrint(st.type, st.from, st.to, st.dept, st.tbl);
   };
   draw();
