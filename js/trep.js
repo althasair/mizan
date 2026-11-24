@@ -198,6 +198,8 @@ const TR_VD = { 1: 'التخطيط', 2: 'تنفيذ الدرس', 3: 'الإدا�
 const TR_OV = {};
 /* مشاركات الطالبات الخارجية (3 درجات من مجال إشراك الطلبة): جائزة/مركز على مستوى الدولة أو دولي = 3 · مشاركة دولية = 2.5 · مشاركة على مستوى الدولة = 2 · مدرسية = 1 · لا شيء = 0.5
    أنشطة مدرسية سُجّلت خطأً على مستوى الدولة تُحسب مدرسية */
+/* كثيرات الغياب بحسب متابعة النائب الأكاديمي — مؤقتاً حتى وصول كشف الغياب من السكرتارية */
+const TR_ABS_HIGH = ['هند خالد', 'سابرينا حمدان', 'سعيدة خليلي'];
 const TR_SCHOOL_ONLY = /يوم فيزيائي|من الشيماء (ال[ىي]|إلى) قطر/;
 function trExt(name, D, inM) {
   const L = D.ach.map(r => ({ k: r.d.kind || '', l: r.d.lvl || '', n: r.d.name || '', res: r.d.res || '' }))
@@ -239,7 +241,8 @@ function trEval(name, rng, D) {
       const own5 = D.ws.some(r => fx(Object.assign({ item: 'TWS' }, r))), dep5 = S.records.find(r => fx(r) && r.dept === myDept && r.d.t !== name);
       if (own5) ev.push('قدّمت ملتقى لمعلمات المدارس الأخرى'); else if (dep5) ev.push(`شاركت في ملتقى القسم «${dep5.d.title}» لمعلمات المدارس الأخرى`);
       else if (!presWS && !D.wsC.length) sug = Math.min(sug, w - 0.5); }
-    if (n === 7 && sug != null) { const ex = Math.max(0, prq.length - mo); if (ex) sug = Math.max(w * 0.5, sug - 0.5 * ex); ev.push(prq.length ? `الاستئذان: ${prq.length} مرة (${prqH} ساعة)${ex ? ' — خصم ' + ex * 0.5 + ' لما زاد على استئذان شهرياً' : ''}` : 'الاستئذان: لا يوجد', absAll ? `أيام الغياب: ${absAll}${abs ? ' (غير مرضي: ' + abs + ')' : ' (مرضي)'}` : 'أيام الغياب المسجّلة: لا يوجد'); }
+    if (n === 7 && sug != null) { const ex = Math.max(0, prq.length - mo); if (ex) sug = Math.max(w * 0.5, sug - 0.5 * ex);
+      if (TR_ABS_HIGH.includes(name)) { sug = Math.max(w * 0.5, sug - 1.5); ev.push('كثرة الغياب (بحسب متابعة النائب الأكاديمي) — خصم 1.5'); } ev.push(prq.length ? `الاستئذان: ${prq.length} مرة (${prqH} ساعة)${ex ? ' — خصم ' + ex * 0.5 + ' لما زاد على استئذان شهرياً' : ''}` : 'الاستئذان: لا يوجد', absAll ? `أيام الغياب: ${absAll}${abs ? ' (غير مرضي: ' + abs + ')' : ' (مرضي)'}` : 'أيام الغياب المسجّلة: لا يوجد'); }
     const val = TR_OV[key] != null ? TR_OV[key] : sug;
     return { n, t, w, sug, val, key, src: o ? o.src : 'لا تتوفر بيانات كافية — يُستكمل بالحضور الصفي', ev: ev.filter(x => x && !/(^|\s)0\s/.test(x)) };
   });
