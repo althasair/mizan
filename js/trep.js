@@ -139,7 +139,12 @@ function trSignBlock(name, sig) {
   return `<table style="width:100%;border:0;margin-top:5mm"><tr>${cell('منسقة قسم ' + dept, coord, sig.c)}${cell('نائب المدير للشؤون الأكاديمية', 'آسيا الذبياني', sig.v)}</tr></table>`;
 }
 
-function T_rep(el) { trPage(el, S.user.name); }
+/* تقرير أعمالي (تقييم المعلمة) مغلق عند المعلمات حتى إشعار آخر — بقرار النائب الأكاديمي؛ اجعليها false لإعادة فتحه */
+const TR_TEACHER_LOCK = true;
+function T_rep(el) {
+  if (TR_TEACHER_LOCK) { setTitle('تقرير أعمالي'); el.innerHTML = `<div class="card" style="text-align:center;padding:40px 20px"><div style="font-size:42px;margin-bottom:8px">🔒</div><div style="margin:0 0 8px;color:var(--maroon);font-size:20px;font-weight:700">مغلق حتى إشعار آخر</div><div style="color:var(--muted);font-size:14px">معلمتي الغالية، يستمر توثيق أعمالكِ في الميزان كالمعتاد، ويُعاد فتح هذا القسم عند صدور الإشعار.</div></div>`; return; }
+  trPage(el, S.user.name);
+}
 function C_trep(el) { trPage(el, null); }
 function trPage(el, fixed) {
   if (!document.getElementById('trcss')) { const st = document.createElement('style'); st.id = 'trcss'; st.textContent = FORM_CSS + '.trv{font-size:12.5px}.trv h1{font-size:18px}'; document.head.appendChild(st); }
