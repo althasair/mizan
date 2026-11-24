@@ -237,6 +237,12 @@ function trTeachX(name, rng, D) {
   const ra = S.records.filter(r => r.item === 'RA' && r.d && r.dept === dept && inM(r) && hit(r.d.by)).map(r => Object.assign({}, r, { d: Object.assign({ name: r.d.item }, r.d) }));
   const pa = S.records.filter(r => r.item === 'PA' && r.d && r.dept === dept && inM(r) && String(r.d.by || '').includes(name));
   const X = Object.assign({}, D, { tX: true });
+  /* زيارات صفية مسجّلة بلا تقدير للبنود (مثل المستوردة من تقارير المنسقات): تُحسب «مستكملة وفاعلة» في جميع البنود */
+  const seenV = new Set(D.vis.map(r => String(r.date).slice(0, 10)));
+  const unr = S.records.filter(r => ['V', 'VPV', 'PRV', 'LVV', 'TVR'].includes(r.item) && r.d && r.d.t === name && inM(r) && !(r.d.rt && Object.values(r.d.rt).some(v => v != null && +v < 5)))
+    .filter(r => { const k = String(r.date).slice(0, 10); return seenV.has(k) ? false : (seenV.add(k), true); })
+    .map(r => Object.assign({}, r, { d: Object.assign({}, r.d, { rt: new Proxy({}, { get: (o, k) => /^\d+$/.test(String(k)) ? 1 : undefined }) }) }));
+  X.vis = D.vis.concat(unr);
   X.ta = D.ta.concat(ac, ra); X.pa = D.pa.concat(pa); X.paa = X.ta.filter(isPaAct);
   return X;
 }
