@@ -223,7 +223,7 @@ function trEval(name, rng, D) {
   });
   const have = rows.filter(r => r.val != null), tot = have.reduce((a, r) => a + r.val, 0), wSum = have.reduce((a, r) => a + r.w, 0);
   const pct = wSum ? tot / wSum * 100 : 0;
-  return { rows, tot, wSum, pct, band: wSum ? TR_BAND(Math.round(pct)) : '—', missing: rows.filter(r => r.val == null).map(r => r.n) };
+  return { rows, tot, wSum, pct, band: wSum ? TR_BAND(trH(pct)) : '—', missing: rows.filter(r => r.val == null).map(r => r.n) };
 }
 function trEvalHTML(name, rng, E, live) {
   const st = (S.staff || []).find(x => x.name === name) || {};
@@ -236,7 +236,7 @@ function trEvalHTML(name, rng, E, live) {
     ${E.rows.map(r => `<tr><td><b>${r.n}. ${esc(r.t)}</b></td><td class="c">${r.w}</td><td style="font-size:12px">${esc(r.src)}${r.ev.length ? `<div style="color:#666">${esc(r.ev.join('، '))}</div>` : /الأعمال/.test(r.src) ? '<div style="color:#8A4A08">لم يُوثَّق خلال الفترة</div>' : ''}</td>
       <td class="c">${live ? `<input type="number" class="ev-in" data-k="${esc(r.key)}" min="0" max="${r.w}" step="0.5" value="${r.val == null ? '' : num(r.val)}" placeholder="—">${r.sug != null && r.val !== r.sug ? `<div style="font-size:10px;color:#888">المقترح ${num(r.sug)}</div>` : ''}` : `<b>${num(r.val)}</b>`}</td></tr>`).join('')}
     <tr class="ev-sum"><td colspan="2"><b>المجموع</b></td><td>${E.missing.length ? `<span style="font-size:11.5px;color:#8A4A08">احتُسب من ${E.wSum} درجة لعدم توفر بيانات المعيار ${E.missing.join(' و')}</span>` : ''}</td><td class="c"><b>${num(E.tot)} / ${E.wSum}</b></td></tr>
-    <tr class="ev-sum"><td colspan="3"><b>النسبة والتقدير العام</b></td><td class="c"><b>${Math.round(E.pct)}% — ${E.band}</b></td></tr></table>
+    <tr class="ev-sum"><td colspan="3"><b>النسبة والتقدير العام</b></td><td class="c"><b>${trH(E.pct)}% — ${E.band}</b></td></tr></table>
     ${live ? `<div class="actions noprint" style="margin-top:8px"><button class="btn sec" id="evRst">العودة للدرجات المقترحة</button><button class="btn" id="evPr">طباعة الاستمارة</button></div>` : ''}</div>`;
 }
 function trEvBind(box, name, rng) {
@@ -257,6 +257,8 @@ function trEvBind(box, name, rng) {
    (السلّم: مستكملة وفاعلة ومبتكرة 100 · مستكملة وفاعلة 88 · معظم الأدلة 75 · بعض الأدلة 60 · غير متوفرة 45؛ «لم يتم قياسه» لا يُحتسب) */
 const trSrc = r => r.item === 'V' ? 'c' : r.item === 'VPV' ? 'v' : r.item === 'PRV' ? 'p' : r.item === 'LVV' ? (r.d.k === 'pr' ? 'p' : 'v') : r.item === 'TVR' ? (r.d.src === 'V' ? 'c' : r.d.src === 'PRV' ? 'p' : 'v') : '';
 const trBand = p => p == null ? '' : p >= 90 ? '#DFF2E6' : p >= 80 ? '#EEF6DA' : p >= 70 ? '#FFF4D6' : p >= 60 ? '#FCE6D4' : '#F9DADA';
+/* التقدير بالكسور كما هو: نصف يبقى نصفاً، والربع يُجبر إلى أقرب نصف (95.5 تبقى 95.5) */
+const trH = x => Math.round(x * 2) / 2;
 function trVisHTML(D) {
   const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : null;
   const head = '<div class="h2" style="font-weight:bold;color:#7A1F33;margin:10px 0 4px">متوسط تقديرات الحضور الصفي (المنسقة والنائب الأكاديمي ومديرة المدرسة)</div>';
@@ -283,7 +285,7 @@ function trVisHTML(D) {
 function A_trep(el) { trPage(el, null); }
 function trGridHTML(RG, chip) {
   const ST = (S.staff || []).filter(s => s.name && s.dept), depts = [...new Set(ST.map(s => s.dept))];
-  const ev = n => { const D = trData(n, RG), E = trEval(n, RG, D); return { D, p: E.wSum ? Math.round(E.pct) : null }; };
+  const ev = n => { const D = trData(n, RG), E = trEval(n, RG, D); return { D, p: E.wSum ? trH(E.pct) : null }; };
   const tone = p => p == null ? ['#F1F1F1', '#888'] : p >= 90 ? ['#DFF2E6', '#1F6B3A'] : p >= 80 ? ['#EEF6DA', '#4C6B12'] : p >= 70 ? ['#FFF4D6', '#7A5A06'] : ['#F9DADA', '#8A2B2B'];
   const clsT = { 'مبادرة': ['مبادِرة', '#E4F3EA', '#1F6B3A'], 'مجتهدة': ['مجتهدة', '#E3F2F4', '#1E6670'], 'ضعيف': ['تحتاج دعماً', '#FCEADB', '#8A4A08'] };
   const pill = (t, bg, fg, extra) => `<span style="background:${bg};color:${fg};border-radius:20px;padding:1px 9px;font-size:11px;white-space:nowrap;${extra || ''}">${t}</span>`;
@@ -296,7 +298,7 @@ function trGridHTML(RG, chip) {
   return `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:12px;margin-top:12px">${depts.map(d => {
     const c = ST.find(s => s.dept === d && s.role === 'منسقة');
     const T = ST.filter(s => s.dept === d && s !== c).map(s => ({ s, x: ev(s.name) })).sort((a, b) => (b.x.p == null ? -1 : b.x.p) - (a.x.p == null ? -1 : a.x.p) || b.x.D.work - a.x.D.work);
-    const ps = T.map(o => o.x.p).filter(v => v != null), av = ps.length ? Math.round(ps.reduce((a, b) => a + b, 0) / ps.length) : null, [hb, hf] = tone(av);
+    const ps = T.map(o => o.x.p).filter(v => v != null), av = ps.length ? trH(ps.reduce((a, b) => a + b, 0) / ps.length) : null, [hb, hf] = tone(av);
     const leadName = T.length && T[0].x.p != null ? T[0].s.name : '';
     return `<div style="border:1px solid #EADFCF;border-radius:16px;padding:10px 10px 8px;background:#fff;box-shadow:0 1px 3px rgba(122,31,51,.06)">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;padding:0 4px">
