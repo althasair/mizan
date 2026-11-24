@@ -12,7 +12,10 @@ function goneSnap(o) {
 }
 /* استمارة المنسقة على النموذج الأصلي في الدليل الإرشادي: سلّمها يبدأ من «مستكملة وفاعلة» (لا عمود «مبتكرة»)،
    فأي تقدير «مبتكرة» قديم في زيارات المنسقات يُقرأ «مستكملة وفاعلة» */
-function coordRt(r) { if (!r || !r.d || !r.d.rt || !(r.item === 'V' || (r.item === 'TVR' && r.d.src === 'V'))) return r;
+/* منسقات واعيات بالسلّم (يميّزن «مبتكرة» بدقة): يبقى لهن عمود «مبتكرة» ويُحسب كما هو — بقرار النائب الأكاديمي */
+const CV_AWARE_DEPTS = ['الرياضيات', 'اللغة العربية', 'الكيمياء'];
+const cvAware = dept => CV_AWARE_DEPTS.includes(dept);
+function coordRt(r) { if (!r || !r.d || !r.d.rt || !(r.item === 'V' || (r.item === 'TVR' && r.d.src === 'V')) || cvAware(r.dept)) return r;
   if (!Object.values(r.d.rt).some(v => +v === 0)) return r; const rt = {}; Object.entries(r.d.rt).forEach(([k, v]) => rt[k] = +v === 0 ? 1 : v);
   return Object.assign({}, r, { d: Object.assign({}, r.d, { rt }) }); }
 function staffGone(L) {
