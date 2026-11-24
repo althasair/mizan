@@ -18,6 +18,15 @@ const cvAware = dept => CV_AWARE_DEPTS.includes(dept);
 function coordRt(r) { if (!r || !r.d || !r.d.rt || !(r.item === 'V' || (r.item === 'TVR' && r.d.src === 'V')) || cvAware(r.dept)) return r;
   if (!Object.values(r.d.rt).some(v => +v === 0)) return r; const rt = {}; Object.entries(r.d.rt).forEach(([k, v]) => rt[k] = +v === 0 ? 1 : v);
   return Object.assign({}, r, { d: Object.assign({}, r.d, { rt }) }); }
+/* سجلات سبع سنابل التي وصلت بلا اسم معلمة (مثل قسم المهارات الحياتية): تُنسب إلى معلمة القسم التي تدرّس الشعبة نفسها، إن كانت واحدة فقط */
+function sabFillT(L, staff) {
+  const secs = s => String(s.secs || '').split(/[،,\s]+/).filter(Boolean);
+  return (L || []).map(r => {
+    if (!r || !r.d || r.d.t || r.d.src !== 'sab3' || !r.d.s) return r;
+    const m = (staff || []).filter(s => s.dept === r.dept && secs(s).includes(String(r.d.s)));
+    return m.length === 1 ? Object.assign({}, r, { d: Object.assign({}, r.d, { t: m[0].name }) }) : r;
+  });
+}
 function staffGone(L) {
   const gone = n => STAFF_GONE.includes(String(n || '').trim());
   return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(coordRt).map(r => {
@@ -63,7 +72,7 @@ async function boot() {
   const j = await call('boot');
   S.bootAt = Date.now();
   S.sv = j.sv || 0; S.sab = j.sab || null;
-  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: staffGone(j.records), reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
+  Object.assign(S, { user: j.user, periods: j.periods, cal: j.cal, pd: j.pd, staff: j.staff, coords: j.coords || [], records: staffGone(sabFillT(j.records, j.staff)), reports: j.reports, indibatAt: j.indibatAt || '', stuN: j.stuN || 0, acts: j.acts || [], staffAll: j.staffAll || [], students: j.students || [] });
   const t = today(); const cur = S.periods.find(p => t >= p.from && t <= p.to) || [...S.periods].reverse().find(p => p.from <= t) || S.periods[0];
   S.period = S.period || (cur && cur.name);
   S.dept = S.dept || (isAdmin() ? null : S.user.dept[0]);
@@ -440,7 +449,7 @@ async function C_report(el, deptArg) {
   const frozen = rp && rp.snap && repLocked(rp, p);
   /* مزامنة فورية: عند فتح التقرير (غير الموقّع) يُجلب آخر ما سجّلته المعلمات والمنسقة بصمت، ثم يُعاد بناء التقرير */
   if (!frozen && !S._repSync && Date.now() - (S.bootAt || 0) > 300000) {
-    S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: staffGone(j.records), reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
+    S._repSync = 1; call('boot').then(j => { S.bootAt = Date.now(); Object.assign(S, { records: staffGone(sabFillT(j.records, j.staff)), reports: j.reports, staff: j.staff || S.staff, acts: j.acts || S.acts }); S._repSync = 0;
       if (el.isConnected) refresh(); }).catch(() => { S._repSync = 0; }); }
   const R = frozen ? goneSnap(rp.snap) : buildReport(ctxFor(dept, p));
   let sig = '';

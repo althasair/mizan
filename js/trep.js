@@ -210,11 +210,43 @@ function trExt(name, D, inM) {
     if (v > best.v) best = { v, why: (win ? 'إنجاز: ' : 'مشاركة: ') + x.n + (x.res && x.res !== '-' && x.res !== '0' ? ' (' + x.res + ')' : '') }; });
   return best;
 }
+/* المنسقة في تقييم الأداء: تُحسب لها جميع أنشطة القسم وإجراءاته (سبع سنابل والميزان) دون تكرار،
+   ويُعدّ حضورها الصفي «مستكملة وفاعلة» في جميع البنود (لا تُمنح «مبتكرة») */
+const trIsCoord = name => ((S.staff || []).find(x => x.name === name) || {}).role === 'منسقة';
+function trCoordD(name, rng, D) {
+  const dept = ((S.staff || []).find(x => x.name === name) || {}).dept;
+  const inM = r => { const d = String(r.date || '').slice(0, 10); return d >= rng.from && d <= rng.to; };
+  const dp = its => S.records.filter(r => its.includes(r.item) && r.d && r.dept === dept && inM(r));
+  const uniq = (L, key) => { const seen = {}; return L.filter(r => { const k = key(r); return seen[k] ? false : (seen[k] = 1); }); };
+  const nz = x => String(x || '').replace(/\s+/g, ' ').trim();
+  const X = Object.assign({}, D);
+  X.ta = uniq(dp(['TA', 'AC']), r => nz(r.d.name || r.d.title || r.id) + '|' + String(r.date).slice(0, 10));
+  X.sen = dp(['SEN']); X.sfb = dp(['SFB', 'SAN', 'SAC']); X.rf = dp(['SRF']); X.pa = dp(['TPA']);
+  X.paa = X.ta.filter(isPaAct);
+  X.vis = []; X.coordVis = true;
+  return X;
+}
+/* المعلمة في تقييم الأداء: تُضاف أعمالها التي سجّلتها المنسقة باسمها أو باسم «جميع أعضاء القسم»:
+   الأنشطة (AC) وبرامج رفع التحصيل والرعاية (RA) والتواصل مع أولياء الأمور (PA) — دون تكرار ما سجّلته بنفسها */
+function trTeachX(name, rng, D) {
+  const dept = ((S.staff || []).find(x => x.name === name) || {}).dept, ALL = REF.ALL_MEMBERS || 'جميع أعضاء القسم';
+  const inM = r => { const d = String(r.date || '').slice(0, 10); return d >= rng.from && d <= rng.to; };
+  const nz = x => String(x || '').replace(/\s+/g, ' ').trim(), mine = new Set(D.ta.map(r => nz(r.d.name)));
+  const hit = v => { v = String(v || ''); return v.includes(name) || v.includes(ALL); };
+  const ac = S.records.filter(r => r.item === 'AC' && r.d && r.dept === dept && inM(r) && [r.d.e1, r.d.e2, r.d.e3].some(hit) && !mine.has(nz(r.d.name)));
+  const ra = S.records.filter(r => r.item === 'RA' && r.d && r.dept === dept && inM(r) && hit(r.d.by)).map(r => Object.assign({}, r, { d: Object.assign({ name: r.d.item }, r.d) }));
+  const pa = S.records.filter(r => r.item === 'PA' && r.d && r.dept === dept && inM(r) && String(r.d.by || '').includes(name));
+  const X = Object.assign({}, D, { tX: true });
+  X.ta = D.ta.concat(ac, ra); X.pa = D.pa.concat(pa); X.paa = X.ta.filter(isPaAct);
+  return X;
+}
 function trEval(name, rng, D) {
+  if (trIsCoord(name) && !D.coordVis) D = trCoordD(name, rng, D);
+  else if (!trIsCoord(name) && !D.tX) D = trTeachX(name, rng, D);
   const mo = Math.max(1, Math.round((new Date(rng.to) - new Date(rng.from)) / 864e5 / 30));
   const F = (typeof FORMS !== 'undefined' && FORMS && FORMS.visit) ? FORMS.visit.items : [];
   const vw = n => n === 1 ? 'زيارة صفية واحدة' : n === 2 ? 'زيارتين صفيتين' : n <= 10 ? `${n} زيارات صفية` : `${n} زيارة صفية`;
-  const vAvg = dn => { const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
+  const vAvg = dn => { if (D.coordVis) { const n = F.filter(it => it.d === TR_VD[dn]).length; return n ? { p: TR_RT[1], n } : null; } const xs = []; D.vis.forEach(r => F.forEach((it, i) => { const k = r.d.rt[i]; if (it.d === TR_VD[dn] && k != null && k < 5) xs.push(TR_RT[k]); })); return xs.length ? { p: xs.reduce((a, b) => a + b, 0) / xs.length, n: xs.length } : null; };
   const wk = (n, target) => 72 + 28 * Math.min(1, n / Math.max(1, target));
   const nPA = D.pa.reduce((a, r) => a + (+r.d.n || (r.d.stu && r.d.stu.length) || 1), 0);
   const presWS = D.ws.filter(r => r.d.role === 'قدّمتُ لتطوير الزملاء').length;
@@ -223,10 +255,11 @@ function trEval(name, rng, D) {
   const inM = r => { const d = String(r.date || '').slice(0, 10); return d >= rng.from && d <= rng.to; };
   const prq = S.records.filter(r => r.item === 'PRQ' && r.d && r.d.t === name && !/rej|ref/.test(r.d.st || '') && inM(r)), prqH = Math.round(prq.reduce((a, r) => a + (+r.d.h || 0), 0) * 100) / 100;
   const nVis = D.vis.length;
-  const mix = (v, w, wv) => v ? { p: v.p * wv + w * (1 - wv), src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null;
+  const vSrc = v => D.coordVis ? 'الحضور الصفي: الأدلة مستكملة وفاعلة (للمنسقة)، مع أعمال القسم وإجراءاته' : `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)`;
+  const mix = (v, w, wv) => v ? { p: v.p * wv + w * (1 - wv), src: vSrc(v) } : null;
   const rows = TR_DOM.map(([n, t, w]) => {
     let o = null, ev = [];
-    if (n === 1) { const v = vAvg(1); o = v ? { p: v.p, src: `متوسط تقديرات ${vw(nVis)} (${v.n} تقديراً)` } : null; }
+    if (n === 1) { const v = vAvg(1); o = v ? { p: v.p, src: vSrc(v) } : null; }
     if (n === 2) { const c = D.ta.length + D.sen.length; ev.push(`${D.ta.length} نشاطاً وبرنامجاً`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(2), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(88, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
     if (n === 3) { ev.push(`${D.rf.length} شهادة تعزيز للطالبات`); o = mix(vAvg(3), wk(D.rf.length, mo), 0.85); }
     if (n === 4) { const c = D.sen.length + D.sfb.length; ev.push(`${D.sfb.length} تغذية راجعة وتحليل نتائج`, `${D.sen.length} حصة إثرائية`); o = mix(vAvg(4), wk(c, mo * 2), 0.8) || (c ? { p: Math.min(88, wk(c, mo * 2)), src: 'الأعمال الموثّقة فقط (لا توجد زيارات صفية في الفترة)' } : null); }
