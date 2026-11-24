@@ -243,7 +243,7 @@ function cfEvid(T, sem) {
     E[7] = lr.length || ai ? `تابعت المنسقة توظيف التكنولوجيا ونظام قطر للتعليم${lr.length ? ` في ${A(lr.length, W.pr)}، ${lr.length > 1 ? 'منها' : 'هي'} ${q(lr.map(r => r.d.e))}` : ''}${ai ? `، وحضرت معلمات القسم ${A(ai, W.ws)} في التقنية والذكاء الاصطناعي` : ''}.` : 'لا يوجد توثيق لمتابعة دمج التكنولوجيا في الفصل.'; }
   // 3) تقييم تعلّم الطلبة
   { const as = recs('AS'), ty = {}; as.forEach(r => ty[r.d.ty] = (ty[r.d.ty] || 0) + 1);
-    E[8] = as.length ? `تابعت المنسقة إعداد ${A(as.length, W.as)} (${Object.entries(ty).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join('، ')}) في جميع المستويات.` : 'لا توجد اختبارات داخلية مسجلة في الفصل.'; }
+    E[8] = as.length ? `تابعت المنسقة إعداد ${A(as.length, W.as)} (${Object.entries(ty).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${v}`).join('، ')}) في جميع المستويات، إضافة إلى الاختبارات التحصيلية (اختبار منتصف الفصل الأول).` : 'تابعت المنسقة إعداد الاختبارات التحصيلية (اختبار منتصف الفصل الأول) في جميع المستويات.'; }
   { const an = recs('AS', r => SEC.AS.an(r.d) && !/قيد/.test(r.d.an || '')), pend = recs('AS', r => /قيد/.test(r.d.an || '')).length;
     E[9] = an.length ? `أعدّت المنسقة ${A(an.length, W.an)} للنتائج${an.length > 1 ? '، منها' : ' هو'} ${q(an.map(r => `${r.d.ty} (${r.d.lvl})`))}${pend ? `، وما زال تحليل ${A(pend, W.ex)} قيد الإنجاز` : ''}.` : pend ? `بدأت المنسقة تحليل ${A(pend, W.ex)} من نتائج الاختبارات، وما زالت قيد التحليل.` : 'لا توجد تحليلات موثقة للنتائج في الفصل.'; }
   { const ra = recs('RA'), im = ra.filter(r => r.d.imp && !/قيد/.test(r.d.imp)), tg = ra.filter(r => r.d.tg && !/جميع/.test(r.d.tg)).length;
