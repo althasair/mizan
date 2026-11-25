@@ -573,7 +573,7 @@ function sabAccess_() {
 function cacheGetBig_(key) { try { const c = CacheService.getScriptCache(); const n = c.get(key + 'N'); if (n == null) return null; const P = c.getAll([...Array(+n).keys()].map(i => key + i)); return JSON.parse([...Array(+n).keys()].map(i => P[key + i] || '').join('')); } catch (e) { return null; } }
 function cachePutBig_(key, arr, sec) { try { if (!arr || !arr.length) return; const s = JSON.stringify(arr), k = Math.ceil(s.length / 90000); if (k > 80) return; const parts = {}; for (let i = 0; i < k; i++) parts[key + i] = s.slice(i * 90000, (i + 1) * 90000); const c = CacheService.getScriptCache(); c.putAll(parts, sec); c.put(key + 'N', String(k), sec); } catch (e) {} }
 const isoD_ = v => { v = String(v || ''); let m = v.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return m[0]; m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/); if (m) return m[3] + '-' + ('0' + m[2]).slice(-2) + '-' + ('0' + m[1]).slice(-2); return v.slice(0, 10); };
-const SERVER_V = 11;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
+const SERVER_V = 12;   // رقم نسخة الخادم: تعرضه المنصة للنائب الأكاديمي لتعرف هل نُشر الكود الأخير
 function sabErr_(m) { try { CacheService.getScriptCache().put('sabErr', String(m).slice(0, 300) + ' — ' + now_(), 21600); } catch (e) {} }
 /* إجراءات المعلمات في سبع سنابل ← الميزان.
    لتخفيف القراءات (حد Firebase المجاني 50 ألف قراءة يوميًا): تُحفظ نسخة مما جُلب في ورقة «مخزن سبع سنابل»،
@@ -1009,17 +1009,21 @@ function prqApply_(u, t, i, act, phrase, note) {
   if (!lv || lv < PRQ_ST[d.st]) fail_('هذا الطلب بانتظار ' + PRQ_WHO[d.st]);
   if (lv === 1 && (u.dept.indexOf(row[1]) < 0 || d.t === u.name)) fail_('هذا الطلب ليس لقسمكِ');
   const who = lv === 3 ? 'pr' : lv === 2 ? 'vp' : 'coord';
-  if (act === 'rej') {
+  if (act === 'hold') {   // تعليق الطلب مع ملاحظة: يبقى عند المعتمِدة نفسها، ثم تعتمده أو ترفضه لاحقاً
+    d.hold = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) };
+  } else if (act === 'rej') {
     d.rej = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) }; d.st = 'rej'; d.seen = false;
   } else if (act === 'ret') {
     d.ret = { by: u.name, w: who, at: now_(), note: String(note || '').slice(0, 300) }; d.st = 'ret'; d.seen = false;
   } else {
+    if (d.hold) { d.holdDone = d.hold; delete d.hold; }
     d.steps = (d.steps || []).filter(s => PRQ_ST[s.w] < PRQ_ST[who]).concat([{ by: u.name, w: who, at: now_(), ph: String(phrase || PRQ_DEF).slice(0, 80) }]);
     d.st = prqNext_(who); if (d.st === 'ok') { d.okAt = now_(); d.seen = false; }
   }
   row[5] = JSON.stringify(d); row[8] = now_();
   t.sh.getRange(i + 2, 6).setValue(row[5]); t.sh.getRange(i + 2, 9).setValue(row[8]);
-  log_(u, act === 'rej' ? 'رفض طلب إذن' : act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
+  if (act === 'rej' || act === 'ret') { if (d.hold) { d.holdDone = d.hold; delete d.hold; } row[5] = JSON.stringify(d); t.sh.getRange(i + 2, 6).setValue(row[5]); }
+  log_(u, act === 'hold' ? 'تعليق طلب إذن' : act === 'rej' ? 'رفض طلب إذن' : act === 'ret' ? 'إعادة طلب إذن' : 'اعتماد طلب إذن', row[1], d.t + ' — ' + row[4]);
   return recObj_(row);
 }
 function prqAfter_(rec) { try { return prqAfterX_(rec); } catch (e) { log_(null, 'تنبيه', rec.dept, String(e.message || e).slice(0, 120)); return [rec]; } }
@@ -1048,7 +1052,7 @@ function prqAct_(u, p) {
   const done = [];
   try {
     const t = rows_(SH.rec);
-    ids.forEach(id => { try { const i = prqFind_(t, id); if (i < 0) throw new Error('غير موجود'); const r = prqApply_(u, t, i, p.act === 'ret' || p.act === 'rej' ? p.act : 'ok', p.phrase || prqPhrase_(u.id), p.note); if (r) done.push(r); } catch (e) { skipped.push(String(e.message || e)); } });
+    ids.forEach(id => { try { const i = prqFind_(t, id); if (i < 0) throw new Error('غير موجود'); const r = prqApply_(u, t, i, ['ret', 'rej', 'hold'].indexOf(p.act) >= 0 ? p.act : 'ok', p.phrase || prqPhrase_(u.id), p.note); if (r) (p.act === 'hold' ? out : done).push(r); } catch (e) { skipped.push(String(e.message || e)); } });
   } finally { lock.releaseLock(); }
   done.forEach(r => prqAfter_(r).forEach(x => out.push(x)));
   if (done.some(r => r.d.st === 'ok')) sabSoon_('TDS');

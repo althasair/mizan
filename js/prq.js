@@ -61,6 +61,7 @@ function prqStatus(r) {
   const d = r.d;
   if (d.st === 'ok') return '<span class="chip ok">معتمد ✓</span>';
   if (d.st === 'rej') return `<span class="chip" style="background:#F9E3E6;color:#A3202F">لم تتم الموافقة ✕</span>${d.rej && d.rej.note ? `<div style="font-size:12px;color:#A3202F">السبب: ${esc(d.rej.note)}${d.rej.by ? ' — ' + esc(d.rej.by) : ''}</div>` : ''}`;
+  if (d.hold && !['ok', 'rej', 'ret'].includes(d.st)) return `<span class="chip" style="background:#EDE7F6;color:#5B3A99">⏸ معلّق للمراجعة</span>${d.hold.note ? `<div style="font-size:12px;color:#5B3A99">${esc(d.hold.by)}: ${esc(d.hold.note)}</div>` : ''}`;
   if (d.st === 'ret') return `<span class="chip" style="background:#FCEADB;color:#B8521A">أُعيد للتعديل</span>${d.ret && d.ret.note ? `<div style="font-size:12px;color:#B8521A">${esc(d.ret.by)}: ${esc(d.ret.note)}</div>` : ''}`;
   return `<span class="chip" style="background:#FBF1DB;color:#946410">بانتظار ${PRQ_WHO[d.st] || ''}</span>`;
 }
@@ -213,7 +214,7 @@ function prqPhSet(p) { try { const u = new Date(Date.now() + 6 * 864e5).toISOStr
 
 function A_prq(el) {
   setTitle('إذنٌ مُيسَّر — الاعتماد');
-  const lv = prqLvl(); const L = prqForMe(); const mineL = L.filter(r => r._mine), early = L.filter(r => !r._mine);
+  const lv = prqLvl(); const L = prqForMe(); const heldL = L.filter(r => r._mine && r.d.hold), mineL = L.filter(r => r._mine && !r.d.hold), early = L.filter(r => !r._mine);
   const fixed = prqPhGet(); const thu = prqIsThu(); const ph = thu ? PRQ_THU : (S.prqPh || fixed || PRQ_PH[0]);
   const mo = S.prqMo || today().slice(0, 7);
   const all = S.records.filter(r => r.item === 'PRQ' && r.d);
@@ -224,7 +225,7 @@ function A_prq(el) {
     return `<tr><td>${act ? `<input type="checkbox" data-pk="${r.id}" checked>` : ''}</td><td style="white-space:nowrap"><b>${esc(r.d.t)}</b><br><small style="color:var(--muted)">${esc(r.dept)}</small></td><td style="white-space:nowrap">${prqDay(r.date)}<br><small>${dmy(r.date)}</small></td><td style="white-space:nowrap">${prqT12(r.d.from)} – ${prqT12(r.d.to)}<br><b>${prqNum(r.d.h)} س</b></td>
       <td>${esc(r.d.reason)}${r.d.note ? `<br><small>${esc(r.d.note)}</small>` : ''}<br><span class="chip" style="font-size:11px">${esc(r.d.kind)}</span></td>
       <td style="font-size:12px">${r.d.kind === 'إذن عمل' ? 'لا يُحسب' : `<b style="color:${tot > PRQ_LIMIT ? '#A3202F' : 'inherit'}">${prqNum(tot)}</b> من ${PRQ_LIMIT} بعد هذا الإذن`}</td><td>${prqChain(r)}</td>
-      <td style="white-space:nowrap"><button class="btn sm" data-pa="${r.id}">✓ اعتماد</button> <button class="btn sm ghost" data-pr="${r.id}" style="color:#B8521A">إعادة للتعديل</button> <button class="btn sm ghost" data-prj="${r.id}" style="color:#A3202F">✕ رفض</button></td></tr>`; };
+      <td style="white-space:nowrap"><button class="btn sm" data-pa="${r.id}">✓ اعتماد</button> ${r.d.hold ? '' : `<button class="btn sm ghost" data-phold="${r.id}" style="color:#5B3A99">⏸ تعليق</button> <button class="btn sm ghost" data-pr="${r.id}" style="color:#B8521A">إعادة للتعديل</button> `}<button class="btn sm ghost" data-prj="${r.id}" style="color:#A3202F">✕ رفض</button>${r.d.hold ? `<div style="font-size:11.5px;color:#5B3A99;margin-top:4px;white-space:normal">⏸ ${esc(r.d.hold.note || 'معلّق')} <small style="color:var(--muted)">(${esc(String(r.d.hold.at || '').slice(5, 16))})</small></div>` : ''}</td></tr>`; };
   const head = '<tr><th></th><th>المعلمة</th><th>اليوم</th><th>الوقت</th><th>السبب</th><th>رصيد الشهر</th><th>المسار</th><th></th></tr>';
   el.innerHTML = `
   <div class="prq-top"><div class="prq-v">﴿إِنَّ اللَّهَ يَأْمُرُكُمْ أَن تُؤَدُّوا الْأَمَانَاتِ إِلَىٰ أَهْلِهَا﴾</div><small>النساء 58</small></div>
@@ -233,6 +234,7 @@ function A_prq(el) {
     ${'Notification' in window && Notification.permission !== 'granted' ? '<button class="btn sec sm" id="pNot" style="float:left">🔔 تفعيل إشعارات هذا الجهاز</button>' : ''}<label style="display:block;margin-top:8px"><input type="checkbox" id="pfix" ${fixed && fixed === ph ? 'checked' : ''}> تثبيت هذه العبارة لهذا الأسبوع</label>`}</div>
   <div class="card"><div class="row"><h2 style="margin:0">بانتظار اعتمادكِ (${mineL.length})</h2><span class="sp"></span>${mineL.length ? `<button class="btn" id="pAll">✓ اعتماد المحدد (${mineL.length})</button>` : ''}</div>
     <div class="tbl" style="margin-top:8px"><table class="t">${head}${mineL.map(r => row(r, 1)).join('') || '<tr><td colspan="8"><div class="empty">لا توجد طلبات بانتظاركِ الآن 🌿</div></td></tr>'}</table></div></div>
+  ${heldL.length ? `<div class="card" style="border-right:4px solid #5B3A99"><h2 style="margin:0 0 6px">⏸ طلبات معلّقة (${heldL.length}) <span class="sub">علّقتِها للمراجعة — اعتمديها أو ارفضيها متى قررتِ</span></h2><div class="tbl"><table class="t">${head}${heldL.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
   ${early.length ? `<div class="card"><h2>في مراحل سابقة (${early.length}) <span class="sub">يمكنكِ اعتمادها مباشرة عند الحاجة</span></h2><div class="tbl"><table class="t">${head}${early.map(r => row(r, 0)).join('')}</table></div></div>` : ''}
   ${prqToday(lv === 1 ? S.user.dept : null)}
   ${lv >= 2 ? prqDash(mo, months) : lv === 1 ? prqDeptRep(mo, months, S.user.dept) : ''}`;
@@ -242,15 +244,16 @@ function A_prq(el) {
   if ($('#pfix')) $('#pfix').onchange = e => { if (e.target.checked) prqPhSet(curPh()); else try { localStorage.removeItem('mz_prqph'); } catch (x) {} };
   if ($('#pMo')) $('#pMo').onchange = e => { S.prqMo = e.target.value; show(); };
   const run = async (ids, act, note) => {
-    if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],[data-prj],#pAll', el).forEach(b => b.disabled = true);
+    if (S.prqBusy) return; S.prqBusy = 1; $$('[data-pa],[data-pr],[data-prj],[data-phold],#pAll', el).forEach(b => b.disabled = true);
     try {
     const j = await call('prqAct', { ids, act, phrase: curPh(), fix: !!($('#pfix') || {}).checked, note });
     j.records.forEach(r => { const i = S.records.findIndex(x => x.id === r.id); if (i >= 0) S.records[i] = r; else S.records.push(r); });
-    if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'rej' ? 'تم رفض الطلب، ووصل السبب للمعلمة ✓' : act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
+    if (j.skipped && j.skipped.length) toast(j.skipped[0], 1); else toast(act === 'rej' ? 'تم رفض الطلب، ووصل السبب للمعلمة ✓' : act === 'ret' ? 'أُعيد الطلب للمعلمة ✓' : act === 'hold' ? 'عُلّق الطلب ✓ — تجدينه في «طلبات معلّقة»' : `تم الاعتماد ✓ (${ids.length}) — ${curPh()}`);
     } finally { S.prqBusy = 0; }
     refresh();
   };
   $$('[data-pa]', el).forEach(b => b.onclick = () => run([b.dataset.pa], 'ok'));
+  $$('[data-phold]', el).forEach(b => b.onclick = () => { if ((S.sv || 0) < 12) return toast('التعليق يعمل بعد تحديث كود الخادم (نسخة 12)', 1); const n = prompt('ملاحظة التعليق (تظهر للمعلمة مع حالة طلبها):', ''); if (n === null) return; run([b.dataset.phold], 'hold', n); });
   $$('[data-pr]', el).forEach(b => b.onclick = () => { const n = prompt('سبب الإعادة للتعديل (يصل للمعلمة):', ''); if (n === null) return; run([b.dataset.pr], 'ret', n); });
   /* الرفض: سبب جاهز للاختيار أو مكتوب، يصل للمعلمة مع الإشعار والبريد */
   $$('[data-prj]', el).forEach(b => b.onclick = () => {

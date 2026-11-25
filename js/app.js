@@ -95,7 +95,7 @@ async function anaLoad(force) {
 
 /* ------------------------------------------------------------------ الدخول */
 /* حالة الربط مع سبع سنابل (للنائب الأكاديمي): هل نُشر كود الخادم الأخير؟ وكم إجراءً وصل من كل نوع؟ */
-const SV_NEED = 11;
+const SV_NEED = 12;
 function sabHealthHTML() {
   if (!isAdmin()) return '';
   if ((S.sv || 0) < SV_NEED) return `<div class="card" style="border:2px solid #B3261E;background:#FFF4F2"><h2 style="color:#B3261E;margin:0 0 6px">⚠️ كود الخادم في Apps Script ليس الأخير</h2>
