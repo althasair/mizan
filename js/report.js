@@ -64,31 +64,42 @@ function buildReport(ctx) {
       if (T.as_anal && typeof T.as_anal === 'object') T.as_anal.pre = (T.as_anal.pre ? T.as_anal.pre + ' ' : '') + tx;   // مع جدول القراءة المعتمدة: لا يُستبدل الجدول
       else T.as_anal = /^لم /.test(T.as_anal) ? tx : T.as_anal + ' ' + tx; } }
 
-  /* رفع التحصيل */
+  /* رفع التحصيل — بنقاط عامة مرتّبة: بلا أسماء طالبات ولا تكرار (الإجراء المتكرر يُذكر مرة واحدة مع عدده ومستوياته) */
   const RA = Rp('RA');
-  /* إجراءات المعلمات المسجّلة في سبع سنابل تنعكس هنا تلقائياً، والمنسقة تضيف في «RA» ما لم تسجّله المعلمات فقط */
-  const SB = ctx.recs.filter(r => r.dept === dept && ['SEN', 'SFB', 'SAC'].includes(r.item) && r.d && inP(r.date, P));
-  let sbTxt = '';
-  if (SB.length) {
-    const ind = SB.filter(r => r.item === 'SEN' && !r.d.whole), grp = SB.filter(r => r.item === 'SEN' && r.d.whole), fb = SB.filter(r => r.item === 'SFB'), ac = SB.filter(r => r.item === 'SAC');
-    const nStu = L => new Set(L.flatMap(r => (r.d.stu || []).map(n => n + '|' + r.d.s))).size;
-    const parts = [ind.length ? `(${ind.length}) من الحصص الإثرائية الفردية لـ(${nStu(ind)}) من الطالبات` : '', grp.length ? `(${grp.length}) من الحصص الإثرائية الجماعية` : '',
-      fb.length ? `(${fb.length}) من التغذية الراجعة والتقييمات القصيرة لـ(${nStu(fb)}) من الطالبات` : '', ac.length ? `(${ac.length}) من الأنشطة وتعلّم الأقران` : ''].filter(Boolean);
-    const by = {}; SB.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
-    sbTxt = `سجّلت معلمات القسم في منصة سبع سنابل ${parts.join('، و')}، كالآتي: ` + Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length})`).join('، ') + '.';
-  }
-  T.ra = (sbTxt ? sbTxt + (RA.length ? ' ' : '') : '') + (RA.length ? (sbTxt ? 'كما نفّذ القسم إجراءات أخرى لرفع التحصيل: ' : 'نفّذ القسم الإجراءات الآتية لرفع التحصيل: ') + RA.map(r => SEC.RA.tx(d(r))).join('؛ ') + '.' : '') || 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.';
-  /* تعويض الطالبات عن الحصص الفائتة بسبب الخروج للأنشطة (توثيق المعلمات في الميزان) */
-  { const XC = ctx.recs.filter(r => r.dept === dept && r.item === 'XCMP' && r.d && inP(String(r.date).slice(0, 10), P));
-    if (XC.length) { const by = {}; XC.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
-      const tx = `وعوّضت معلمات القسم الطالبات عن (${XC.length}) من الحصص التي فاتتهن بسبب الخروج للأنشطة المدرسية: ` + Object.entries(by).map(([t, L]) => `أ. ${t}: ` + L.map(r => `${r.d.ex} — الصف ${r.d.c} (${r.d.how}${r.d.per ? '، ' + r.d.per : ''}، ${dm(r.date)})`).join('؛ ')).join('. ') + '.';
-      T.ra = /^لم /.test(T.ra) ? tx.replace(/^و/, '') : T.ra + ' ' + tx; } }
-  /* تعزيز الطالبات بالشهادات من سبع سنابل: من عزّزت، وكم طالبة، وعلى ماذا */
-  { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
-    if (RF.length) { const by = {}; RF.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
-      const why = r => { const m = String(r.d.det || '').split(' — على: '); return { tt: m[0] || 'شهادة', on: m[1] || '' }; };
-      T.ra = (/^لم /.test(T.ra) ? '' : T.ra + ' ') + (/^لم /.test(T.ra) ? '' : 'و') + `عزّزت معلمات القسم (${new Set(RF.flatMap(r => r.d.stu || [])).size}) من الطالبات بـ(${RF.length}) من الشهادات: ` +
-        Object.entries(by).map(([t, L]) => `أ. ${t} (${L.length}): ` + L.map(r => { const w = why(r); return `${w.tt} للطالبة ${(r.d.stu || []).join('، ')} (${r.d.s || ''}) على ${w.on}`; }).join('؛ ')).join('. ') + '.'; } }
+  { const L = [], nk = x => String(x || '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي').replace(/[^ء-ي0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+    const GR = { '10': 'العاشر', '11': 'الحادي عشر', '12': 'الثاني عشر' };
+    const lvOf = s => { const m = String(s || '').match(/^(1[012])/); return m ? GR[m[1]] : ''; };
+    const lvTx = (A, t) => { const u = [...new Set(A.filter(Boolean))].filter(x => !(t && String(t).includes(x))); if (!u.length) return ''; const j = u.join(' و'); return ' — ' + (/ و/.test(j) ? (u.length > 2 || / و.* و/.test(j) ? 'للصفوف ' : 'للصفين ') : 'للصف ') + j; };
+    const cnt = n => n > 1 ? ` (${n})` : '';
+    const top = (M, k) => Object.values(M).sort((x, y) => y.n - x.n).slice(0, k || 8);
+    /* ما سجّلته المعلمات في سبع سنابل: يُجمع حسب نوع الإجراء (أول مقطع في التفصيل)، وتُحذف أسماء الطالبات */
+    const SB = ctx.recs.filter(r => r.dept === dept && ['SEN', 'SFB', 'SAC'].includes(r.item) && r.d && inP(r.date, P));
+    const opt = r => { const g = String(r.d.det || '').split(' — ').map(x => x.trim()).filter(x => x && !/^(الغائبات|من الميزان)/.test(x));
+      let o = (g[0] || '').replace(/^إجراء مبتكر:\s*/, ''); if (r.item === 'SEN') { o = g.find(x => !/^حصة إثرائية (فردية|جماعية)$/.test(x) && x.length <= 70) || ''; } return o.length > 90 ? '' : o; };
+    const grp = (it, head) => { const X = SB.filter(r => r.item === it); if (!X.length) return;
+      const M = {}; X.forEach(r => { const o = opt(r), k = nk(o); if (!k) return; (M[k] = M[k] || { t: o, n: 0 }).n++; });
+      const kinds = top(M, 6).map(o => o.t + cnt(o.n));
+      L.push({ st: 0, tx: head(X) + (kinds.length ? '، شملت: ' + kinds.join('، ') : '') + lvTx(X.map(r => lvOf(r.d.s))) + '.' }); };
+    grp('SEN', X => { const f = X.filter(r => !r.d.whole).length, w = X.length - f;
+      return `تقديم (${X.length}) من الحصص الإثرائية` + (f && w ? ` (${f} فردية و${w} جماعية)` : f ? ' الفردية' : ' الجماعية'); });
+    grp('SFB', X => `تقديم التغذية الراجعة والتقييمات القصيرة (${X.length})`);
+    grp('SAC', X => `تنفيذ الأنشطة الصفية وتعلّم الأقران (${X.length})`);
+    /* ما سجّلته المنسقة: الإجراء المكرر يُذكر مرة واحدة */
+    { const M = {}; RA.forEach(r => { const x = d(r), k = nk(x.item); if (!k) return; const o = M[k] = M[k] || { t: String(x.item).trim(), n: 0, lv: [], tg: [], imp: [] }; o.n++;
+        o.lv.push(x.lvl && x.lvl !== 'جميع المستويات' ? String(x.lvl).replace(/^الصف(ان)?\s+/, '').replace(/^الصفين\s+/, '') : ''); if (x.tg) o.tg.push(x.tg); if (x.imp && !/قيد المتابعة/.test(x.imp)) o.imp.push(x.imp); });
+      Object.values(M).forEach(o => { const tg = [...new Set(o.tg)], im = [...new Set(o.imp)];
+        L.push({ st: 0, tx: o.t.replace(/[.،؛]\s*$/, '') + lvTx(o.lv, o.t) + (tg.length ? ' (' + tg.join('، ') + ')' : '') + (im.length ? ' — الأثر: ' + im.join('، ') : '') + '.' }); }); }
+    /* تعويض الحصص الفائتة بسبب الأنشطة */
+    { const XC = ctx.recs.filter(r => r.dept === dept && r.item === 'XCMP' && r.d && inP(String(r.date).slice(0, 10), P));
+      if (XC.length) { const how = [...new Set(XC.map(r => r.d.how).filter(Boolean))];
+        L.push({ st: 0, tx: `تعويض الطالبات عن (${XC.length}) من الحصص التي فاتتهن بسبب الخروج للأنشطة المدرسية` + (how.length ? ' (' + how.join('، ') + ')' : '') + lvTx(XC.map(r => lvOf(r.d.c))) + '.' }); } }
+    /* تعزيز الطالبات بشهادات الشكر من سبع سنابل: العدد وأسباب التعزيز فقط */
+    { const RF = ctx.recs.filter(r => r.dept === dept && r.item === 'SRF' && r.d && inP(r.date, P));
+      if (RF.length) { const M = {}; RF.forEach(r => String(String(r.d.det || '').split(' — على: ')[1] || '').split('، ').map(x => x.trim()).filter(Boolean).forEach(w => { const k = nk(w); (M[k] = M[k] || { t: w, n: 0 }).n++; }));
+        const ws = top(M, 6).map(o => o.t);
+        L.push({ st: 0, tx: `تعزيز (${new Set(RF.flatMap(r => (r.d.stu || []).map(n => n + '|' + r.d.s))).size}) من الطالبات بـ(${RF.length}) من شهادات الشكر` + (ws.length ? '، تقديرًا لـ: ' + ws.join('، ') : '') + '.' }); } }
+    T.ra = L.length ? 'نفّذت معلمات القسم خلال الفترة الإجراءات الآتية لرفع التحصيل الأكاديمي:' : 'لم تُسجَّل إجراءات لرفع التحصيل خلال الفترة.';
+    T.ra_lines = L.length ? L : null; }
 
   /* التطوير الداخلي */
   const WSall = R('WS').map(r => ({ r, x: d(r), w: SEC.WS.when(d(r)) || r.date }));
@@ -472,7 +483,7 @@ function buildReport(ctx) {
   /* هيكل التقرير الرسمي */
   const rows = [
     ['التخطيط', [['الخطة السنوية للقسم', [T.pl_annual]], ['متابعة الخطط الفصلية', [T.pl_sem]]]],
-    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
+    ['التحصيل الأكاديمي', [['التقييمات القصيرة', [T.as_short]], ['الاختبارات التحصيلية', [T.as_ach]], ['تحليل وقراءة النتائج', [T.as_anal]], ['إجراءات رفع التحصيل', [T.ra, ...(T.ra_lines ? [{ lines: T.ra_lines }] : [])]], ...(T.as_next ? [['الإجراءات المقترحة للفترة القادمة', [T.as_next]]] : [])]],
     ['التطوير المهني', [['التطوير الداخلي', [T.pd_int]], ['التطوير الخارجي', [T.pd_ext]], ['التنمية الذاتية', [T.pd_self]]]],
     ['الاجتماعات الأكاديمية', [['الخارجية', [T.mt_ext]], ['الداخلية', [T.mt_int]]]],
     ['الزيارات الأكاديمية', [['مدير المدرسة', [T.ov_pr]], ['نائب المدير للشؤون الأكاديمية', [T.ov_vp]], ['الموجه التربوي', [T.ov_sup]],
