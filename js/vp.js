@@ -119,7 +119,7 @@ async function A_vpvisit(el) {
     ${kpi('أُرسلت للمعلمات', inS.filter(r => r.d.sent).length, 'من ' + inS.length, 'var(--tiffany-d)')}
     ${kpi('لم أحضر لهن بعد', pool.length - [...seen].filter(n => pool.some(p => p.name === n)).length, 'في ' + sem, 'var(--maroon)')}
   </div>
-  ${RO ? '<div class="note">حضور النائب الأكاديمي — للاطلاع فقط.</div>' : ''}<div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">${RO ? 'زيارات النائب الأكاديمي' : 'زياراتي الصفية'} — ${sem}</h2><span class="sp"></span>${RO ? '' : '<button class="btn" id="nv">+ حضور جديد (تعبئة الاستمارة)</button>'}</div>
+  ${RO ? '<div class="note">حضور النائب الأكاديمي — للاطلاع فقط.</div>' : ''}<div class="card" style="margin-top:14px"><div class="row"><h2 style="margin:0">${RO ? 'زيارات النائب الأكاديمي' : 'زياراتي الصفية'} — ${sem}</h2><span class="sp"></span>${RO ? '' : wiBtn('VPV') + ' <button class="btn" id="nv">+ حضور جديد (تعبئة الاستمارة)</button>'}</div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>التاريخ</th><th>المعلمة</th><th>القسم</th><th>الصف</th><th>الموضوع</th><th>التحصيل الأكاديمي</th><th>المستوى العام</th><th>الإرسال</th><th></th></tr>
   ${inS.map(r => { const a = lv(r); const ok = a == null ? '' : a < 1.25 ? 'ok' : a < 2.2 ? 'tf' : a < 3.2 ? 'warn' : 'bad';
     const lbl = a == null ? '—' : FORMS.visit.scale[Math.round(a)];
@@ -129,7 +129,7 @@ async function A_vpvisit(el) {
   $$('[data-s]', el).forEach(b => b.onclick = () => { S.vsem = b.dataset.s; show(); });
   if (RO) { $$('[data-o]', el).forEach(b => b.onclick = async () => { const r = S.records.find(x => x.id === b.dataset.o); await showPaper(el, 'استمارة الإشراف — ' + r.d.t, visitInner(r)); $('#pBack').onclick = () => show(); }); return; }
   S.vkind = 'VPV';
-  $('#nv').onclick = () => { S.vpv = 'new'; S.vpvT = ''; show(); };
+  $('#nv').onclick = () => { S.vpv = 'new'; S.vpvT = ''; show(); }; wiBind(el, 'VPV');
   $$('[data-nt]', el).forEach(b => b.onclick = () => { S.vpv = 'new'; S.vpvT = b.dataset.nt; show(); });
   $$('[data-o]', el).forEach(b => b.onclick = () => { S.vpv = b.dataset.o; show(); });
 }

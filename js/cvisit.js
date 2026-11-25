@@ -280,7 +280,7 @@ async function C_visit(el) {
     ${SP.map(t => (specFollow(t, per, recs) || []).map(x => `<tr><td><b>${esc(t)}</b></td><td>${mAr(x.m)}</td><td>${x.v} من ${x.needV} <small style="color:var(--muted)">(كلية ${x.vk} · جزئية ${x.vj})</small></td><td>${x.s} من ${x.needS} ${recs.filter(r => r.item === 'IS' && r.d.t === t && monthKey(r.date) === x.m).map(r => `<button class="chip" data-is="${r.id}" style="cursor:pointer">${dm(r.date)}</button>`).join(' ')}</td>
       <td>${!x.shortV && !x.shortS ? '<span class="chip ok">مكتملة</span>' : x.done ? '<span class="chip bad">قصور في متابعة المعلمة</span>' : `<span class="chip warn">متبقٍ: ${[x.shortV ? (x.needV - x.v > 0 ? cntAr(x.needV - x.v, 'زيارة', 'زيارتان', 'زيارات') : 'زيارة كلية') : '', x.shortS ? cntAr(x.needS - x.s, 'جلسة', 'جلستان', 'جلسات') : ''].filter(Boolean).join(' و')}</span>`}</td>
       <td>${x.m === today().slice(0, 7) ? `<button class="btn sm" data-isn="${esc(t)}">+ جلسة فردية</button>` : ''}</td></tr>`).join('')).join('')}</table></div></div>`; })()}
-  <div class="card"><div class="row"><h2 style="margin:0">خطة ${mName(mk)}</h2><span class="sp"></span><button class="btn" id="cvNew">+ حضور صفي جديد</button></div>
+  <div class="card"><div class="row"><h2 style="margin:0">خطة ${mName(mk)}</h2><span class="sp"></span>${wiBtn('V')} <button class="btn" id="cvNew">+ حضور صفي جديد</button></div>
   <div class="tbl" style="margin-top:10px"><table class="t"><tr><th>المعلمة</th><th>الخطة</th><th>زيارات الشهر</th><th>آخر زيارة</th><th>التالية المتوقعة</th><th>الحالة</th><th></th></tr>
   ${X.map(x => `<tr><td><b>${esc(x.t)}</b></td><td style="font-size:12px">${x.P.n} · ${esc(x.P.lbl)}</td>
     <td>${x.inM.map(r => `<button class="chip ${r.d.kj === 'كلية' ? 'tf' : ''}" data-o="${r.id}" style="cursor:pointer">${dm(r.date)} ${esc(r.d.kj || '')}</button>`).join(' ') || '—'}</td>
@@ -292,7 +292,7 @@ async function C_visit(el) {
     <td>${f.length ? `<span class="chip ${ok === f.length ? 'ok' : 'warn'}">${ok} من ${f.length} منفذة</span>` : (r.d.form ? '<span class="chip">أول زيارة</span>' : '<span class="chip">إدخال يدوي</span>')}</td>
     <td>${r.d.sent ? `<span class="chip ok">${dm(r.d.sent)}</span>` : '<span class="chip">لم تُرسل</span>'}</td><td><button class="btn sm sec" data-o="${r.id}">فتح</button></td></tr>`; }).join('') || '<tr><td colspan="7"><div class="empty">لا توجد زيارات في هذا الشهر</div></td></tr>'}</table></div></div>`;
   $$('[data-m]', el).forEach(b => b.onclick = () => { S.cvm = b.dataset.m; show(); });
-  $('#cvNew').onclick = () => { S.cvv = 'new'; S.cvT = ''; S.cvK = ''; show(); };
+  $('#cvNew').onclick = () => { S.cvv = 'new'; S.cvT = ''; S.cvK = ''; show(); }; wiBind(el, 'V', { dept: S.dept });
   $$('[data-nt]', el).forEach(b => b.onclick = () => { S.cvv = 'new'; S.cvT = b.dataset.nt; S.cvK = b.dataset.kj; show(); });
   $$('[data-o]', el).forEach(b => b.onclick = () => { S.cvv = b.dataset.o; show(); });
   $$('[data-isn]', el).forEach(b => b.onclick = () => isForm(b.dataset.isn));
@@ -433,7 +433,7 @@ function cvForm(el, rec) {
 /* ================================================================== الطباعة والإرسال */
 function cvInner(r) {
   const F = vForm(r.d), d = r.d; let lastD = ''; const cvSL = cvAware(r.dept) ? 0 : 1;
-  const cN = (r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(r.dept)) || {}).name || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
+  const cN = (r.d && r.d.cby) || (r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(r.dept)) || {}).name || S.user.name;   // المنسقة كاتبة الاستمارة (ملاحظة النائب لا تغيّر كاتبها)
   const achOK = String(d.date || '') >= CV_ACH_FROM;   // التحصيل الأكاديمي يظهر في زيارات ما بعد اختبار منتصف الفصل فقط
   const achT = !achOK ? '' : d.ach || ((d.s && d.subj && typeof sanabilClass === 'function') ? ((sanabilClass(d.s, d.subj) || {}).txt || '') : '');
   const ys = (v, x) => v === x ? '☑' : '☐';
@@ -503,7 +503,7 @@ async function A_cvisits(el) {
   const inPer = r => f.all || (r.date >= p.from && r.date <= p.to);
   const VA = S.records.filter(r => r.item === 'V' && r.d && r.d.t);
   const V = VA.filter(inPer).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-  const coordName = (d, r) => (r && r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(d)) || {}).name || '—';
+  const coordName = (d, r) => (r && r.d && r.d.cby) || (r && r.by && r.by !== 'استيراد' ? r.by : '') || ((S.coords || []).find(c => (c.dept || []).includes(d)) || {}).name || '—';
   const depts = [...new Set([...(S.coords || []).filter(c => c.active !== false).flatMap(c => c.dept), ...V.map(r => r.dept)])].filter(Boolean);
   const tOf = d => S.staff.filter(x => x.dept === d && x.role !== 'منسقة').map(x => x.name);
   const days = d => d ? Math.round((new Date(today()) - new Date(d)) / 864e5) : null;
@@ -522,7 +522,7 @@ async function A_cvisits(el) {
   const tyChip = t => /متابعة/.test(t || '') ? 'tl2' : /الأولى/.test(t || '') ? 'tl3' : 'tl4';
   const sel = rows.find(r => r.d === f.dept);
   el.innerHTML = `
-  <div class="note">متابعة زيارات المنسقات الصفية لمعلمات أقسامهن: من زارت، ومن لم تُزر بعد، وما تحتاج ملاحظتكِ. اختاري قسماً من الجدول لعرض زياراته، ثم «فتح» لقراءة الاستمارة وكتابة ملاحظتكِ.</div>
+  <div class="row noprint" style="margin-bottom:8px">${wiBtn('V')}</div><div class="note">متابعة زيارات المنسقات الصفية لمعلمات أقسامهن: من زارت، ومن لم تُزر بعد، وما تحتاج ملاحظتكِ. اختاري قسماً من الجدول لعرض زياراته، ثم «فتح» لقراءة الاستمارة وكتابة ملاحظتكِ.</div>
   <div class="row noprint" style="margin:10px 0;gap:8px"><div class="tabs" style="margin:0"><button class="${f.all ? '' : 'on'}" data-all="0">${esc(p.name)}</button><button class="${f.all ? 'on' : ''}" data-all="1">كل الفترات</button></div></div>
   <div class="cmhero"><div><h2>زيارات المنسقات — ${f.all ? 'كل الفترات' : esc(p.name)}</h2><div class="sub">${rows.length} أقسام</div></div><div class="cmks">
     <div class="cmk"><b>${tot}</b><span>زيارة صفية</span></div><div class="cmk"><b>${totT ? Math.round(tot / totT * 10) / 10 : 0}</b><span>زيارة لكل معلمة</span></div><div class="cmk"><b>${avgCov}%</b><span>شمول المعلمات</span></div>
@@ -554,6 +554,7 @@ async function A_cvisits(el) {
   $$('[data-dp]', el).forEach(b => b.onclick = () => set({ dept: f.dept === b.dataset.dp ? '' : b.dataset.dp }));
   if ($('#acAll')) $('#acAll').onclick = () => set({ dept: '' });
   $$('[data-ao]', el).forEach(b => b.onclick = () => { S.acv = b.dataset.ao; show(); window.scrollTo(0, 0); });
+  wiBind(el, 'V', { cby: d => coordName(d) });
 }
 /* لوحة الحضور الصفي لكل منسقة: معلمات القسم وتواريخ حضورها، وكل تاريخ يفتح استمارته
    (زيارات ما قبل اختبار منتصف الفصل بلا تحصيل أكاديمي، وما بعده يُضاف إليها التحصيل) */
