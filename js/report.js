@@ -384,6 +384,10 @@ function buildReport(ctx) {
       const ACa = Rp('AC').filter(r => /أولياء/.test(d(r).tg || '') && !(nk(d(r).name).length > 3 && pe.some(k => k.includes(nk(d(r).name)))));
       if (ACa.length) add('pa_ev', 'ونفّذ القسم بمشاركة أولياء الأمور: ' + ACa.map(r => `${d(r).ty || 'نشاط'} «${nz(d(r).name)}»` + (d(r).tg ? ` (المستهدف: ${d(r).tg})` : '') + dateTxt(r.date)).join('؛ ') + '.');
       if (PAa.length) add('pa_ev', 'ونفّذت معلمات القسم للشراكة مع أولياء الأمور: ' + PAa.map(r => `${r.d.kind || 'نشاط'} «${nz(r.d.name)}» (أ. ${r.d.t})` + dateTxt(r.date)).join('؛ ') + '.'); }
+    /* دروس المعايشة والمشاهدة التي دعت إليها المعلمات أولياء الأمور (من الميزان أو سبع سنابل) تُحسب أيضاً في «المجالس والفعاليات» */
+    { const MA = PAt.filter(r => /معايش|مشاهد/.test([r.d.way, r.d.topic, r.d.cat].join(' ')));
+      if (MA.length) { const by = {}; MA.forEach(r => { const o = by[r.d.t] = by[r.d.t] || { n: 0, ds: [] }; o.n += +r.d.n > 0 ? +r.d.n : 1; o.ds.push(dm(String(r.date).slice(0, 10)) + (r.d.s ? ' ' + r.d.s : '')); });
+        add('pa_ev', `ونفّذت معلمات القسم دروس معايشة لأولياء الأمور (${MA.length}): ` + Object.entries(by).map(([t, o]) => `أ. ${t} (${o.n} من أولياء الأمور — ${[...new Set(o.ds)].join('، ')})`).join('؛ ') + '.'); } }
     // الإنجازات والمشاركات
     const AH = mineD('TACH'); const AHw = AH.filter(r => /إنجاز/.test(r.d.kind)), AHp = AH.filter(r => !/إنجاز/.test(r.d.kind));
     const ahTx = r => `«${nz(r.d.name)}»` + (r.d.ent ? ` (${r.d.ent})` : '') + (r.d.res ? `، ${r.d.res}` : '') + ` بإشراف أ. ${r.d.t}` + dateTxt(r.date);
