@@ -392,6 +392,15 @@ function buildReport(ctx) {
     { const TS = mineD('TAS'); const by = {}; TS.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
       T.tas_lines = Object.entries(by).map(([t, L]) => { const it = uniq(L.flatMap(r => lst(r.d.what).map(w => w + (r.d.scope === 'طوال العام' && !/طوال العام/.test(w) ? ' (طوال العام)' : ''))));
         return { st: Math.min(it.length, 3), n: it.length, tx: `أ. ${t}: تم تكليفها بـ ` + it.join('، ') + '.' }; }).sort((a, b) => b.n - a.n); }
+    /* حصص الاحتياط التي سجّلتها المعلمات بأنفسهن في «التكليفات والأعباء الوظيفية» تظهر أيضاً في «تغطية معلمات القسم للحصص»
+       (بتاريخها داخل الفترة)، ولا تُكرَّر إن سُجّلت الحصة نفسها في منصة انضباط لنفس المعلمة واليوم */
+    { const ind = new Set(SBC.map(x => nz(x.t) + '|' + String(x.date).slice(0, 10)));
+      const CV = ctx.recs.filter(r => r.item === 'TAS' && r.d && inP(String(r.date).slice(0, 10), P) && (r.dept === dept || extraT.includes(r.d.t))
+        && lst(r.d.what).some(w => /احتياط|تبديل|تغطية/.test(w)) && !ind.has(nz(r.d.t) + '|' + String(r.date).slice(0, 10)));
+      if (CV.length) { const by = {}; CV.forEach(r => (by[r.d.t] = by[r.d.t] || []).push(r));
+        const tx = Object.entries(by).sort((x, y) => y[1].length - x[1].length).map(([t, L]) => `أ. ${t} (` + L.sort((x, y) => String(x.date).localeCompare(String(y.date))).map(r => dm(String(r.date).slice(0, 10)) + (nz(r.d.note) && lst(r.d.what).length === 1 ? ': ' + nz(r.d.note).replace(/[.،؛\s]+$/, '') : '')).join('، ') + ')').join('؛ ');
+        T.sb_cov = SBC.length ? T.sb_cov + ` وسجّلت معلمات القسم في التكليفات (${CV.length}) من حصص الاحتياط: ` + tx + '.' : `سجّلت معلمات القسم (${CV.length}) من حصص الاحتياط: ` + tx + '.';
+        T.sb_n = SBC.length + CV.length; } }
     // ما كان على مستوى المدارس أو خارج المدرسة يُعرض في «الأنشطة الخارجية»، والباقي في «الداخلية»
     const TAext = r => taScope(r.d) === 'ext';
     const TAall = mineD('TA').filter(r => !r.d.q1), TAt = TAall.filter(r => taScope(r.d) === 'int'), TAx = TAall.filter(TAext), TAc = TAall.filter(r => taScope(r.d) === 'cp');
@@ -505,7 +514,7 @@ function buildReport(ctx) {
     planPct: planN ? planDone / planN : null, att: att, extPct: NM ? exK / NM : 0,
     meetings: nMT(MT), activities: AC.length, parents: PA.length, achievements: A1.length, participations: A2.length,
     peer: PV.length, peerMet: pvMet, elearn: T.el_n, challenges: CH.length, records: ctx.recs.filter(r => r.dept === dept && !/^SB[AC]$/.test(r.item) && inP(r.date || SEC.WS.when(r.d), P)).length,
-    commonRecs: T.common.length, cpActions: T.common.length - T.commonOpen.length, commonOpen: T.commonOpen.length, subCover: SBC.length, subAbs: SBA.length,
+    commonRecs: T.common.length, cpActions: T.common.length - T.commonOpen.length, commonOpen: T.commonOpen.length, subCover: T.sb_n || SBC.length, subAbs: SBA.length,
   };
   return { dept, P, coord, NT, teachers, T, rows, K };
 }
