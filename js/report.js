@@ -286,10 +286,11 @@ function buildReport(ctx) {
 
   /* الاحتياط والتبديل (من منصة انضباط) */
   const nP = n => n === 1 ? 'حصة واحدة' : n === 2 ? 'حصتان' : n <= 10 ? `${n} حصص` : `${n} حصة`;
-  const SBC = Rp('SBC').map(r => Object.assign({}, r.d, { date: r.date })), SBA = Rp('SBA').map(r => Object.assign({}, r.d, { date: r.date }));
+  /* لا يُقرأ الاحتياط من منصة انضباط في التقرير؛ المعتمد ما تسجّله المعلمات بأنفسهن في «التكليفات والأعباء الوظيفية» */
+  const SBC = [], SBA = [];
   const byT = L => { const o = {}; L.forEach(x => (o[x.t] = o[x.t] || []).push(x)); return Object.entries(o).sort((a, b) => b[1].length - a[1].length); };
   const cIht = SBC.filter(x => x.type !== 'تبديل').length, cTb = SBC.filter(x => x.type === 'تبديل').length;
-  T.sb_cov = !SBC.length ? 'لم تُسجَّل حصص احتياط أو تبديل لمعلمات القسم خلال الفترة.'
+  T.sb_cov = !SBC.length ? 'لم تُسجّل معلمات القسم حصص احتياط خلال الفترة.'
     : `غطّت معلمات القسم (${SBC.length}) من الحصص: احتياطاً (${cIht}) وتبديلاً (${cTb})، كالآتي: ` + byT(SBC).map(([t, L]) => {
         const a = L.filter(x => x.type !== 'تبديل').length, b = L.length - a;
         return `أ. ${t} ${nP(L.length)}` + ' (' + [a ? `احتياط ${a}` : '', b ? `تبديل ${b}` : ''].filter(Boolean).join('، ') + ' — ' + L.map(x => `${dm(x.date)} ${x.cls}`).join('، ') + ')';
@@ -504,7 +505,7 @@ function buildReport(ctx) {
     ['الإنجازات والمشاركات', [['الإنجازات (مراكز وجوائز)', [T.ach]], ['المشاركات', [T.part]]]],
     ['تكليفات المعلمات والأعباء الوظيفية', [[null, [(T.tas_lines && T.tas_lines.length) ? { lines: T.tas_lines } : 'لم تُسجَّل تكليفات للمعلمات خلال الفترة.']]]],
     ['تحقيق أولويات المدرسة', REF.PRIO_FULL.map((p, i) => [p, [T.prio[i].txt], 1])],
-    ['الاحتياط والتبديل', [['تغطية معلمات القسم للحصص', [T.sb_cov]], ['غياب معلمات القسم وتغطيته', [T.sb_abs]]]],
+    ['الاحتياط والتبديل', [['تغطية معلمات القسم للحصص', [T.sb_cov]]]],
     ['التحديات والحلول المقترحة', [[null, [T.chal]]]],
   ];
 
