@@ -29,7 +29,9 @@ function sabFillT(L, staff) {
 }
 function staffGone(L) {
   const gone = n => STAFF_GONE.includes(String(n || '').trim());
-  return (L || []).filter(r => !(r && r.d && gone(r.d.t))).map(coordRt).map(r => {
+  /* قسم الفيزياء: لا تظهر حصص الاحتياط والتبديل الواردة من منصة انضباط (بطلب النائب الأكاديمي 28/11)؛ المعتمد ما تسجّله المعلمات */
+  const indPhy = r => r && /^ind_/.test(String(r.id || '')) && /فيزياء/.test(String(r.dept || ''));
+  return (L || []).filter(r => !(r && r.d && gone(r.d.t)) && !indPhy(r)).map(coordRt).map(r => {
     if (!r || !r.d || !['a1', 'a2', 'a3'].some(k => gone(r.d[k]))) return r;
     const d = Object.assign({}, r.d); const A = ['a1', 'a2', 'a3'].map(k => d[k]).filter(x => x && !gone(x));
     ['a1', 'a2', 'a3'].forEach((k, i) => d[k] = A[i] || ''); return Object.assign({}, r, { d });
