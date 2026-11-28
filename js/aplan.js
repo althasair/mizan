@@ -107,8 +107,39 @@ const APL_RULES = [
   [/التعلم النشط|الأسئلة الصفية|الفروق الفردية|البيئة الصفية|الأنشطة الصفية|الأنشطة العملية|تنمية مهارات|مواءمة الأنشطة|إجراءات السلامة|البرامج الوقائية|الأنشطة الرياضية/, ['V', 'LVV'], 'rec'],
 ];
 const APL_YEARLONG = /اجتماع|التوصيات|زيارات|الخطط|تغذية راجعة|التعلم النشط|الأسئلة|الفهم القرائي|الفروق|البيئة الصفية|الأنشطة الصفية|تقييمات بنائية|الموهوبات|رفع التحصيل|قراءة النتائج|الأقل من|تقارير كمية|إجراءات رفع|إعادة بناء|ملفات المعلمات/, APL_ONEOFF = /منتصف|الأول|قبلي|القبلية|الرخص|ورشة|ممارسة متميزة/;
-function aplRule(t) { for (const [re, src, ty] of APL_RULES) if (re.test(t)) return { src, ty }; return { src: [], ty: 'man' }; }
-function aplEv(dept, src, from, to) { return S.records.filter(r => r.dept === dept && src.includes(r.item) && r.date && String(r.date).slice(0, 10) >= from && String(r.date).slice(0, 10) <= to && !(r.item === 'PL' && /السنوية/.test((r.d || {}).c || '') && false)); }
+/* مصادر إضافية تُضمّ إلى مصادر القاعدة الأساسية (ولا تحذف شيئاً منها) حتى يُقرأ البند تلقائياً من الميزان وسبع سنابل.
+   «البند:مفتاح» = سجلات ذلك البند التي يرد في نصها ما يطابق APL_PAT[مفتاح] */
+const APL_PAT = {
+  pledge: /ميثاق/, enr: /إثرائ|علاج|تقوية|دعم/, honor: /تكريم|الأوائل|المتفوق|تحفيز|تعزيز|شكر/, diag: /تشخيص|قبلي/,
+  pisa: /PISA|بيزا|الاختبارات الدولية|الدراسات الدولية|TIMSS/, pres: /قدّمتُ|قدمت/, att: /حضرتُ|حضرت/
+};
+const APL_EXTRA = [
+  [/ميثاق/, ['TPA:pledge', 'PA:pledge', 'RA:pledge'], 'rec'],
+  [/علاجي|العلاجية|الحصص الإثرائية|حصص? إثرائية|حصص الدعم|حصص التقوية/, ['SEN', 'RA:enr'], 'rec'],
+  [/التغذية الراجعة (للطالبات|على أعمال|المكتوبة|الفورية)|تغذية راجعة (للطالبات|فورية|مكتوبة)/, ['SFB'], 'rec'],
+  [/الورقة الامتحانية|تحليل (نتائج )?الاختبار|تحليل الأسئلة|تحليل الورقة/, ['SAN', 'SRQ'], 'cyc'],
+  [/تكريم|التحفيز|تحفيز|الأوائل|تعزيز (الطالبات|وتحفيز|المتفوقات|المتميزات)|التعزيز والتكريم/, ['SRF', 'TACH:honor', 'AC:honor', 'TA:honor'], 'rec'],
+  [/تعلم الأقران|تعلّم الأقران|الطالبة المعلمة|التعلم التعاوني|تعلم تعاوني/, ['SAC'], 'rec'],
+  [/^(?!.*قياس أثر).*(الأنشطة الصفية|الأنشطة اللاصفية|أنشطة إثرائية|الأنشطة العملية|أنشطة مادة|الأنشطة المختلفة|والأنشطة للطالبات|في الأنشطة)/, ['SAC', 'AC', 'TA'], 'rec'],
+  [/قراءة نتائج القسم|النتائج المعتمدة/, ['SRQ'], 'cyc'],
+  [/تقويم قبلي|التقويم القبلي|تشخيص/, ['AS', 'SAN', 'RA:diag', 'SFB:diag'], 'rec'],
+  [/تقييمات بنائية|التقييمات البنائية|التقييم البنائي|أعمال الطالبات|الواجبات/, ['AS', 'SFB'], 'rec'],
+  [/اختبارات تحصيلية|أدوات تقييم/, ['AS', 'SAN'], 'rec'],
+  [/PISA|بيزا|الاختبارات الدولية/, ['AS:pisa', 'RA:pisa', 'SFB:pisa', 'SAC:pisa', 'AC:pisa', 'TA:pisa'], 'rec'],
+  [/البرامج التدريبية|برامج ودورات|دورات تدريبية|برامج تدريبية/, ['EX', 'TWS:att', 'TEX'], 'rec'],
+  [/إثراء المادة العلمية|الاطلاع على المستجدات|المستجدات التربوية/, ['EX', 'TWS:att'], 'rec'],
+  [/تقديم ورشة|ممارسة متميزة/, ['WS', 'TWS:pres'], 'rec'],
+];
+function aplRule(t) {
+  let base = { src: [], ty: 'man' }; for (const [re, src, ty] of APL_RULES) if (re.test(t)) { base = { src, ty }; break; }
+  const ex = APL_EXTRA.filter(([re]) => re.test(t)); if (!ex.length) return base;
+  const src = [...new Set(base.src.concat(...ex.map(x => x[1])))];
+  return { src, ty: base.ty === 'man' ? ex[0][2] : base.ty };
+}
+function aplEv(dept, src, from, to) {
+  const plain = src.filter(x => !x.includes(':')), pat = src.filter(x => x.includes(':')).map(x => x.split(':'));
+  const hit = r => plain.includes(r.item) || pat.some(([it, k]) => it === r.item && APL_PAT[k] && APL_PAT[k].test(JSON.stringify(r.d || {}) + ' ' + (r.sum || '')));
+  return S.records.filter(r => r.dept === dept && hit(r) && r.date && String(r.date).slice(0, 10) >= from && String(r.date).slice(0, 10) <= to && !(r.item === 'PL' && /السنوية/.test((r.d || {}).c || '') && false)); }
 const aplEvTxt = L => { const c = {}; L.forEach(r => { const k = APL_LBL[r.item] || r.item; c[k] = (c[k] || 0) + 1; }); return Object.entries(c).map(([k, n]) => `${k} (${n})`).join('، '); };
 /* الحالة التلقائية للإجراء في شهر معيّن */
 function aplAuto(dept, it, mk) {
@@ -125,6 +156,8 @@ function aplAuto(dept, it, mk) {
   const fin = mEnd >= due;
   if (R.ty === 'cyc') { if (last2.length) return out(fin ? 'مكتمل' : 'على المسار', 0, aplEvTxt(last2), lastD); if (mk < '2026-10') return out('لم يبدأ', 0, 'بعد أول اختبار', ''); if (ever.length) return out('على المسار', 0, 'آخر تنفيذ ' + dm(lastD) + ' — بانتظار نتائج الاختبار القادم', lastD); return out('متأخر', 1, 'لا يوجد تحليل أو حصر مسجّل بعد الاختبار', ''); }
   if (inM.length) return out(fin ? 'مكتمل' : 'على المسار', 0, aplEvTxt(inM), lastD);
+  /* أغسطس شهر بداية العام قبل دوام الطالبات: الإجراء المتكرر الذي لم يُنفَّذ فيه «لم يبدأ» بعد، ولا يحتاج قراراً */
+  if (mk === APL_MONTHS[0]) return out('لم يبدأ', 0, 'بداية العام الدراسي — يبدأ تنفيذه مع دوام الطالبات', '');
   if (last2.length) return out('على المسار', 0, 'آخر تنفيذ ' + dm(lastD), lastD);
   if (mFrom > due) return ever.length ? out('مكتمل', 0, aplEvTxt(ever), lastD) : out('متأخر', 1, 'انتهى موعده ولا يوجد ما يثبت تنفيذه', '');
   if (mk <= '2026-09' && !ever.length) return out('على المسار', 1, 'لا يوجد تسجيل بعد', '');
